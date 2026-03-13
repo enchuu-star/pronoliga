@@ -289,9 +289,23 @@ function ProgressBar({ predictions, matches }) {
 // NAVBAR
 // ============================================================
 function NavBar({ user, view, setView, onLogout }) {
+  // Definimos el orden de las pestañas según el rol
   const tabs = user.role === "admin"
-    ? [{ id: "groups", icon: "⚽", label: "Grupos" }, { id: "results", icon: "📊", label: "Result." }, { id: "community", icon: "👥", label: "Todos" }, { id: "ranking", icon: "🏆", label: "Ranking" }, { id: "admin", icon: "⚙️", label: "Admin" }]
-    : [{ id: "groups", icon: "⚽", label: "Grupos" }, { id: "results", icon: "📊", label: "Result." }, { id: "community", icon: "👥", label: "Todos" }, { id: "profile", icon: "👤", label: "Perfil" }, { id: "ranking", icon: "🏆", label: "Ranking" }];
+    ? [
+        { id: "groups", icon: "⚽", label: "Grupos" }, 
+        { id: "community", icon: "👥", label: "Todos los pronósticos" }, 
+        { id: "ranking", icon: "🏆", label: "Ranking" },
+        { id: "results", icon: "📊", label: "Resultados" }, 
+        { id: "admin", icon: "⚙️", label: "Admin" }
+      ]
+    : [
+        { id: "groups", icon: "⚽", label: "Grupos" }, 
+        { id: "community", icon: "👥", label: "Todos los pronósticos" }, 
+        { id: "ranking", icon: "🏆", label: "Ranking" },
+        { id: "results", icon: "📊", label: "Resultados" }, 
+        { id: "profile", icon: "👤", label: "Perfil" }
+      ];
+
   return (
     <>
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,10,10,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
@@ -306,7 +320,7 @@ function NavBar({ user, view, setView, onLogout }) {
           {tabs.map(t => (
             <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "11px 2px 9px", border: "none", cursor: "pointer", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", borderTop: view === t.id ? `2px solid ${GREEN}` : "2px solid transparent" }}>
               <span style={{ fontSize: "17px", lineHeight: 1 }}>{t.icon}</span>
-              <span style={{ fontSize: "7px", fontFamily: "monospace", color: view === t.id ? GREEN : "#333", textTransform: "uppercase", letterSpacing: "0.5px" }}>{t.label}</span>
+              <span style={{ fontSize: "7px", fontFamily: "monospace", color: view === t.id ? GREEN : "#333", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center" }}>{t.label}</span>
             </button>
           ))}
         </div>
