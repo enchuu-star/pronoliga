@@ -292,19 +292,17 @@ function NavBar({ user, view, setView, onLogout }) {
   // Definimos el orden de las pestañas según el rol
   const tabs = user.role === "admin"
     ? [
-        { id: "groups", icon: "⚽", label: "Grupos" },
-        { id: "community", icon: "👥", label: "Todos" },
+        { id: "groups", icon: "⚽", label: "Grupos" }, 
+        { id: "community", icon: "👥", label: "Todos los pronósticos" }, 
         { id: "ranking", icon: "🏆", label: "Ranking" },
-        { id: "results", icon: "📊", label: "Resultados" },
-        { id: "games", icon: "🎮", label: "Juegos" },
+        { id: "results", icon: "📊", label: "Resultados" }, 
         { id: "admin", icon: "⚙️", label: "Admin" }
       ]
     : [
-        { id: "groups", icon: "⚽", label: "Grupos" },
-        { id: "community", icon: "👥", label: "Todos" },
+        { id: "groups", icon: "⚽", label: "Grupos" }, 
+        { id: "community", icon: "👥", label: "Todos los pronósticos" }, 
         { id: "ranking", icon: "🏆", label: "Ranking" },
-        { id: "results", icon: "📊", label: "Resultados" },
-        { id: "games", icon: "🎮", label: "Juegos" },
+        { id: "results", icon: "📊", label: "Resultados" }, 
         { id: "profile", icon: "👤", label: "Perfil" }
       ];
 
@@ -912,8 +910,11 @@ function AdminView({ matches, onDataChange }) {
   const [hr, setHr] = useState(""); const [ar, setAr] = useState("");
   const [saved, setSaved] = useState(false);
   const [closingAll, setClosingAll] = useState(false);
+  const [openingAll, setOpeningAll] = useState(false);
   const [allClosed, setAllClosed] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(null);
 
   useEffect(() => {
     setAllClosed(matches.length > 0 && matches.every(m => m.status === "closed"));
@@ -927,6 +928,14 @@ function AdminView({ matches, onDataChange }) {
     onDataChange();
   };
 
+  const openAll = async () => {
+    setOpeningAll(true);
+    const ids = matches.filter(m => m.status === "closed" && m.result_home === null).map(m => m.id);
+    for (const id of ids) await supabase.from("matches").update({ status: "open" }).eq("id", id);
+    setOpeningAll(false); setConfirmOpen(false);
+    onDataChange();
+  };
+
   const handleResult = async () => {
     if (hr === "" || ar === "") return;
     const rh = parseInt(hr), ra = parseInt(ar);
@@ -935,6 +944,13 @@ function AdminView({ matches, onDataChange }) {
     for (const pred of (preds || [])) await supabase.from("predictions").update({ points: calcPoints(pred, rh, ra) }).eq("id", pred.id);
     setSaved(true); setSel(null); setHr(""); setAr(""); onDataChange();
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const clearResult = async (matchId) => {
+    await supabase.from("matches").update({ result_home: null, result_away: null, status: "closed" }).eq("id", matchId);
+    const { data: preds } = await supabase.from("predictions").select("*").eq("match_id", matchId);
+    for (const pred of (preds || [])) await supabase.from("predictions").update({ points: null }).eq("id", pred.id);
+    setConfirmClear(null); onDataChange();
   };
 
   const toggleStatus = async m => {
@@ -947,7 +963,7 @@ function AdminView({ matches, onDataChange }) {
       <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "16px" }}>PANEL DE ADMINISTRACIÓN</p>
 
       {/* BOTÓN CERRAR TODO */}
-      <div style={{ background: CARD, border: "1px solid rgba(255,82,82,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+      <div style={{ background: CARD, border: "1px solid rgba(255,82,82,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
         <p style={{ fontSize: "10px", color: "#888", fontFamily: "monospace", marginBottom: "10px" }}>
           🔒 Cierra todos los pronósticos de golpe al inicio del torneo. Una vez cerrado, los usuarios no podrán modificar sus pronósticos.
         </p>
@@ -959,6 +975,20 @@ function AdminView({ matches, onDataChange }) {
               <button onClick={() => setConfirmClose(false)} style={{ padding: "12px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#555", fontFamily: "monospace", fontSize: "12px", cursor: "pointer" }}>Cancelar</button>
             </div>
             : <button onClick={() => setConfirmClose(true)} style={{ width: "100%", padding: "12px", border: "1px solid rgba(255,82,82,0.3)", borderRadius: "7px", background: "rgba(255,82,82,0.08)", color: "#ff5252", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700, letterSpacing: "2px" }}>🔒 CERRAR TODOS LOS PRONÓSTICOS</button>
+        }
+      </div>
+
+      {/* BOTÓN ABRIR TODO */}
+      <div style={{ background: CARD, border: "1px solid rgba(0,200,100,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+        <p style={{ fontSize: "10px", color: "#888", fontFamily: "monospace", marginBottom: "10px" }}>
+          🔓 Abre todos los partidos sin resultado para que los usuarios puedan hacer sus pronósticos.
+        </p>
+        {confirmOpen
+          ? <div style={{ display: "flex", gap: "8px" }}>
+            <button onClick={openAll} disabled={openingAll} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "7px", background: "#00c864", color: "#0a0a0a", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>{openingAll ? "Abriendo..." : "⚠️ SÍ, ABRIR TODO"}</button>
+            <button onClick={() => setConfirmOpen(false)} style={{ padding: "12px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#555", fontFamily: "monospace", fontSize: "12px", cursor: "pointer" }}>Cancelar</button>
+          </div>
+          : <button onClick={() => setConfirmOpen(true)} style={{ width: "100%", padding: "12px", border: "1px solid rgba(0,200,100,0.3)", borderRadius: "7px", background: "rgba(0,200,100,0.08)", color: "#00c864", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700, letterSpacing: "2px" }}>🔓 ABRIR TODOS LOS PRONÓSTICOS</button>
         }
       </div>
 
@@ -977,7 +1007,18 @@ function AdminView({ matches, onDataChange }) {
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               <span style={{ flex: 1, fontSize: "12px", color: "#777", fontFamily: "monospace", minWidth: "150px" }}>{ht.flag} {m.home} vs {at.flag} {m.away}</span>
               <span style={{ fontSize: "9px", fontFamily: "monospace", padding: "2px 7px", borderRadius: "8px", background: m.status === "open" ? "rgba(0,200,100,0.08)" : "rgba(255,100,50,0.08)", color: m.status === "open" ? "#00c864" : "#ff6432" }}>{m.status === "open" ? "ABIERTO" : "CERRADO"}</span>
-              {m.result_home !== null && <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{m.result_home}-{m.result_away}</span>}
+              {m.result_home !== null && (
+                confirmClear === m.id
+                  ? <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                    <span style={{ fontSize: "9px", color: "#ff5252", fontFamily: "monospace" }}>¿Borrar resultado?</span>
+                    <button onClick={() => clearResult(m.id)} style={{ padding: "3px 8px", border: "none", borderRadius: "4px", background: "#ff5252", color: "white", cursor: "pointer", fontSize: "9px", fontFamily: "monospace", fontWeight: 700 }}>Sí</button>
+                    <button onClick={() => setConfirmClear(null)} style={{ padding: "3px 8px", border: `1px solid ${BORDER}`, borderRadius: "4px", background: "transparent", color: "#aaa", cursor: "pointer", fontSize: "9px", fontFamily: "monospace" }}>No</button>
+                  </div>
+                  : <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{m.result_home}-{m.result_away}</span>
+                    <button onClick={() => setConfirmClear(m.id)} title="Borrar resultado" style={{ padding: "2px 6px", border: "1px solid rgba(255,82,82,0.3)", borderRadius: "4px", background: "rgba(255,82,82,0.08)", color: "#ff5252", cursor: "pointer", fontSize: "10px", fontFamily: "monospace" }}>✕</button>
+                  </div>
+              )}
               <button onClick={() => toggleStatus(m)} style={{ padding: "4px 10px", border: `1px solid ${BORDER}`, borderRadius: "5px", background: "transparent", color: "#aaa", cursor: "pointer", fontSize: "9px", fontFamily: "monospace" }}>{m.status === "open" ? "Cerrar" : "Reabrir"}</button>
               {sel === m.id
                 ? <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
@@ -996,860 +1037,6 @@ function AdminView({ matches, onDataChange }) {
     </div>
   );
 }
-
-// ============================================================
-// TRIVIAL MUNDIAL — PREGUNTAS
-// ============================================================
-const TRIVIA_QUESTIONS = [
-  { q: "¿Cuántos equipos participan en el Mundial 2026?", opts: ["32", "36", "48", "40"], a: 2 },
-  { q: "¿En qué países se celebra el Mundial 2026?", opts: ["USA y México", "USA, Canadá y México", "USA, Canadá y Brasil", "Canadá y México"], a: 1 },
-  { q: "¿Qué selección ha ganado más Mundiales?", opts: ["Alemania", "Argentina", "Brasil", "Italia"], a: 2 },
-  { q: "¿Cuántos Mundiales ha ganado Brasil?", opts: ["4", "5", "6", "3"], a: 1 },
-  { q: "¿Quién es el máximo goleador de la historia de los Mundiales?", opts: ["Ronaldo", "Miroslav Klose", "Pelé", "Gerd Müller"], a: 1 },
-  { q: "¿En qué año se celebró el primer Mundial de fútbol?", opts: ["1928", "1930", "1934", "1926"], a: 1 },
-  { q: "¿Dónde se jugó el primer Mundial de fútbol?", opts: ["Brasil", "Italia", "Uruguay", "Argentina"], a: 2 },
-  { q: "¿Qué jugador marcó el gol de la 'Mano de Dios'?", opts: ["Pelé", "Ronaldo", "Maradona", "Zidane"], a: 2 },
-  { q: "¿Cuántos goles marcó Miroslav Klose en Mundiales?", opts: ["14", "16", "15", "13"], a: 1 },
-  { q: "¿Qué país fue el anfitrión del Mundial 2022?", opts: ["Emiratos Árabes", "Arabia Saudí", "Qatar", "Bahréin"], a: 2 },
-  { q: "¿Qué selección ganó el Mundial 2022?", opts: ["Francia", "Brasil", "Argentina", "Croacia"], a: 2 },
-  { q: "¿Quién ganó el Balón de Oro del Mundial 2022?", opts: ["Mbappé", "Messi", "Modric", "Benzema"], a: 1 },
-  { q: "¿Cuántos goles marcó Mbappé en el Mundial 2022?", opts: ["6", "7", "8", "5"], a: 2 },
-  { q: "¿Qué estadio acogió la final del Mundial 2022?", opts: ["Al Thumama", "Lusail", "Al Bayt", "Education City"], a: 1 },
-  { q: "¿Cuántos Mundiales ha ganado Alemania?", opts: ["3", "4", "5", "2"], a: 1 },
-  { q: "¿Qué país ha organizado el Mundial más veces?", opts: ["Italia", "Francia", "México", "Brasil"], a: 2 },
-  { q: "¿Quién marcó hat-trick en la final del Mundial 1966?", opts: ["Charlton", "Hurst", "Moore", "Peters"], a: 1 },
-  { q: "¿Qué portero es conocido como 'La Araña Negra'?", opts: ["Oliver Kahn", "Buffon", "Lev Yashin", "Casillas"], a: 2 },
-  { q: "¿Cuántos equipos europeos han ganado el Mundial fuera de Europa?", opts: ["0", "1", "2", "3"], a: 0 },
-  { q: "¿En qué Mundial debutó Pelé con solo 17 años?", opts: ["1954", "1958", "1962", "1966"], a: 1 },
-  { q: "¿Qué selección ganó el primer Mundial en 1930?", opts: ["Argentina", "Uruguay", "Brasil", "USA"], a: 1 },
-  { q: "¿Cuántos Mundiales ha ganado España?", opts: ["0", "1", "2", "3"], a: 1 },
-  { q: "¿Qué jugador ganó el Balón de Oro en el Mundial 2018?", opts: ["Modric", "Mbappé", "Griezmann", "Hazard"], a: 0 },
-  { q: "¿Cuál es el resultado más goleador en la historia del Mundial?", opts: ["10-1", "11-0", "12-0", "9-0"], a: 2 },
-  { q: "¿Qué países coorganizaron el Mundial 2002?", opts: ["Japón y China", "Corea del Sur y Japón", "China y Corea del Sur", "Japón y Australia"], a: 1 },
-];
-
-// ============================================================
-// JUEGO TRIVIAL
-// ============================================================
-function TriviaGame({ user, onBack }) {
-  const [phase, setPhase] = useState("menu");
-  const [questions, setQuestions] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [score, setScore] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [answered, setAnswered] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(15);
-  const [rankings, setRankings] = useState([]);
-  const [loadingRank, setLoadingRank] = useState(false);
-  const timerRef = useRef(null);
-
-  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
-
-  const startGame = () => {
-    const qs = shuffle(TRIVIA_QUESTIONS).slice(0, 10);
-    setQuestions(qs); setCurrent(0); setScore(0); setSelected(null); setAnswered(false); setTimeLeft(15);
-    setPhase("playing");
-  };
-
-  useEffect(() => {
-    if (phase !== "playing") return;
-    if (answered) return;
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) { clearInterval(timerRef.current); handleAnswer(null); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timerRef.current);
-  }, [phase, current, answered]);
-
-  const handleAnswer = (idx) => {
-    if (answered) return;
-    clearInterval(timerRef.current);
-    setSelected(idx);
-    setAnswered(true);
-    const correct = idx === questions[current].a;
-    const pts = correct ? (timeLeft >= 10 ? 3 : timeLeft >= 5 ? 2 : 1) : 0;
-    setScore(s => s + pts);
-  };
-
-  const next = () => {
-    if (current + 1 >= questions.length) { finishGame(); }
-    else { setCurrent(c => c + 1); setSelected(null); setAnswered(false); setTimeLeft(15); }
-  };
-
-  const finishGame = async () => {
-    const finalScore = score;
-    setPhase("result");
-    await supabase.from("trivia_scores").insert({ user_id: user.id, score: finalScore });
-    loadRankings();
-  };
-
-  const loadRankings = async () => {
-    setLoadingRank(true);
-    const { data: scores } = await supabase.from("trivia_scores").select("*").order("score", { ascending: false }).limit(20);
-    const { data: profiles } = await supabase.from("profiles").select("*");
-    if (scores && profiles) {
-      const byUser = {};
-      scores.forEach(s => { if (!byUser[s.user_id] || s.score > byUser[s.user_id]) byUser[s.user_id] = s.score; });
-      const r = Object.entries(byUser).map(([uid, sc]) => ({ name: profiles.find(p => p.id === uid)?.name || "Usuario", score: sc })).sort((a, b) => b.score - a.score);
-      setRankings(r);
-    }
-    setLoadingRank(false);
-  };
-
-  useEffect(() => { if (phase === "menu") loadRankings(); }, [phase]);
-
-  const q = questions[current];
-  const medals = ["🥇", "🥈", "🥉"];
-
-  if (phase === "menu") return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#aaa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
-        <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px" }}>TRIVIAL MUNDIAL</p>
-      </div>
-      <div style={{ background: CARD, border: "1px solid rgba(0,230,118,0.15)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
-        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🧠</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#f0f0f0", letterSpacing: "3px", marginBottom: "8px" }}>TRIVIAL MUNDIAL 2026</div>
-        <p style={{ fontSize: "11px", color: "#888", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>10 preguntas · 15 segundos por pregunta<br/><span style={{ color: GREEN }}>+3</span> rápido · <span style={{ color: "#ffc107" }}>+2</span> normal · <span style={{ color: "#ff8a00" }}>+1</span> lento · <span style={{ color: "#ff5252" }}>+0</span> fallo</p>
-        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#00b0ff)`, color: "#0a0a0a", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
-      </div>
-      <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
-      {loadingRank ? <p style={{ color: "#999", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(0,230,118,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
-          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
-          <span style={{ flex: 1, fontFamily: "monospace", fontSize: "13px", color: "#f0f0f0" }}>{r.name}</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#f0f0f0" }}>{r.score}</span>
-          <span style={{ fontSize: "9px", color: "#999", fontFamily: "monospace" }}>PTS</span>
-        </div>
-      ))}
-    </div>
-  );
-
-  if (phase === "playing" && q) return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-        <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#999" }}>Pregunta {current + 1}/10</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{score} PTS</span>
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: `3px solid ${timeLeft > 8 ? GREEN : timeLeft > 4 ? "#ffc107" : "#ff5252"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: timeLeft > 8 ? GREEN : timeLeft > 4 ? "#ffc107" : "#ff5252" }}>{timeLeft}</span>
-          </div>
-        </div>
-      </div>
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(0,230,118,0.12)", borderRadius: "14px", padding: "20px", marginBottom: "14px" }}>
-        <div style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "3px", marginBottom: "16px", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${(current / 10) * 100}%`, background: GREEN, borderRadius: "3px" }} />
-        </div>
-        <p style={{ fontFamily: "monospace", fontSize: "14px", color: "#f0f0f0", lineHeight: 1.6, textAlign: "center" }}>{q.q}</p>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-        {q.opts.map((opt, i) => {
-          let bg = CARD, border = BORDER, color = "#ccc";
-          if (answered) {
-            if (i === q.a) { bg = GREEN_DIM; border = "rgba(0,230,118,0.5)"; color = GREEN; }
-            else if (i === selected) { bg = "rgba(255,82,82,0.1)"; border = "rgba(255,82,82,0.4)"; color = "#ff5252"; }
-          }
-          return (
-            <button key={i} onClick={() => handleAnswer(i)} disabled={answered} style={{ padding: "14px 10px", border: `1px solid ${border}`, borderRadius: "10px", background: bg, color, fontFamily: "monospace", fontSize: "12px", cursor: answered ? "default" : "pointer", textAlign: "left", lineHeight: 1.4 }}>
-              <span style={{ color: "#555", marginRight: "6px" }}>{["A", "B", "C", "D"][i]}.</span>{opt}
-            </button>
-          );
-        })}
-      </div>
-      {answered && (
-        <div style={{ marginTop: "14px", textAlign: "center" }}>
-          {selected === q.a ? <p style={{ color: GREEN, fontFamily: "monospace", fontSize: "13px", marginBottom: "12px" }}>✓ ¡Correcto! +{timeLeft >= 10 ? 3 : timeLeft >= 5 ? 2 : 1} pts</p> : <p style={{ color: "#ff5252", fontFamily: "monospace", fontSize: "13px", marginBottom: "12px" }}>✗ Era: {q.opts[q.a]}</p>}
-          <button onClick={next} style={{ padding: "12px 32px", border: "none", borderRadius: "9px", background: GREEN, color: "#0a0a0a", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>{current + 1 >= questions.length ? "VER RESULTADO" : "SIGUIENTE →"}</button>
-        </div>
-      )}
-    </div>
-  );
-
-  if (phase === "result") return (
-    <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
-      <button onClick={() => setPhase("menu")} style={{ marginBottom: "20px", padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#aaa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
-      <div style={{ background: CARD, border: "1px solid rgba(0,230,118,0.15)", borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
-        <div style={{ fontSize: "44px", marginBottom: "10px" }}>{score >= 25 ? "🏆" : score >= 15 ? "⚽" : "😅"}</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#999", letterSpacing: "3px" }}>TU PUNTUACIÓN</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: GREEN, lineHeight: 1 }}>{score}</div>
-        <div style={{ fontFamily: "monospace", fontSize: "11px", color: "#888", marginTop: "4px" }}>de 30 posibles</div>
-        <p style={{ marginTop: "14px", fontSize: "12px", color: "#aaa", fontFamily: "monospace" }}>{score >= 25 ? "¡Crack del balón! 🔥" : score >= 15 ? "Buen nivel futbolero ⚽" : "A repasar el mundial 😅"}</p>
-      </div>
-      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#00b0ff)`, color: "#0a0a0a", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
-      <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
-      {loadingRank ? <p style={{ color: "#999", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(0,230,118,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
-          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
-          <span style={{ flex: 1, fontFamily: "monospace", fontSize: "13px", color: "#f0f0f0" }}>{r.name}</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#f0f0f0" }}>{r.score}</span>
-          <span style={{ fontSize: "9px", color: "#999", fontFamily: "monospace" }}>PTS</span>
-        </div>
-      ))}
-    </div>
-  );
-  return null;
-}
-
-// ============================================================
-// FLAPPY BALÓN
-// ============================================================
-function FlappyGame({ user, onBack }) {
-  const canvasRef = useRef(null);
-  const stateRef = useRef(null);
-  const rafRef = useRef(null);
-  const [phase, setPhase] = useState("menu");
-  const [score, setScore] = useState(0);
-  const [bestScore, setBestScore] = useState(0);
-  const [rankings, setRankings] = useState([]);
-  const [loadingRank, setLoadingRank] = useState(false);
-
-  const W = 360, H = 500;
-  const BALL_X = 80, GRAVITY = 0.45, JUMP = -8, PIPE_W = 52, GAP = 150, PIPE_SPEED = 2.8;
-  const FLAGS = ["🇧🇷","🇩🇪","🇪🇸","🇫🇷","🇦🇷","🇵🇹","🇳🇱","🇧🇪","🇮🇹","🇲🇽","🇦🇺","🇯🇵","🇰🇷","🇺🇸","🇨🇦","🇳🇴","🇸🇳","🇨🇴","🇺🇾","🇭🇷"];
-
-  const initState = () => ({ ballY: H / 2, ballVY: 0, pipes: [], frame: 0, score: 0, alive: true });
-  const jump = () => { if (stateRef.current?.alive) stateRef.current.ballVY = JUMP; };
-  const startGame = () => { stateRef.current = initState(); setScore(0); setPhase("playing"); };
-
-  useEffect(() => {
-    if (phase !== "playing") return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const draw = () => {
-      const s = stateRef.current;
-      if (!s) return;
-      s.ballVY += GRAVITY; s.ballY += s.ballVY; s.frame++;
-      if (s.frame % 90 === 0) {
-        const gapY = 100 + Math.random() * (H - GAP - 180);
-        s.pipes.push({ x: W + 10, gapY, flag: FLAGS[Math.floor(Math.random() * FLAGS.length)], scored: false });
-      }
-      s.pipes = s.pipes.filter(p => p.x > -PIPE_W - 10);
-      s.pipes.forEach(p => { p.x -= PIPE_SPEED; if (!p.scored && p.x + PIPE_W < BALL_X) { p.scored = true; s.score++; setScore(s.score); } });
-      const br = 16;
-      if (s.ballY - br < 0 || s.ballY + br > H) { endGame(); return; }
-      for (const p of s.pipes) {
-        if (BALL_X + br > p.x && BALL_X - br < p.x + PIPE_W) {
-          if (s.ballY - br < p.gapY || s.ballY + br > p.gapY + GAP) { endGame(); return; }
-        }
-      }
-      ctx.clearRect(0, 0, W, H);
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-      bgGrad.addColorStop(0, "#0a0a1a"); bgGrad.addColorStop(1, "#0a1a0a");
-      ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = "rgba(255,255,255,0.4)";
-      for (let i = 0; i < 30; i++) { const sx = ((i * 137 + s.frame * 0.3) % W); const sy = (i * 53) % H; ctx.beginPath(); ctx.arc(sx, sy, 1, 0, Math.PI * 2); ctx.fill(); }
-      ctx.fillStyle = "#1a3a1a"; ctx.fillRect(0, H - 20, W, 20);
-      ctx.fillStyle = "#00e676"; ctx.fillRect(0, H - 22, W, 3);
-      s.pipes.forEach(p => {
-        const grad = ctx.createLinearGradient(p.x, 0, p.x + PIPE_W, 0);
-        grad.addColorStop(0, "#1a4a1a"); grad.addColorStop(0.5, "#2a6a2a"); grad.addColorStop(1, "#1a4a1a");
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.roundRect(p.x, 0, PIPE_W, p.gapY - 6, [0, 0, 8, 8]); ctx.fill();
-        ctx.fillStyle = "#00e676"; ctx.fillRect(p.x - 4, p.gapY - 18, PIPE_W + 8, 12);
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.roundRect(p.x, p.gapY + GAP + 6, PIPE_W, H - (p.gapY + GAP + 6), [8, 8, 0, 0]); ctx.fill();
-        ctx.fillStyle = "#00e676"; ctx.fillRect(p.x - 4, p.gapY + GAP + 6, PIPE_W + 8, 12);
-        ctx.font = "20px serif"; ctx.textAlign = "center"; ctx.fillText(p.flag, p.x + PIPE_W / 2, p.gapY + GAP / 2 + 7);
-      });
-      ctx.save(); ctx.translate(BALL_X, s.ballY); ctx.rotate(s.frame * 0.08);
-      ctx.font = "32px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⚽", 0, 0); ctx.restore();
-      ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.beginPath(); ctx.roundRect(W/2 - 36, 14, 72, 32, 8); ctx.fill();
-      ctx.fillStyle = "#00e676"; ctx.font = "bold 20px 'Courier New'"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(s.score, W / 2, 30);
-      rafRef.current = requestAnimationFrame(draw);
-    };
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [phase]);
-
-  const endGame = async () => {
-    const finalScore = stateRef.current?.score || 0;
-    cancelAnimationFrame(rafRef.current);
-    setScore(finalScore); setBestScore(b => Math.max(b, finalScore));
-    stateRef.current = null; setPhase("dead");
-    await supabase.from("flappy_scores").insert({ user_id: user.id, score: finalScore });
-    loadRankings();
-  };
-
-  const loadRankings = async () => {
-    setLoadingRank(true);
-    const { data: scores } = await supabase.from("flappy_scores").select("*").order("score", { ascending: false });
-    const { data: profiles } = await supabase.from("profiles").select("*");
-    if (scores && profiles) {
-      const byUser = {};
-      scores.forEach(s => { if (!byUser[s.user_id] || s.score > byUser[s.user_id]) byUser[s.user_id] = s.score; });
-      const r = Object.entries(byUser).map(([uid, sc]) => ({ name: profiles.find(p => p.id === uid)?.name || "Usuario", score: sc })).sort((a, b) => b.score - a.score);
-      setRankings(r);
-    }
-    setLoadingRank(false);
-  };
-
-  useEffect(() => { if (phase === "menu") loadRankings(); }, [phase]);
-  const medals = ["🥇", "🥈", "🥉"];
-  const handleTap = () => { if (phase === "playing") jump(); else if (phase === "dead") startGame(); };
-
-  return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#aaa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
-        <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px" }}>FLAPPY BALÓN</p>
-      </div>
-      {phase === "menu" && (
-        <div style={{ textAlign: "center", marginBottom: "20px" }}>
-          <div style={{ background: CARD, border: "1px solid rgba(0,230,118,0.15)", borderRadius: "14px", padding: "24px", marginBottom: "20px" }}>
-            <div style={{ fontSize: "52px", marginBottom: "10px" }}>⚽</div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#f0f0f0", letterSpacing: "3px", marginBottom: "8px" }}>FLAPPY BALÓN</div>
-            <p style={{ fontSize: "11px", color: "#888", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>Esquiva las porterías · Toca para saltar</p>
-            <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#00b0ff)`, color: "#0a0a0a", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
-          </div>
-          <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FLAPPY</p>
-          {loadingRank ? <p style={{ color: "#999", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(0,230,118,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
-              <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
-              <span style={{ flex: 1, fontFamily: "monospace", fontSize: "13px", color: "#f0f0f0" }}>{r.name}</span>
-              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#f0f0f0" }}>{r.score}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {(phase === "playing" || phase === "dead") && (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ position: "relative", borderRadius: "14px", overflow: "hidden", border: `1px solid ${BORDER}`, cursor: "pointer", userSelect: "none" }}
-            onClick={handleTap} onTouchStart={e => { e.preventDefault(); handleTap(); }}>
-            <canvas ref={canvasRef} width={W} height={H} style={{ display: "block", maxWidth: "100%" }} />
-            {phase === "dead" && (
-              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px" }}>
-                <div style={{ fontSize: "40px" }}>💥</div>
-                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#f0f0f0", letterSpacing: "3px" }}>GAME OVER</div>
-                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: GREEN, lineHeight: 1 }}>{score}</div>
-                <div style={{ padding: "12px 28px", background: GREEN, color: "#0a0a0a", borderRadius: "9px", fontFamily: "monospace", fontSize: "12px", fontWeight: 800 }}>TOCA PARA REPETIR</div>
-              </div>
-            )}
-          </div>
-          {phase === "playing" && <p style={{ fontSize: "10px", color: "#888", fontFamily: "monospace", marginTop: "10px" }}>Toca la pantalla o haz clic para saltar</p>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================
-// ADIVINA LA BANDERA
-// ============================================================
-const FLAG_COUNTRIES = [
-  { name: "México", flag: "🇲🇽" }, { name: "Corea del Sur", flag: "🇰🇷" }, { name: "Sudáfrica", flag: "🇿🇦" },
-  { name: "Canadá", flag: "🇨🇦" }, { name: "Suiza", flag: "🇨🇭" }, { name: "Qatar", flag: "🇶🇦" },
-  { name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" }, { name: "Haití", flag: "🇭🇹" },
-  { name: "Estados Unidos", flag: "🇺🇸" }, { name: "Paraguay", flag: "🇵🇾" }, { name: "Australia", flag: "🇦🇺" },
-  { name: "Alemania", flag: "🇩🇪" }, { name: "Ecuador", flag: "🇪🇨" }, { name: "Costa de Marfil", flag: "🇨🇮" }, { name: "Curazao", flag: "🇨🇼" },
-  { name: "Países Bajos", flag: "🇳🇱" }, { name: "Japón", flag: "🇯🇵" }, { name: "Túnez", flag: "🇹🇳" },
-  { name: "Bélgica", flag: "🇧🇪" }, { name: "Egipto", flag: "🇪🇬" }, { name: "Irán", flag: "🇮🇷" }, { name: "Nueva Zelanda", flag: "🇳🇿" },
-  { name: "España", flag: "🇪🇸" }, { name: "Cabo Verde", flag: "🇨🇻" }, { name: "Arabia Saudí", flag: "🇸🇦" }, { name: "Uruguay", flag: "🇺🇾" },
-  { name: "Francia", flag: "🇫🇷" }, { name: "Senegal", flag: "🇸🇳" }, { name: "Noruega", flag: "🇳🇴" },
-  { name: "Argentina", flag: "🇦🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Argelia", flag: "🇩🇿" },
-  { name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "Jordania", flag: "🇯🇴" },
-  { name: "Portugal", flag: "🇵🇹" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Ghana", flag: "🇬🇭" }, { name: "Austria", flag: "🇦🇹" },
-];
-
-function FlagsGame({ user, onBack }) {
-  const [phase, setPhase] = useState("menu");
-  const [questions, setQuestions] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [score, setScore] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [answered, setAnswered] = useState(false);
-  const [streak, setStreak] = useState(0);
-  const [rankings, setRankings] = useState([]);
-  const [loadingRank, setLoadingRank] = useState(false);
-
-  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
-
-  const buildQuestions = () => {
-    const pool = shuffle([...FLAG_COUNTRIES]);
-    return pool.slice(0, 15).map(correct => {
-      const wrong = shuffle(FLAG_COUNTRIES.filter(c => c.name !== correct.name)).slice(0, 3);
-      return { correct, opts: shuffle([correct, ...wrong]) };
-    });
-  };
-
-  const startGame = () => {
-    setQuestions(buildQuestions());
-    setCurrent(0); setScore(0); setSelected(null); setAnswered(false); setStreak(0);
-    setPhase("playing");
-  };
-
-  const handleAnswer = (name) => {
-    if (answered) return;
-    setSelected(name);
-    setAnswered(true);
-    const isCorrect = name === questions[current].correct.name;
-    if (isCorrect) {
-      const newStreak = streak + 1;
-      setStreak(newStreak);
-      setScore(s => s + (newStreak >= 3 ? 2 : 1));
-    } else {
-      setStreak(0);
-    }
-  };
-
-  const next = async () => {
-    if (current + 1 >= questions.length) {
-      setPhase("result");
-      await supabase.from("flags_scores").insert({ user_id: user.id, score });
-      loadRankings();
-    } else {
-      setCurrent(c => c + 1); setSelected(null); setAnswered(false);
-    }
-  };
-
-  const loadRankings = async () => {
-    setLoadingRank(true);
-    const { data: scores } = await supabase.from("flags_scores").select("*").order("score", { ascending: false });
-    const { data: profiles } = await supabase.from("profiles").select("*");
-    if (scores && profiles) {
-      const byUser = {};
-      scores.forEach(s => { if (!byUser[s.user_id] || s.score > byUser[s.user_id]) byUser[s.user_id] = s.score; });
-      const r = Object.entries(byUser).map(([uid, sc]) => ({ name: profiles.find(p => p.id === uid)?.name || "Usuario", score: sc })).sort((a, b) => b.score - a.score);
-      setRankings(r);
-    }
-    setLoadingRank(false);
-  };
-
-  useEffect(() => { if (phase === "menu") loadRankings(); }, [phase]);
-  const medals = ["🥇", "🥈", "🥉"];
-  const q = questions[current];
-
-  if (phase === "menu") return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#aaa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
-        <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px" }}>ADIVINA LA BANDERA</p>
-      </div>
-      <div style={{ background: CARD, border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
-        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🌍</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#f0f0f0", letterSpacing: "3px", marginBottom: "8px" }}>ADIVINA LA BANDERA</div>
-        <p style={{ fontSize: "11px", color: "#888", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>15 banderas del Mundial 2026<br/><span style={{ color: GREEN }}>+1</span> acierto · <span style={{ color: "#ffc107" }}>+2</span> con racha de 3 seguidas 🔥</p>
-        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#ffc107,#ff8a00)", color: "#0a0a0a", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
-      </div>
-      <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
-      {loadingRank ? <p style={{ color: "#999", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(255,193,7,0.1)" : CARD, border: i === 0 ? "1px solid rgba(255,193,7,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
-          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
-          <span style={{ flex: 1, fontFamily: "monospace", fontSize: "13px", color: "#f0f0f0" }}>{r.name}</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? "#ffc107" : "#f0f0f0" }}>{r.score}</span>
-          <span style={{ fontSize: "9px", color: "#999", fontFamily: "monospace" }}>PTS</span>
-        </div>
-      ))}
-    </div>
-  );
-
-  if (phase === "playing" && q) return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-        <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#999" }}>{current + 1}/15</span>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {streak >= 2 && <span style={{ fontSize: "10px", fontFamily: "monospace", color: "#ffc107" }}>🔥 ×{streak}</span>}
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#ffc107" }}>{score} PTS</span>
-        </div>
-      </div>
-      <div style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "3px", marginBottom: "24px", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${(current / 15) * 100}%`, background: "#ffc107", borderRadius: "3px" }} />
-      </div>
-      <div style={{ textAlign: "center", marginBottom: "28px" }}>
-        <div style={{ fontSize: "96px", lineHeight: 1, marginBottom: "12px" }}>{q.correct.flag}</div>
-        <p style={{ fontSize: "12px", color: "#666", fontFamily: "monospace" }}>¿De qué país es esta bandera?</p>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-        {q.opts.map(opt => {
-          let bg = CARD, border = BORDER, color = "#ccc";
-          if (answered) {
-            if (opt.name === q.correct.name) { bg = GREEN_DIM; border = "rgba(0,230,118,0.5)"; color = GREEN; }
-            else if (opt.name === selected) { bg = "rgba(255,82,82,0.1)"; border = "rgba(255,82,82,0.4)"; color = "#ff5252"; }
-          }
-          return (
-            <button key={opt.name} onClick={() => handleAnswer(opt.name)} disabled={answered}
-              style={{ padding: "14px 10px", border: `1px solid ${border}`, borderRadius: "10px", background: bg, color, fontFamily: "monospace", fontSize: "12px", cursor: answered ? "default" : "pointer", textAlign: "center" }}>
-              {opt.name}
-            </button>
-          );
-        })}
-      </div>
-      {answered && (
-        <div style={{ marginTop: "14px", textAlign: "center" }}>
-          {selected === q.correct.name
-            ? <p style={{ color: GREEN, fontFamily: "monospace", fontSize: "13px", marginBottom: "12px" }}>✓ ¡Correcto! {streak >= 3 ? "+2 🔥 RACHA!" : "+1"}</p>
-            : <p style={{ color: "#ff5252", fontFamily: "monospace", fontSize: "13px", marginBottom: "12px" }}>✗ Era {q.correct.name}</p>}
-          <button onClick={next} style={{ padding: "12px 32px", border: "none", borderRadius: "9px", background: "#ffc107", color: "#0a0a0a", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>{current + 1 >= questions.length ? "VER RESULTADO" : "SIGUIENTE →"}</button>
-        </div>
-      )}
-    </div>
-  );
-
-  if (phase === "result") return (
-    <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
-      <button onClick={() => setPhase("menu")} style={{ marginBottom: "20px", padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#aaa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
-      <div style={{ background: CARD, border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
-        <div style={{ fontSize: "44px", marginBottom: "10px" }}>{score >= 20 ? "🏆" : score >= 12 ? "🌍" : "😅"}</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#999", letterSpacing: "3px" }}>TU PUNTUACIÓN</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: "#ffc107", lineHeight: 1 }}>{score}</div>
-        <p style={{ marginTop: "10px", fontSize: "12px", color: "#aaa", fontFamily: "monospace" }}>{score >= 20 ? "¡Experto en geografía! 🌍" : score >= 12 ? "Buen conocimiento ⚽" : "A practicar geografía 😅"}</p>
-      </div>
-      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#ffc107,#ff8a00)", color: "#0a0a0a", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
-      <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
-      {loadingRank ? <p style={{ color: "#999", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(255,193,7,0.1)" : CARD, border: i === 0 ? "1px solid rgba(255,193,7,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
-          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
-          <span style={{ flex: 1, fontFamily: "monospace", fontSize: "13px", color: "#f0f0f0" }}>{r.name}</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? "#ffc107" : "#f0f0f0" }}>{r.score}</span>
-          <span style={{ fontSize: "9px", color: "#999", fontFamily: "monospace" }}>PTS</span>
-        </div>
-      ))}
-    </div>
-  );
-  return null;
-}
-
-// ============================================================
-// PENALTIS EN TIEMPO REAL
-// ============================================================
-// Tabla Supabase necesaria:
-// create table penalty_rooms (
-//   id uuid default gen_random_uuid() primary key,
-//   code text unique not null,
-//   player1_id uuid references profiles(id),
-//   player1_name text,
-//   player2_id uuid references profiles(id),
-//   player2_name text,
-//   status text default 'waiting',
-//   current_round int default 1,
-//   current_shooter text default 'p1',
-//   p1_shots jsonb default '[]',
-//   p2_shots jsonb default '[]',
-//   p1_score int default 0,
-//   p2_score int default 0,
-//   p1_turn_choice jsonb,
-//   p2_turn_choice jsonb,
-//   created_at timestamptz default now()
-// );
-
-const PENALTY_DIRS = ["⬅️ Izq", "⬆️ Centro", "➡️ Der"];
-
-function PenaltyGame({ user, onBack }) {
-  const [phase, setPhase] = useState("lobby");
-  const [roomCode, setRoomCode] = useState("");
-  const [inputCode, setInputCode] = useState("");
-  const [room, setRoom] = useState(null);
-  const [myRole, setMyRole] = useState(null);
-  const [shootDir, setShootDir] = useState(null);
-  const [saveDir, setSaveDir] = useState(null);
-  const [waitingForOther, setWaitingForOther] = useState(false);
-  const [roundResult, setRoundResult] = useState(null);
-  const [error, setError] = useState("");
-  const channelRef = useRef(null);
-  const roomIdRef = useRef(null);
-  const myRoleRef = useRef(null);
-
-  useEffect(() => { myRoleRef.current = myRole; }, [myRole]);
-
-  const subscribeRoom = (roomId) => {
-    if (channelRef.current) channelRef.current.unsubscribe();
-    channelRef.current = supabase
-      .channel(`penalty_room_${roomId}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "penalty_rooms", filter: `id=eq.${roomId}` },
-        payload => {
-          const r = payload.new;
-          setRoom(r);
-          if (r.status === "playing") setPhase("playing");
-          if (r.status === "finished") setPhase("finished");
-          if (r.p1_turn_choice && r.p2_turn_choice && r.status === "playing" && myRoleRef.current === "p1") {
-            resolveRound(r);
-          }
-        })
-      .subscribe();
-  };
-
-  useEffect(() => { return () => { if (channelRef.current) channelRef.current.unsubscribe(); }; }, []);
-
-  const createRoom = async () => {
-    setError("");
-    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-    const { data, error: err } = await supabase.from("penalty_rooms").insert({
-      code, player1_id: user.id, player1_name: user.name,
-      status: "waiting", current_round: 1, current_shooter: "p1",
-      p1_shots: [], p2_shots: [], p1_score: 0, p2_score: 0,
-    }).select().single();
-    if (err) { setError("Error al crear sala: " + err.message); return; }
-    setRoomCode(code); setMyRole("p1"); setRoom(data);
-    roomIdRef.current = data.id;
-    subscribeRoom(data.id);
-    setPhase("waiting");
-  };
-
-  const joinRoom = async () => {
-    setError("");
-    if (!inputCode.trim()) return;
-    const { data, error: err } = await supabase.from("penalty_rooms")
-      .select("*").eq("code", inputCode.trim().toUpperCase()).eq("status", "waiting").single();
-    if (err || !data) { setError("Sala no encontrada o ya en curso"); return; }
-    if (data.player1_id === user.id) { setError("No puedes unirte a tu propia sala"); return; }
-    const { data: updated, error: err2 } = await supabase.from("penalty_rooms")
-      .update({ player2_id: user.id, player2_name: user.name, status: "playing" })
-      .eq("id", data.id).select().single();
-    if (err2) { setError("Error al unirse"); return; }
-    setMyRole("p2"); setRoom(updated);
-    roomIdRef.current = updated.id;
-    subscribeRoom(updated.id);
-    setPhase("playing");
-  };
-
-  const submitTurn = async () => {
-    if (!shootDir || !saveDir) return;
-    setWaitingForOther(true);
-    const field = myRole === "p1" ? "p1_turn_choice" : "p2_turn_choice";
-    await supabase.from("penalty_rooms")
-      .update({ [field]: JSON.stringify({ shoot: shootDir, save: saveDir }) })
-      .eq("id", roomIdRef.current);
-  };
-
-  const resolveRound = async (r) => {
-    try {
-      const p1c = typeof r.p1_turn_choice === "string" ? JSON.parse(r.p1_turn_choice) : r.p1_turn_choice;
-      const p2c = typeof r.p2_turn_choice === "string" ? JSON.parse(r.p2_turn_choice) : r.p2_turn_choice;
-      const shooter = r.current_shooter;
-      const shootChoice = shooter === "p1" ? p1c.shoot : p2c.shoot;
-      const saveChoice = shooter === "p1" ? p2c.save : p1c.save;
-      const scored = shootChoice !== saveChoice;
-      const shooterName = shooter === "p1" ? r.player1_name : r.player2_name;
-
-      const newP1Score = r.p1_score + (shooter === "p1" && scored ? 1 : 0);
-      const newP2Score = r.p2_score + (shooter === "p2" && scored ? 1 : 0);
-
-      const p1Shots = Array.isArray(r.p1_shots) ? [...r.p1_shots] : [];
-      const p2Shots = Array.isArray(r.p2_shots) ? [...r.p2_shots] : [];
-      if (shooter === "p1") p1Shots.push({ shoot: p1c.shoot, save: p2c.save, scored });
-      else p2Shots.push({ shoot: p2c.shoot, save: p1c.save, scored });
-
-      let nextShooter = shooter === "p1" ? "p2" : "p1";
-      let nextRound = r.current_round;
-      if (nextShooter === "p1") nextRound += 1;
-
-      const totalShots = p1Shots.length + p2Shots.length;
-      const nextStatus = totalShots >= 10 ? "finished" : "playing";
-
-      await supabase.from("penalty_rooms").update({
-        p1_score: newP1Score, p2_score: newP2Score,
-        current_round: Math.min(nextRound, 5),
-        current_shooter: nextShooter,
-        status: nextStatus,
-        p1_shots: p1Shots, p2_shots: p2Shots,
-        p1_turn_choice: null, p2_turn_choice: null,
-      }).eq("id", r.id);
-
-      setRoundResult({ scored, shooterName, shootChoice, saveChoice });
-      setShootDir(null); setSaveDir(null); setWaitingForOther(false);
-      setTimeout(() => setRoundResult(null), 2500);
-    } catch (e) { console.error("resolveRound error", e); }
-  };
-
-  const myScore = room ? (myRole === "p1" ? room.p1_score : room.p2_score) : 0;
-  const theirScore = room ? (myRole === "p1" ? room.p2_score : room.p1_score) : 0;
-  const theirName = room ? (myRole === "p1" ? room.player2_name : room.player1_name) : "";
-  const amIShooter = room && room.current_shooter === myRole;
-  const myShots = room ? (myRole === "p1" ? (Array.isArray(room.p1_shots) ? room.p1_shots : []) : (Array.isArray(room.p2_shots) ? room.p2_shots : [])) : [];
-  const theirShots = room ? (myRole === "p1" ? (Array.isArray(room.p2_shots) ? room.p2_shots : []) : (Array.isArray(room.p1_shots) ? room.p1_shots : [])) : [];
-
-  const btnSt = (sel, val) => ({
-    flex: 1, padding: "14px 4px", border: `1px solid ${sel === val ? GREEN : BORDER}`,
-    borderRadius: "10px", background: sel === val ? GREEN_DIM : CARD,
-    color: sel === val ? GREEN : "#888", fontFamily: "monospace", fontSize: "11px",
-    cursor: "pointer", textAlign: "center",
-  });
-
-  if (phase === "lobby") return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#aaa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
-        <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px" }}>PENALTIS</p>
-      </div>
-      <div style={{ background: CARD, border: "1px solid rgba(255,82,82,0.2)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
-        <div style={{ fontSize: "52px", marginBottom: "10px" }}>🥅</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#f0f0f0", letterSpacing: "3px", marginBottom: "8px" }}>PENALTIS 1v1</div>
-        <p style={{ fontSize: "11px", color: "#888", fontFamily: "monospace", lineHeight: 1.8 }}>Multijugador en tiempo real · 5 penaltis cada uno<br/>Elige disparo y parada simultáneamente</p>
-      </div>
-      {error && <p style={{ color: "#ff5252", fontFamily: "monospace", fontSize: "12px", marginBottom: "12px", textAlign: "center" }}>⚠ {error}</p>}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <button onClick={createRoom} style={{ padding: "20px", border: "1px solid rgba(0,230,118,0.3)", borderRadius: "12px", background: GREEN_DIM, color: GREEN, fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>
-          ➕ CREAR SALA
-        </button>
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "14px" }}>
-          <p style={{ fontSize: "9px", color: "#aaa", fontFamily: "monospace", marginBottom: "8px", letterSpacing: "2px" }}>UNIRSE CON CÓDIGO</p>
-          <input value={inputCode} onChange={e => setInputCode(e.target.value.toUpperCase())} placeholder="XXXXX" maxLength={5}
-            style={{ width: "100%", padding: "10px", marginBottom: "8px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "rgba(0,0,0,0.4)", color: "#f0f0f0", fontSize: "18px", fontFamily: "'Bebas Neue', monospace", letterSpacing: "4px", textAlign: "center", outline: "none" }} />
-          <button onClick={joinRoom} style={{ width: "100%", padding: "10px", border: "none", borderRadius: "7px", background: GREEN, color: "#0a0a0a", fontFamily: "monospace", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>UNIRSE</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (phase === "waiting") return (
-    <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center", padding: "40px 0" }}>
-      <div style={{ fontSize: "52px", marginBottom: "16px" }}>⏳</div>
-      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#f0f0f0", marginBottom: "8px" }}>ESPERANDO RIVAL</div>
-      <p style={{ fontFamily: "monospace", fontSize: "12px", color: "#aaa", marginBottom: "24px" }}>Comparte este código:</p>
-      <div style={{ display: "inline-block", background: GREEN_DIM, border: `2px solid ${GREEN}`, borderRadius: "12px", padding: "16px 32px", marginBottom: "24px" }}>
-        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "42px", color: GREEN, letterSpacing: "8px" }}>{roomCode}</span>
-      </div>
-      <p style={{ fontFamily: "monospace", fontSize: "10px", color: "#555" }}>La partida comenzará automáticamente</p>
-      <button onClick={onBack} style={{ display: "block", margin: "24px auto 0", padding: "8px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#aaa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>Cancelar</button>
-    </div>
-  );
-
-  if (phase === "playing" && room) return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", marginBottom: "14px", alignItems: "center" }}>
-        <div style={{ background: GREEN_DIM, border: "1px solid rgba(0,230,118,0.3)", borderRadius: "10px", padding: "10px", textAlign: "center" }}>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "36px", color: GREEN }}>{myScore}</div>
-          <div style={{ fontSize: "9px", fontFamily: "monospace", color: "#888" }}>TÚ</div>
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "monospace", fontSize: "9px", color: "#555", marginBottom: "2px" }}>RONDA {room.current_round}/5</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#555" }}>VS</div>
-        </div>
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "10px", textAlign: "center" }}>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "36px", color: "#f0f0f0" }}>{theirScore}</div>
-          <div style={{ fontSize: "9px", fontFamily: "monospace", color: "#888" }}>{theirName?.split(" ")[0] || "Rival"}</div>
-        </div>
-      </div>
-
-      {roundResult && (
-        <div style={{ padding: "12px", background: roundResult.scored ? GREEN_DIM : "rgba(255,82,82,0.1)", border: `1px solid ${roundResult.scored ? "rgba(0,230,118,0.3)" : "rgba(255,82,82,0.3)"}`, borderRadius: "10px", textAlign: "center", marginBottom: "14px" }}>
-          <div style={{ fontSize: "28px", marginBottom: "4px" }}>{roundResult.scored ? "⚽" : "🧤"}</div>
-          <p style={{ fontFamily: "monospace", fontSize: "12px", color: roundResult.scored ? GREEN : "#ff5252" }}>
-            {roundResult.scored ? `¡GOL de ${roundResult.shooterName}!` : `¡Parada!`}
-          </p>
-        </div>
-      )}
-
-      {!roundResult && !waitingForOther && (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "14px", marginBottom: "12px" }}>
-          <p style={{ fontSize: "10px", color: amIShooter ? "#ffc107" : "#00b0ff", fontFamily: "monospace", letterSpacing: "1px", marginBottom: "12px", textAlign: "center" }}>
-            {amIShooter ? "⚽ TÚ DISPARAS — ¿a dónde?" : "🧤 TÚ PARAS — ¿a dónde te tiras?"}
-          </p>
-          <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
-            {PENALTY_DIRS.map(d => <button key={d} onClick={() => setShootDir(d)} style={btnSt(shootDir, d)}>{d}</button>)}
-          </div>
-          <p style={{ fontSize: "10px", color: amIShooter ? "#00b0ff" : "#ffc107", fontFamily: "monospace", letterSpacing: "1px", marginBottom: "10px", textAlign: "center" }}>
-            {amIShooter ? "🧤 ¿Dónde para tu rival?" : "⚽ ¿Dónde dispara tu rival?"}
-          </p>
-          <div style={{ display: "flex", gap: "6px", marginBottom: "14px" }}>
-            {PENALTY_DIRS.map(d => <button key={d} onClick={() => setSaveDir(d)} style={btnSt(saveDir, d)}>{d}</button>)}
-          </div>
-          <button onClick={submitTurn} disabled={!shootDir || !saveDir}
-            style={{ width: "100%", padding: "13px", border: "none", borderRadius: "9px", background: shootDir && saveDir ? `linear-gradient(135deg,${GREEN},#00b0ff)` : "#1a1a1a", color: shootDir && saveDir ? "#0a0a0a" : "#555", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: shootDir && saveDir ? "pointer" : "default", letterSpacing: "2px" }}>
-            ⚡ CONFIRMAR
-          </button>
-        </div>
-      )}
-
-      {waitingForOther && !roundResult && (
-        <div style={{ textAlign: "center", padding: "28px 0" }}>
-          <div style={{ fontSize: "32px", marginBottom: "8px", animation: "pulse 1.5s infinite" }}>⏳</div>
-          <p style={{ fontFamily: "monospace", fontSize: "12px", color: "#aaa" }}>Esperando a {theirName?.split(" ")[0] || "rival"}...</p>
-        </div>
-      )}
-
-      {(myShots.length > 0 || theirShots.length > 0) && (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "10px" }}>
-          <p style={{ fontSize: "9px", color: "#555", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "6px" }}>HISTORIAL</p>
-          <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "9px", color: "#555", fontFamily: "monospace", marginRight: "4px" }}>TÚ:</span>
-            {myShots.map((s, i) => <span key={i} style={{ fontSize: "16px" }}>{s.scored ? "⚽" : "❌"}</span>)}
-            <span style={{ color: "#333", margin: "0 8px", fontSize: "16px" }}>|</span>
-            <span style={{ fontSize: "9px", color: "#555", fontFamily: "monospace", marginRight: "4px" }}>RIVAL:</span>
-            {theirShots.map((s, i) => <span key={i} style={{ fontSize: "16px" }}>{s.scored ? "⚽" : "❌"}</span>)}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  if (phase === "finished" && room) {
-    const iWon = myScore > theirScore;
-    const draw = myScore === theirScore;
-    return (
-      <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
-        <div style={{ background: CARD, border: `1px solid ${iWon ? "rgba(0,230,118,0.3)" : draw ? BORDER : "rgba(255,82,82,0.2)"}`, borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
-          <div style={{ fontSize: "52px", marginBottom: "10px" }}>{iWon ? "🏆" : draw ? "🤝" : "😔"}</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: iWon ? GREEN : draw ? "#aaa" : "#ff5252", letterSpacing: "3px", marginBottom: "16px" }}>
-            {iWon ? "¡GANASTE!" : draw ? "EMPATE" : "PERDISTE"}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", alignItems: "center" }}>
-            <div>
-              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: GREEN }}>{myScore}</div>
-              <div style={{ fontSize: "10px", color: "#888", fontFamily: "monospace" }}>TÚ</div>
-            </div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#555" }}>VS</div>
-            <div>
-              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: "#f0f0f0" }}>{theirScore}</div>
-              <div style={{ fontSize: "10px", color: "#888", fontFamily: "monospace" }}>{theirName?.split(" ")[0] || "Rival"}</div>
-            </div>
-          </div>
-          <div style={{ marginTop: "16px", display: "flex", justifyContent: "center", gap: "8px" }}>
-            {myShots.map((s, i) => <span key={i} style={{ fontSize: "18px" }}>{s.scored ? "⚽" : "❌"}</span>)}
-          </div>
-        </div>
-        <button onClick={() => { setPhase("lobby"); setRoom(null); setMyRole(null); setShootDir(null); setSaveDir(null); setRoundResult(null); setWaitingForOther(false); }}
-          style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#00b0ff)`, color: "#0a0a0a", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>
-          🔄 NUEVA PARTIDA
-        </button>
-      </div>
-    );
-  }
-  return null;
-}
-
-// ============================================================
-// VISTA JUEGOS
-// ============================================================
-function GamesView({ user }) {
-  const [game, setGame] = useState(null);
-
-  if (game === "trivia") return <TriviaGame user={user} onBack={() => setGame(null)} />;
-  if (game === "flappy") return <FlappyGame user={user} onBack={() => setGame(null)} />;
-  if (game === "flags") return <FlagsGame user={user} onBack={() => setGame(null)} />;
-  if (game === "penalty") return <PenaltyGame user={user} onBack={() => setGame(null)} />;
-
-  return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "20px" }}>ZONA DE JUEGOS</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <button onClick={() => setGame("trivia")} style={{ padding: "20px 12px", border: "1px solid rgba(0,230,118,0.2)", borderRadius: "14px", background: "rgba(0,230,118,0.05)", cursor: "pointer", textAlign: "center" }}>
-          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🧠</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#f0f0f0", letterSpacing: "2px", marginBottom: "4px" }}>TRIVIAL</div>
-          <div style={{ fontSize: "9px", color: "#888", fontFamily: "monospace" }}>10 preguntas · 1 jugador</div>
-        </button>
-        <button onClick={() => setGame("flappy")} style={{ padding: "20px 12px", border: "1px solid rgba(0,176,255,0.2)", borderRadius: "14px", background: "rgba(0,176,255,0.05)", cursor: "pointer", textAlign: "center" }}>
-          <div style={{ fontSize: "34px", marginBottom: "8px" }}>⚽</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#f0f0f0", letterSpacing: "2px", marginBottom: "4px" }}>FLAPPY BALÓN</div>
-          <div style={{ fontSize: "9px", color: "#888", fontFamily: "monospace" }}>Esquiva porterías · 1 jugador</div>
-        </button>
-        <button onClick={() => setGame("flags")} style={{ padding: "20px 12px", border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", background: "rgba(255,193,7,0.05)", cursor: "pointer", textAlign: "center" }}>
-          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🌍</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#f0f0f0", letterSpacing: "2px", marginBottom: "4px" }}>BANDERAS</div>
-          <div style={{ fontSize: "9px", color: "#888", fontFamily: "monospace" }}>48 países · 1 jugador</div>
-        </button>
-        <button onClick={() => setGame("penalty")} style={{ padding: "20px 12px", border: "1px solid rgba(255,82,82,0.2)", borderRadius: "14px", background: "rgba(255,82,82,0.05)", cursor: "pointer", textAlign: "center" }}>
-          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🥅</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#f0f0f0", letterSpacing: "2px", marginBottom: "4px" }}>PENALTIS</div>
-          <div style={{ fontSize: "9px", color: "#ff8a80", fontFamily: "monospace" }}>5 penaltis · 2 jugadores 🔴</div>
-        </button>
-      </div>
-    </div>
-  );
-}
-
 
 // ============================================================
 // APP PRINCIPAL
@@ -1918,7 +1105,6 @@ export default function Home() {
             {view === "community" && <CommunityView matches={matches} />}
             {view === "profile" && <ProfileView user={user} matches={matches} />}
             {view === "ranking" && <RankingView />}
-            {view === "games" && <GamesView user={user} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
           </div>
         </>
