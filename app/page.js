@@ -1704,7 +1704,23 @@ function PenaltyGame({ user, onBack }) {
 
   usePenaltyCanvas(canvasRef, animState);
   useEffect(() => { myRoleRef.current = myRole; }, [myRole]);
-  useEffect(() => { return () => { if (channelRef.current) channelRef.current.unsubscribe(); }; }, []);
+  useEffect(() => {
+    return () => {
+      if (channelRef.current) channelRef.current.unsubscribe();
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const pollRef = useRef(null);
+
+  const checkRoom = async (roomId) => {
+    const { data } = await supabase.from("penalty_rooms").select("*").eq("id", roomId).single();
+    if (!data) return;
+    setRoom(data);
+    if (data.status === "playing") setPhase("playing");
+    if (data.status === "finished") setPhase("finished");
+    if (data.p1_turn_choice && data.p2_turn_choice && data.status === "playing" && myRoleRef.current === "p1") resolveRound(data);
+  };
 
   const subscribeRoom = (roomId) => {
     if (channelRef.current) channelRef.current.unsubscribe();
@@ -1719,6 +1735,9 @@ function PenaltyGame({ user, onBack }) {
           if (r.p1_turn_choice && r.p2_turn_choice && r.status === "playing" && myRoleRef.current === "p1") resolveRound(r);
         })
       .subscribe();
+    // Polling fallback cada 2s por si Realtime no llega
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => checkRoom(roomId), 2000);
   };
 
   const createRoom = async () => {
@@ -1927,7 +1946,7 @@ function PenaltyGame({ user, onBack }) {
             {myShots.map((s, i) => <span key={i} style={{ fontSize: "18px" }}>{s.scored ? "⚽" : "❌"}</span>)}
           </div>
         </div>
-        <button onClick={() => { setPhase("lobby"); setRoom(null); setMyRole(null); setMyChoice(null); setAnimState(null); setWaitingForOther(false); }}
+        <button onClick={() => { setPhase("lobby"); setRoom(null); setMyRole(null); setMyChoice(null); setAnimState(null); setWaitingForOther(false); if (pollRef.current) clearInterval(pollRef.current); }}
           style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>
           🔄 NUEVA PARTIDA
         </button>
