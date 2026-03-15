@@ -289,31 +289,31 @@ function ProgressBar({ predictions, matches }) {
 // NAVBAR
 // ============================================================
 function NavBar({ user, view, setView, onLogout }) {
-  // Definimos el orden de las pestañas según el rol
-  const tabs = user.role === "admin"
-    ? [
-        { id: "groups", icon: "⚽", label: "Grupos" },
-        { id: "community", icon: "👥", label: "Todos" },
-        { id: "ranking", icon: "🏆", label: "Ranking" },
-        { id: "results", icon: "📊", label: "Resultados" },
-        { id: "games", icon: "🎮", label: "Juegos" },
-        { id: "admin", icon: "⚙️", label: "Admin" }
-      ]
-    : [
-        { id: "groups", icon: "⚽", label: "Grupos" },
-        { id: "community", icon: "👥", label: "Todos" },
-        { id: "ranking", icon: "🏆", label: "Ranking" },
-        { id: "results", icon: "📊", label: "Resultados" },
-        { id: "games", icon: "🎮", label: "Juegos" },
-        { id: "profile", icon: "👤", label: "Perfil" }
-      ];
+  // 4 tabs principales + perfil en header
+  const tabs = [
+    { id: "home", icon: "🏠", label: "Inicio" },
+    { id: "groups", icon: "⚽", label: "Mis pronóst." },
+    { id: "community", icon: "👥", label: "Todos" },
+    { id: "ranking", icon: "🏆", label: "Ranking" },
+  ];
 
   return (
     <>
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,10,10,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto", padding: "0 14px", display: "flex", alignItems: "center", height: "50px" }}>
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", letterSpacing: "2px", color: "#f0f0f0", flex: 1 }}>PORRA <span style={{ color: GREEN }}>VALLAU</span></span>
-          <span style={{ fontSize: "11px", color: "#999", fontFamily: "monospace", marginRight: "10px" }}>{user.name?.split(" ")[0]}</span>
+          {/* Avatar / perfil en header */}
+          <button onClick={() => setView("profile")} style={{
+            width: "32px", height: "32px", borderRadius: "50%",
+            background: view === "profile" ? GREEN : GREEN_DIM,
+            border: `1px solid ${view === "profile" ? GREEN : "rgba(0,230,118,0.3)"}`,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            marginRight: "10px", flexShrink: 0,
+          }}>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: view === "profile" ? "#0a0a0a" : GREEN }}>
+              {user.name?.charAt(0).toUpperCase()}
+            </span>
+          </button>
           <button onClick={onLogout} style={{ padding: "5px 10px", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "6px", background: "transparent", color: "#aaa", cursor: "pointer", fontSize: "11px", fontFamily: "monospace" }}>salir</button>
         </div>
       </div>
@@ -998,8 +998,96 @@ function AdminView({ matches, onDataChange }) {
 }
 
 // ============================================================
-// TRIVIAL MUNDIAL — PREGUNTAS
+// PANTALLA DE INICIO
 // ============================================================
+function HomeView({ user, matches, predictions, setView }) {
+  const sent = predictions.length;
+  const pct = Math.round((sent / TOTAL_MATCHES) * 100);
+
+  const navCard = (icon, label, sub, color, border, bg, target) => (
+    <button onClick={() => setView(target)} style={{
+      padding: "18px 12px", border: `1px solid ${border}`, borderRadius: "14px",
+      background: bg, cursor: "pointer", textAlign: "center",
+      display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
+    }}>
+      <span style={{ fontSize: "30px", lineHeight: 1 }}>{icon}</span>
+      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: "#f0f0f0", letterSpacing: "2px" }}>{label}</span>
+      {sub && <span style={{ fontSize: "9px", color, fontFamily: "monospace" }}>{sub}</span>}
+    </button>
+  );
+
+  // Top 3 ranking rápido
+  const [topRanking, setTopRanking] = useState([]);
+  useEffect(() => {
+    (async () => {
+      const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
+      const { data: preds } = await supabase.from("predictions").select("*");
+      const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
+      const r = (profiles || []).map(p => {
+        const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
+        const qualPts = (qpicks || []).filter(x => x.user_id === p.id).reduce((s, pick) => s + (pick.points || 0), 0);
+        return { name: p.name, total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts };
+      }).sort((a, b) => b.total - a.total).slice(0, 3);
+      setTopRanking(r);
+    })();
+  }, []);
+
+  const medals = ["🥇", "🥈", "🥉"];
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      {/* Cuenta atrás */}
+      <CountdownBanner />
+
+      {/* Progreso pronósticos */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 14px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+          <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#555", letterSpacing: "2px" }}>TUS PRONÓSTICOS</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: sent === TOTAL_MATCHES ? GREEN : "#888" }}>{sent}/{TOTAL_MATCHES}</span>
+        </div>
+        <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: "4px", height: "6px", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: pct + "%", background: `linear-gradient(90deg,${GREEN},#00b0ff)`, borderRadius: "4px", transition: "width 0.5s ease" }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "5px" }}>
+          <span style={{ fontSize: "9px", color: "#999", fontFamily: "monospace" }}>{pct}% completado</span>
+          {sent < TOTAL_MATCHES && <span style={{ fontSize: "9px", color: "#aaa", fontFamily: "monospace" }}>{TOTAL_MATCHES - sent} por enviar</span>}
+        </div>
+      </div>
+
+      {/* Grid de accesos */}
+      <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>ACCESO RÁPIDO</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+        {navCard("⚽", "MIS PRONÓSTICOS", `${sent}/${TOTAL_MATCHES} enviados`, "#00e676", "rgba(0,230,118,0.2)", "rgba(0,230,118,0.05)", "groups")}
+        {navCard("👥", "TODOS", "ver todos los pronósticos", "#00b0ff", "rgba(0,176,255,0.2)", "rgba(0,176,255,0.05)", "community")}
+        {navCard("🏆", "RANKING", "clasificación general", "#ffd700", "rgba(255,215,0,0.2)", "rgba(255,215,0,0.05)", "ranking")}
+        {navCard("📊", "RESULTADOS", "marcadores reales", "#ff8a00", "rgba(255,138,0,0.2)", "rgba(255,138,0,0.05)", "results")}
+        {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", "#00e676", "rgba(0,230,118,0.15)", "rgba(0,230,118,0.04)", "games")}
+        {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#aaa", "rgba(255,255,255,0.1)", "rgba(255,255,255,0.03)", "profile")}
+        {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#ff5252", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
+      </div>
+
+      {/* Mini ranking top 3 */}
+      {topRanking.length > 0 && (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <p style={{ fontSize: "9px", color: "#999", fontFamily: "monospace", letterSpacing: "3px" }}>TOP RANKING</p>
+            <button onClick={() => setView("ranking")} style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", background: "none", border: "none", cursor: "pointer" }}>ver todo →</button>
+          </div>
+          {topRanking.map((u, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(0,230,118,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+              <span style={{ fontSize: "18px", minWidth: "24px" }}>{medals[i]}</span>
+              <span style={{ flex: 1, fontFamily: "monospace", fontSize: "13px", color: "#f0f0f0" }}>{u.name}</span>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "24px", color: i === 0 ? GREEN : "#f0f0f0" }}>{u.total}</span>
+              <span style={{ fontSize: "9px", color: "#555", fontFamily: "monospace" }}>PTS</span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+
 const TRIVIA_QUESTIONS = [
   { q: "¿Cuántos equipos participan en el Mundial 2026?", opts: ["32", "36", "48", "40"], a: 2 },
   { q: "¿En qué países se celebra el Mundial 2026?", opts: ["USA y México", "USA, Canadá y México", "USA, Canadá y Brasil", "Canadá y México"], a: 1 },
@@ -1856,39 +1944,28 @@ function GamesView({ user }) {
 // ============================================================
 const ONBOARDING_STEPS = [
   {
+    tab: "home",
+    icon: "🏠",
+    title: "Pantalla de inicio",
+    text: "Desde aquí accedes a todas las secciones. Cuenta atrás, tu progreso de pronósticos y acceso rápido a todo.",
+  },
+  {
     tab: "groups",
     icon: "⚽",
-    title: "Pronósticos de partidos",
-    text: "Aquí introduces el marcador que crees que tendrá cada partido. Se guarda automáticamente al escribir. +3 si aciertas exacto, +1 si aciertas el ganador.",
-    position: "top",
+    title: "Mis pronósticos",
+    text: "Introduce el marcador que crees que tendrá cada partido. Se guarda automáticamente. +3 exacto, +1 ganador.",
+  },
+  {
+    tab: "community",
+    icon: "👥",
+    title: "Todos los pronósticos",
+    text: "Una vez cerrado un partido, puedes ver qué pronóstico puso cada participante y cuántos puntos sacaron.",
   },
   {
     tab: "ranking",
     icon: "🏆",
     title: "Ranking",
     text: "Consulta la clasificación general de todos los participantes en tiempo real. ¿Quién va ganando la porra?",
-    position: "top",
-  },
-  {
-    tab: "results",
-    icon: "📊",
-    title: "Resultados reales",
-    text: "Aquí puedes ver los marcadores reales de los partidos ya jugados y la clasificación real de cada grupo.",
-    position: "top",
-  },
-  {
-    tab: "community",
-    icon: "👥",
-    title: "Pronósticos de todos",
-    text: "Una vez cerrado un partido, puedes ver qué pronóstico puso cada participante y cuántos puntos sacaron.",
-    position: "top",
-  },
-  {
-    tab: "games",
-    icon: "🎮",
-    title: "Zona de juegos",
-    text: "Trivial del Mundial, Flappy Balón, Adivina la Bandera y Penaltis 1v1 en tiempo real. ¡A competir!",
-    position: "top",
   },
 ];
 
@@ -1898,10 +1975,10 @@ function OnboardingTooltips({ user, onFinish, setView }) {
   const isLast = step === ONBOARDING_STEPS.length - 1;
 
   // Tab index en la barra inferior para calcular posición del indicador
-  const userTabs = ["groups", "community", "ranking", "results", "games", "profile"];
-  const tabIdx = userTabs.indexOf(current.tab);
-  const tabCount = userTabs.length;
-  const arrowLeft = `calc(${(tabIdx + 0.5) / tabCount * 100}%)`;
+  const bottomTabs = ["home", "groups", "community", "ranking"];
+  const tabIdx = bottomTabs.indexOf(current.tab);
+  const tabCount = bottomTabs.length;
+  const arrowLeft = tabIdx >= 0 ? `calc(${(tabIdx + 0.5) / tabCount * 100}%)` : "50%";
 
   const next = () => {
     if (isLast) { onFinish(); return; }
@@ -1911,21 +1988,21 @@ function OnboardingTooltips({ user, onFinish, setView }) {
 
   const skip = () => onFinish();
 
-  // Highlight overlay on the bottom tab bar
   return (
     <>
-      {/* Overlay oscuro excepto tab activo */}
+      {/* Overlay oscuro */}
       <div style={{ position: "fixed", inset: 0, zIndex: 200, pointerEvents: "none" }}>
-        {/* Oscurece todo excepto la zona del tab */}
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.75)" }} />
-        {/* Hueco iluminado en la barra inferior para el tab actual */}
-        <div style={{
-          position: "absolute", bottom: 0, left: `calc(${tabIdx / tabCount * 100}%)`,
-          width: `${100 / tabCount}%`, height: "64px",
-          background: "transparent",
-          boxShadow: `0 0 0 9999px rgba(0,0,0,0.75), 0 0 20px 4px rgba(0,230,118,0.4)`,
-          borderRadius: "8px 8px 0 0",
-        }} />
+        {/* Hueco iluminado en la barra inferior */}
+        {tabIdx >= 0 && (
+          <div style={{
+            position: "absolute", bottom: 0, left: `calc(${tabIdx / tabCount * 100}%)`,
+            width: `${100 / tabCount}%`, height: "64px",
+            background: "transparent",
+            boxShadow: `0 0 0 9999px rgba(0,0,0,0.75), 0 0 20px 4px rgba(0,230,118,0.4)`,
+            borderRadius: "8px 8px 0 0",
+          }} />
+        )}
       </div>
 
       {/* Tooltip card */}
@@ -1934,19 +2011,19 @@ function OnboardingTooltips({ user, onFinish, setView }) {
         width: "calc(100% - 32px)", maxWidth: "420px",
         zIndex: 201, animation: "fadeIn 0.25s ease",
       }}>
-        {/* Flecha apuntando al tab */}
-        <div style={{
-          position: "absolute", bottom: "-8px", left: arrowLeft, transform: "translateX(-50%)",
-          width: 0, height: 0,
-          borderLeft: "8px solid transparent", borderRight: "8px solid transparent",
-          borderTop: `8px solid ${GREEN}`,
-        }} />
+        {tabIdx >= 0 && (
+          <div style={{
+            position: "absolute", bottom: "-8px", left: arrowLeft, transform: "translateX(-50%)",
+            width: 0, height: 0,
+            borderLeft: "8px solid transparent", borderRight: "8px solid transparent",
+            borderTop: `8px solid ${GREEN}`,
+          }} />
+        )}
         <div style={{
           background: "#0f0f0f", border: `1px solid ${GREEN}`,
           borderRadius: "14px", padding: "18px 18px 14px",
           boxShadow: `0 0 30px rgba(0,230,118,0.2)`,
         }}>
-          {/* Progreso */}
           <div style={{ display: "flex", gap: "5px", marginBottom: "12px" }}>
             {ONBOARDING_STEPS.map((_, i) => (
               <div key={i} style={{ flex: 1, height: "3px", borderRadius: "2px", background: i <= step ? GREEN : "rgba(255,255,255,0.1)", transition: "background 0.3s" }} />
@@ -1977,7 +2054,6 @@ function OnboardingTooltips({ user, onFinish, setView }) {
         </div>
       </div>
 
-      {/* Bloquea clicks en el resto de la pantalla */}
       <div style={{ position: "fixed", inset: 0, zIndex: 199 }} onClick={next} />
     </>
   );
@@ -1989,7 +2065,7 @@ function OnboardingTooltips({ user, onFinish, setView }) {
 export default function Home() {
   const [screen, setScreen] = useState("login");
   const [user, setUser] = useState(null);
-  const [view, setView] = useState("groups");
+  const [view, setView] = useState("home");
   const [matches, setMatches] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [allClosed, setAllClosed] = useState(false);
@@ -2043,7 +2119,7 @@ export default function Home() {
 
   const finishOnboarding = async () => {
     setShowOnboarding(false);
-    setView("groups");
+    setView("home");
     if (user) await supabase.from("profiles").update({ onboarded: true }).eq("id", user.id);
   };
 
@@ -2061,6 +2137,7 @@ export default function Home() {
         <>
           <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
           <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
+            {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
             {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
             {view === "results" && <ResultsView matches={matches} />}
             {view === "community" && <CommunityView matches={matches} />}
