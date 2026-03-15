@@ -1713,13 +1713,42 @@ function PenaltyGame({ user, onBack }) {
 
   const pollRef = useRef(null);
 
+  const prevChoicesRef = useRef({ p1: null, p2: null });
+
   const checkRoom = async (roomId) => {
     const { data } = await supabase.from("penalty_rooms").select("*").eq("id", roomId).single();
     if (!data) return;
     setRoom(data);
     if (data.status === "playing") setPhase("playing");
     if (data.status === "finished") setPhase("finished");
-    if (data.p1_turn_choice && data.p2_turn_choice && data.status === "playing" && myRoleRef.current === "p1") resolveRound(data);
+
+    // p1 resuelve la ronda cuando ambos han elegido
+    if (data.p1_turn_choice && data.p2_turn_choice && data.status === "playing" && myRoleRef.current === "p1") {
+      resolveRound(data);
+      return;
+    }
+
+    // p2: detectar que la ronda fue resuelta (choices vuelven a null) y resetear su estado
+    if (myRoleRef.current === "p2") {
+      const hadChoices = prevChoicesRef.current.p1 || prevChoicesRef.current.p2;
+      const nowEmpty = !data.p1_turn_choice && !data.p2_turn_choice;
+      if (hadChoices && nowEmpty) {
+        // p1 acaba de resolver la ronda, sacar resultado del ultimo shot
+        // El shooter anterior era el que tenía más shots antes de que se vaciaran los choices
+        const p1s = Array.isArray(data.p1_shots) ? data.p1_shots : [];
+        const p2s = Array.isArray(data.p2_shots) ? data.p2_shots : [];
+        // El último en tirar es quien tiene el último shot en total
+        const lastP1 = p1s[p1s.length - 1];
+        const lastP2 = p2s[p2s.length - 1];
+        // Comparar por índice total: quien tiene más shots tiró en el último turno
+        const lastShot = p1s.length > p2s.length ? lastP1 : p2s.length > p1s.length ? lastP2 : (lastP1 || lastP2);
+        if (lastShot) setAnimState({ shootDir: lastShot.shoot, saveDir: lastShot.save, scored: lastShot.scored });
+        setMyChoice(null);
+        setWaitingForOther(false);
+        setTimeout(() => setAnimState(null), 2800);
+      }
+    }
+    prevChoicesRef.current = { p1: data.p1_turn_choice, p2: data.p2_turn_choice };
   };
 
   const subscribeRoom = (roomId) => {
@@ -1728,11 +1757,8 @@ function PenaltyGame({ user, onBack }) {
       .channel(`penalty_room_${roomId}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "penalty_rooms", filter: `id=eq.${roomId}` },
         payload => {
-          const r = payload.new;
-          setRoom(r);
-          if (r.status === "playing") setPhase("playing");
-          if (r.status === "finished") setPhase("finished");
-          if (r.p1_turn_choice && r.p2_turn_choice && r.status === "playing" && myRoleRef.current === "p1") resolveRound(r);
+          // Route through checkRoom so p2 reset logic runs in one place
+          checkRoom(roomId);
         })
       .subscribe();
     // Polling fallback cada 2s por si Realtime no llega
