@@ -1601,29 +1601,91 @@ function FlagsGame({ user, onBack }) {
 }
 
 // ============================================================
-// PENALTIS EN TIEMPO REAL
+// PENALTIS EN TIEMPO REAL — Canvas animado
 // ============================================================
-// Tabla Supabase necesaria:
-// create table penalty_rooms (
-//   id uuid default gen_random_uuid() primary key,
-//   code text unique not null,
-//   player1_id uuid references profiles(id),
-//   player1_name text,
-//   player2_id uuid references profiles(id),
-//   player2_name text,
-//   status text default 'waiting',
-//   current_round int default 1,
-//   current_shooter text default 'p1',
-//   p1_shots jsonb default '[]',
-//   p2_shots jsonb default '[]',
-//   p1_score int default 0,
-//   p2_score int default 0,
-//   p1_turn_choice jsonb,
-//   p2_turn_choice jsonb,
-//   created_at timestamptz default now()
-// );
+const PENALTY_DIRS = ["izq", "centro", "der"];
+const PENALTY_LABELS = { izq: "← Izq", centro: "↑ Centro", der: "→ Der" };
 
-const PENALTY_DIRS = ["⬅️ Izq", "⬆️ Centro", "➡️ Der"];
+function usePenaltyCanvas(canvasRef, animState) {
+  const rafRef = useRef(null);
+  const frameRef = useRef(0);
+  useEffect(() => {
+    if (!animState || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height;
+    frameRef.current = 0;
+    const { shootDir, saveDir, scored } = animState;
+    const GW = W * 0.72, GH = H * 0.42;
+    const GX = (W - GW) / 2, GY = H * 0.06;
+    const targetX = { izq: GX + GW * 0.22, centro: GX + GW * 0.5, der: GX + GW * 0.78 };
+    const targetY = GY + GH * 0.55;
+    const ballStartX = W / 2, ballStartY = H * 0.88;
+    const ballEndX = targetX[shootDir], ballEndY = targetY;
+    const gkStartX = W / 2, gkStartY = GY + GH - 18;
+    const gkEndX = { izq: GX + 28, centro: W / 2, der: GX + GW - 28 }[saveDir];
+    const gkEndY = { izq: GY + GH * 0.35, centro: GY + GH - 18, der: GY + GH * 0.35 }[saveDir];
+    const TOTAL_FRAMES = 55;
+    const draw = () => {
+      const t = Math.min(frameRef.current / TOTAL_FRAMES, 1);
+      const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#1a2e14"; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#1d3a15"; ctx.fillRect(0, H * 0.72, W, H * 0.28);
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.beginPath(); ctx.arc(W / 2, H * 0.78, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(GX - 10, GY + GH); ctx.lineTo(GX + GW + 10, GY + GH); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.06)"; ctx.lineWidth = 0.8;
+      for (let nx = GX; nx <= GX + GW; nx += GW / 8) { ctx.beginPath(); ctx.moveTo(nx, GY); ctx.lineTo(nx, GY + GH); ctx.stroke(); }
+      for (let ny = GY; ny <= GY + GH; ny += GH / 4) { ctx.beginPath(); ctx.moveTo(GX, ny); ctx.lineTo(GX + GW, ny); ctx.stroke(); }
+      ctx.strokeStyle = "#f5e6c8"; ctx.lineWidth = 4; ctx.strokeRect(GX, GY, GW, GH);
+      if (t >= 1) {
+        ctx.font = "bold 28px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = scored ? "#f59e0b" : "#00b0ff";
+        ctx.fillText(scored ? "GOL!" : "PARADA!", W / 2, H / 2);
+      }
+      const gkX = gkStartX + (gkEndX - gkStartX) * ease;
+      const gkY = gkStartY + (gkEndY - gkStartY) * ease;
+      const gkLean = saveDir === "izq" ? -0.7 * ease : saveDir === "der" ? 0.7 * ease : 0;
+      ctx.save(); ctx.translate(gkX, gkY); ctx.rotate(gkLean);
+      ctx.beginPath(); ctx.arc(0, -22, 7, 0, Math.PI * 2); ctx.fillStyle = "#00b0ff"; ctx.fill();
+      ctx.strokeStyle = "#00b0ff"; ctx.lineWidth = 3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(0, 5); ctx.stroke();
+      const armSpread = ease * 18;
+      ctx.beginPath(); ctx.moveTo(-armSpread, -8); ctx.lineTo(armSpread, -8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-8, 18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(8, 18); ctx.stroke();
+      ctx.restore();
+      const bx = ballStartX + (ballEndX - ballStartX) * ease;
+      const by = ballStartY + (ballEndY - ballStartY) * ease;
+      const ballR = 10 - ease * 3;
+      ctx.save(); ctx.translate(bx, by); ctx.rotate(frameRef.current * 0.25);
+      ctx.beginPath(); ctx.arc(0, 0, ballR, 0, Math.PI * 2);
+      ctx.fillStyle = "#f5f5f5"; ctx.fill(); ctx.strokeStyle = "#333"; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.fillStyle = "#222";
+      for (let p = 0; p < 5; p++) { const a = (p / 5) * Math.PI * 2; ctx.beginPath(); ctx.arc(Math.cos(a) * ballR * 0.5, Math.sin(a) * ballR * 0.5, ballR * 0.22, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+      ctx.save(); ctx.translate(W / 2, H * 0.88);
+      ctx.beginPath(); ctx.arc(0, -22, 7, 0, Math.PI * 2); ctx.fillStyle = "#f59e0b"; ctx.fill();
+      ctx.strokeStyle = "#f59e0b"; ctx.lineWidth = 3; ctx.lineCap = "round";
+      const kickLean = ease * 0.3;
+      ctx.save(); ctx.rotate(kickLean);
+      ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(0, 5); ctx.stroke();
+      ctx.restore();
+      ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-8, 18); ctx.stroke();
+      ctx.save(); ctx.translate(0, 5); ctx.rotate(-ease * 0.8);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8, 14); ctx.stroke();
+      ctx.restore();
+      ctx.beginPath(); ctx.moveTo(-12, -8); ctx.lineTo(12, -8); ctx.stroke();
+      ctx.restore();
+      frameRef.current++;
+      if (frameRef.current <= TOTAL_FRAMES + 25) rafRef.current = requestAnimationFrame(draw);
+    };
+    rafRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [animState]);
+}
 
 function PenaltyGame({ user, onBack }) {
   const [phase, setPhase] = useState("lobby");
@@ -1631,16 +1693,18 @@ function PenaltyGame({ user, onBack }) {
   const [inputCode, setInputCode] = useState("");
   const [room, setRoom] = useState(null);
   const [myRole, setMyRole] = useState(null);
-  const [shootDir, setShootDir] = useState(null);
-  const [saveDir, setSaveDir] = useState(null);
+  const [myChoice, setMyChoice] = useState(null);
   const [waitingForOther, setWaitingForOther] = useState(false);
-  const [roundResult, setRoundResult] = useState(null);
+  const [animState, setAnimState] = useState(null);
   const [error, setError] = useState("");
+  const canvasRef = useRef(null);
   const channelRef = useRef(null);
   const roomIdRef = useRef(null);
   const myRoleRef = useRef(null);
 
+  usePenaltyCanvas(canvasRef, animState);
   useEffect(() => { myRoleRef.current = myRole; }, [myRole]);
+  useEffect(() => { return () => { if (channelRef.current) channelRef.current.unsubscribe(); }; }, []);
 
   const subscribeRoom = (roomId) => {
     if (channelRef.current) channelRef.current.unsubscribe();
@@ -1652,14 +1716,10 @@ function PenaltyGame({ user, onBack }) {
           setRoom(r);
           if (r.status === "playing") setPhase("playing");
           if (r.status === "finished") setPhase("finished");
-          if (r.p1_turn_choice && r.p2_turn_choice && r.status === "playing" && myRoleRef.current === "p1") {
-            resolveRound(r);
-          }
+          if (r.p1_turn_choice && r.p2_turn_choice && r.status === "playing" && myRoleRef.current === "p1") resolveRound(r);
         })
       .subscribe();
   };
-
-  useEffect(() => { return () => { if (channelRef.current) channelRef.current.unsubscribe(); }; }, []);
 
   const createRoom = async () => {
     setError("");
@@ -1671,9 +1731,7 @@ function PenaltyGame({ user, onBack }) {
     }).select().single();
     if (err) { setError("Error al crear sala: " + err.message); return; }
     setRoomCode(code); setMyRole("p1"); setRoom(data);
-    roomIdRef.current = data.id;
-    subscribeRoom(data.id);
-    setPhase("waiting");
+    roomIdRef.current = data.id; subscribeRoom(data.id); setPhase("waiting");
   };
 
   const joinRoom = async () => {
@@ -1687,19 +1745,14 @@ function PenaltyGame({ user, onBack }) {
       .update({ player2_id: user.id, player2_name: user.name, status: "playing" })
       .eq("id", data.id).select().single();
     if (err2) { setError("Error al unirse"); return; }
-    setMyRole("p2"); setRoom(updated);
-    roomIdRef.current = updated.id;
-    subscribeRoom(updated.id);
-    setPhase("playing");
+    setMyRole("p2"); setRoom(updated); roomIdRef.current = updated.id; subscribeRoom(updated.id); setPhase("playing");
   };
 
-  const submitTurn = async () => {
-    if (!shootDir || !saveDir) return;
+  const submitChoice = async () => {
+    if (!myChoice) return;
     setWaitingForOther(true);
     const field = myRole === "p1" ? "p1_turn_choice" : "p2_turn_choice";
-    await supabase.from("penalty_rooms")
-      .update({ [field]: JSON.stringify({ shoot: shootDir, save: saveDir }) })
-      .eq("id", roomIdRef.current);
+    await supabase.from("penalty_rooms").update({ [field]: JSON.stringify({ choice: myChoice }) }).eq("id", roomIdRef.current);
   };
 
   const resolveRound = async (r) => {
@@ -1707,38 +1760,29 @@ function PenaltyGame({ user, onBack }) {
       const p1c = typeof r.p1_turn_choice === "string" ? JSON.parse(r.p1_turn_choice) : r.p1_turn_choice;
       const p2c = typeof r.p2_turn_choice === "string" ? JSON.parse(r.p2_turn_choice) : r.p2_turn_choice;
       const shooter = r.current_shooter;
-      const shootChoice = shooter === "p1" ? p1c.shoot : p2c.shoot;
-      const saveChoice = shooter === "p1" ? p2c.save : p1c.save;
-      const scored = shootChoice !== saveChoice;
-      const shooterName = shooter === "p1" ? r.player1_name : r.player2_name;
-
+      const shootDir = shooter === "p1" ? p1c.choice : p2c.choice;
+      const saveDir = shooter === "p1" ? p2c.choice : p1c.choice;
+      const scored = shootDir !== saveDir;
       const newP1Score = r.p1_score + (shooter === "p1" && scored ? 1 : 0);
       const newP2Score = r.p2_score + (shooter === "p2" && scored ? 1 : 0);
-
       const p1Shots = Array.isArray(r.p1_shots) ? [...r.p1_shots] : [];
       const p2Shots = Array.isArray(r.p2_shots) ? [...r.p2_shots] : [];
-      if (shooter === "p1") p1Shots.push({ shoot: p1c.shoot, save: p2c.save, scored });
-      else p2Shots.push({ shoot: p2c.shoot, save: p1c.save, scored });
-
+      if (shooter === "p1") p1Shots.push({ shoot: shootDir, save: saveDir, scored });
+      else p2Shots.push({ shoot: shootDir, save: saveDir, scored });
       let nextShooter = shooter === "p1" ? "p2" : "p1";
       let nextRound = r.current_round;
       if (nextShooter === "p1") nextRound += 1;
-
       const totalShots = p1Shots.length + p2Shots.length;
       const nextStatus = totalShots >= 10 ? "finished" : "playing";
-
       await supabase.from("penalty_rooms").update({
         p1_score: newP1Score, p2_score: newP2Score,
-        current_round: Math.min(nextRound, 5),
-        current_shooter: nextShooter,
-        status: nextStatus,
-        p1_shots: p1Shots, p2_shots: p2Shots,
+        current_round: Math.min(nextRound, 5), current_shooter: nextShooter,
+        status: nextStatus, p1_shots: p1Shots, p2_shots: p2Shots,
         p1_turn_choice: null, p2_turn_choice: null,
       }).eq("id", r.id);
-
-      setRoundResult({ scored, shooterName, shootChoice, saveChoice });
-      setShootDir(null); setSaveDir(null); setWaitingForOther(false);
-      setTimeout(() => setRoundResult(null), 2500);
+      setAnimState({ shootDir, saveDir, scored });
+      setMyChoice(null); setWaitingForOther(false);
+      setTimeout(() => setAnimState(null), 2800);
     } catch (e) { console.error("resolveRound error", e); }
   };
 
@@ -1749,33 +1793,31 @@ function PenaltyGame({ user, onBack }) {
   const myShots = room ? (myRole === "p1" ? (Array.isArray(room.p1_shots) ? room.p1_shots : []) : (Array.isArray(room.p2_shots) ? room.p2_shots : [])) : [];
   const theirShots = room ? (myRole === "p1" ? (Array.isArray(room.p2_shots) ? room.p2_shots : []) : (Array.isArray(room.p1_shots) ? room.p1_shots : [])) : [];
 
-  const btnSt = (sel, val) => ({
-    flex: 1, padding: "14px 4px", border: `1px solid ${sel === val ? GREEN : BORDER}`,
-    borderRadius: "10px", background: sel === val ? GREEN_DIM : CARD,
-    color: sel === val ? GREEN : "#888", fontFamily: "monospace", fontSize: "11px",
-    cursor: "pointer", textAlign: "center",
+  const btnSt = (val) => ({
+    flex: 1, padding: "14px 4px", border: `1px solid ${myChoice === val ? GREEN : BORDER}`,
+    borderRadius: "10px", background: myChoice === val ? GREEN_DIM : CARD,
+    color: myChoice === val ? GREEN : "#8a6a3a", fontFamily: "monospace", fontSize: "12px",
+    cursor: "pointer", textAlign: "center", fontWeight: myChoice === val ? 700 : 400,
   });
 
   if (phase === "lobby") return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
         <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#b89a6a", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
-        <p style={{ fontSize: "9px", color: "#8a6a3a", fontFamily: "monospace", letterSpacing: "3px" }}>PENALTIS</p>
+        <p style={{ fontSize: "9px", color: "#8a6a3a", fontFamily: "monospace", letterSpacing: "3px" }}>PENALTIS 1v1</p>
       </div>
       <div style={{ background: CARD, border: "1px solid rgba(255,82,82,0.2)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
-        <div style={{ fontSize: "52px", marginBottom: "10px" }}>🥅</div>
+        <div style={{ fontSize: "48px", marginBottom: "10px" }}>🥅</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#f5e6c8", letterSpacing: "3px", marginBottom: "8px" }}>PENALTIS 1v1</div>
-        <p style={{ fontSize: "11px", color: "#7a5a2a", fontFamily: "monospace", lineHeight: 1.8 }}>Multijugador en tiempo real · 5 penaltis cada uno<br/>Elige disparo y parada simultáneamente</p>
+        <p style={{ fontSize: "11px", color: "#7a5a2a", fontFamily: "monospace", lineHeight: 1.8 }}>Multijugador · 5 penaltis cada uno<br/>Se alternan lanzador y portero</p>
       </div>
       {error && <p style={{ color: "#ff5252", fontFamily: "monospace", fontSize: "12px", marginBottom: "12px", textAlign: "center" }}>⚠ {error}</p>}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <button onClick={createRoom} style={{ padding: "20px", border: "1px solid rgba(245,158,11,0.3)", borderRadius: "12px", background: GREEN_DIM, color: GREEN, fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>
-          ➕ CREAR SALA
-        </button>
+        <button onClick={createRoom} style={{ padding: "20px", border: `1px solid ${GREEN}`, borderRadius: "12px", background: GREEN_DIM, color: GREEN, fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>➕ CREAR SALA</button>
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "14px" }}>
           <p style={{ fontSize: "9px", color: "#b89a6a", fontFamily: "monospace", marginBottom: "8px", letterSpacing: "2px" }}>UNIRSE CON CÓDIGO</p>
           <input value={inputCode} onChange={e => setInputCode(e.target.value.toUpperCase())} placeholder="XXXXX" maxLength={5}
-            style={{ width: "100%", padding: "10px", marginBottom: "8px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "rgba(0,0,0,0.35)", color: "#f5e6c8", fontSize: "18px", fontFamily: "'Bebas Neue', monospace", letterSpacing: "4px", textAlign: "center", outline: "none" }} />
+            style={{ width: "100%", padding: "10px", marginBottom: "8px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "rgba(0,0,0,0.3)", color: "#f5e6c8", fontSize: "18px", fontFamily: "'Bebas Neue', monospace", letterSpacing: "4px", textAlign: "center", outline: "none" }} />
           <button onClick={joinRoom} style={{ width: "100%", padding: "10px", border: "none", borderRadius: "7px", background: GREEN, color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>UNIRSE</button>
         </div>
       </div>
@@ -1797,10 +1839,10 @@ function PenaltyGame({ user, onBack }) {
 
   if (phase === "playing" && room) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", marginBottom: "14px", alignItems: "center" }}>
-        <div style={{ background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.3)", borderRadius: "10px", padding: "10px", textAlign: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", marginBottom: "12px", alignItems: "center" }}>
+        <div style={{ background: GREEN_DIM, border: `1px solid rgba(245,158,11,0.3)`, borderRadius: "10px", padding: "10px", textAlign: "center" }}>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "36px", color: GREEN }}>{myScore}</div>
-          <div style={{ fontSize: "9px", fontFamily: "monospace", color: "#7a5a2a" }}>TÚ</div>
+          <div style={{ fontSize: "9px", fontFamily: "monospace", color: "#7a5a2a" }}>TÚ · {amIShooter ? "⚽ LANZAS" : "🧤 PARAS"}</div>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "monospace", fontSize: "9px", color: "#5a3e1e", marginBottom: "2px" }}>RONDA {room.current_round}/5</div>
@@ -1812,50 +1854,52 @@ function PenaltyGame({ user, onBack }) {
         </div>
       </div>
 
-      {roundResult && (
-        <div style={{ padding: "12px", background: roundResult.scored ? GREEN_DIM : "rgba(255,82,82,0.1)", border: `1px solid ${roundResult.scored ? "rgba(245,158,11,0.3)" : "rgba(255,82,82,0.3)"}`, borderRadius: "10px", textAlign: "center", marginBottom: "14px" }}>
-          <div style={{ fontSize: "28px", marginBottom: "4px" }}>{roundResult.scored ? "⚽" : "🧤"}</div>
-          <p style={{ fontFamily: "monospace", fontSize: "12px", color: roundResult.scored ? GREEN : "#ff5252" }}>
-            {roundResult.scored ? `¡GOL de ${roundResult.shooterName}!` : `¡Parada!`}
+      <div style={{ borderRadius: "12px", overflow: "hidden", border: `1px solid ${BORDER}`, marginBottom: "12px", background: "#1a2e14" }}>
+        <canvas ref={canvasRef} width={360} height={220} style={{ display: "block", width: "100%", height: "auto" }} />
+      </div>
+
+      {animState ? (
+        <div style={{ padding: "14px", background: animState.scored ? GREEN_DIM : "rgba(255,82,82,0.1)", border: `1px solid ${animState.scored ? "rgba(245,158,11,0.4)" : "rgba(255,82,82,0.3)"}`, borderRadius: "12px", textAlign: "center" }}>
+          <div style={{ fontSize: "32px", marginBottom: "6px" }}>{animState.scored ? "⚽" : "🧤"}</div>
+          <p style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", letterSpacing: "3px", color: animState.scored ? GREEN : "#ff5252" }}>
+            {animState.scored ? "¡GOL!" : "¡PARADA!"}
+          </p>
+          <p style={{ fontFamily: "monospace", fontSize: "10px", color: "#8a6a3a", marginTop: "4px" }}>
+            Disparo: {PENALTY_LABELS[animState.shootDir]} · Parada: {PENALTY_LABELS[animState.saveDir]}
           </p>
         </div>
-      )}
-
-      {!roundResult && !waitingForOther && (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "14px", marginBottom: "12px" }}>
-          <p style={{ fontSize: "10px", color: amIShooter ? "#ffc107" : "#00b0ff", fontFamily: "monospace", letterSpacing: "1px", marginBottom: "12px", textAlign: "center" }}>
-            {amIShooter ? "⚽ TÚ DISPARAS — ¿a dónde?" : "🧤 TÚ PARAS — ¿a dónde te tiras?"}
+      ) : waitingForOther ? (
+        <div style={{ textAlign: "center", padding: "20px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px" }}>
+          <div style={{ fontSize: "28px", marginBottom: "8px", animation: "pulse 1.5s infinite" }}>⏳</div>
+          <p style={{ fontFamily: "monospace", fontSize: "12px", color: "#b89a6a" }}>Esperando a {theirName?.split(" ")[0] || "rival"}...</p>
+        </div>
+      ) : (
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "14px" }}>
+          <p style={{ fontSize: "11px", color: amIShooter ? GREEN : "#00b0ff", fontFamily: "'Bebas Neue', cursive", letterSpacing: "2px", marginBottom: "12px", textAlign: "center" }}>
+            {amIShooter ? "⚽ ELIGE DONDE DISPARAS" : "🧤 ELIGE DONDE TE TIRAS"}
           </p>
-          <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
-            {PENALTY_DIRS.map(d => <button key={d} onClick={() => setShootDir(d)} style={btnSt(shootDir, d)}>{d}</button>)}
+          <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
+            {PENALTY_DIRS.map(d => (
+              <button key={d} onClick={() => setMyChoice(d)} style={btnSt(d)}>
+                <div style={{ fontSize: "18px", marginBottom: "3px" }}>{d === "izq" ? "←" : d === "centro" ? "↑" : "→"}</div>
+                <div>{d === "izq" ? "Izq" : d === "centro" ? "Centro" : "Der"}</div>
+              </button>
+            ))}
           </div>
-          <p style={{ fontSize: "10px", color: amIShooter ? "#00b0ff" : "#ffc107", fontFamily: "monospace", letterSpacing: "1px", marginBottom: "10px", textAlign: "center" }}>
-            {amIShooter ? "🧤 ¿Dónde para tu rival?" : "⚽ ¿Dónde dispara tu rival?"}
-          </p>
-          <div style={{ display: "flex", gap: "6px", marginBottom: "14px" }}>
-            {PENALTY_DIRS.map(d => <button key={d} onClick={() => setSaveDir(d)} style={btnSt(saveDir, d)}>{d}</button>)}
-          </div>
-          <button onClick={submitTurn} disabled={!shootDir || !saveDir}
-            style={{ width: "100%", padding: "13px", border: "none", borderRadius: "9px", background: shootDir && saveDir ? `linear-gradient(135deg,${GREEN},#e07b00)` : "#1a1a1a", color: shootDir && saveDir ? "#1c1510" : "#555", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: shootDir && saveDir ? "pointer" : "default", letterSpacing: "2px" }}>
-            ⚡ CONFIRMAR
+          <button onClick={submitChoice} disabled={!myChoice}
+            style={{ width: "100%", padding: "13px", border: "none", borderRadius: "9px", background: myChoice ? `linear-gradient(135deg,${GREEN},#e07b00)` : "rgba(0,0,0,0.2)", color: myChoice ? "#1c1510" : "#5a3e1e", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: myChoice ? "pointer" : "default", letterSpacing: "2px" }}>
+            CONFIRMAR
           </button>
         </div>
       )}
 
-      {waitingForOther && !roundResult && (
-        <div style={{ textAlign: "center", padding: "28px 0" }}>
-          <div style={{ fontSize: "32px", marginBottom: "8px", animation: "pulse 1.5s infinite" }}>⏳</div>
-          <p style={{ fontFamily: "monospace", fontSize: "12px", color: "#b89a6a" }}>Esperando a {theirName?.split(" ")[0] || "rival"}...</p>
-        </div>
-      )}
-
       {(myShots.length > 0 || theirShots.length > 0) && (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "10px" }}>
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "10px", marginTop: "10px" }}>
           <p style={{ fontSize: "9px", color: "#5a3e1e", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "6px" }}>HISTORIAL</p>
           <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
             <span style={{ fontSize: "9px", color: "#5a3e1e", fontFamily: "monospace", marginRight: "4px" }}>TÚ:</span>
             {myShots.map((s, i) => <span key={i} style={{ fontSize: "16px" }}>{s.scored ? "⚽" : "❌"}</span>)}
-            <span style={{ color: "#333", margin: "0 8px", fontSize: "16px" }}>|</span>
+            <span style={{ color: "#3a2a18", margin: "0 8px" }}>|</span>
             <span style={{ fontSize: "9px", color: "#5a3e1e", fontFamily: "monospace", marginRight: "4px" }}>RIVAL:</span>
             {theirShots.map((s, i) => <span key={i} style={{ fontSize: "16px" }}>{s.scored ? "⚽" : "❌"}</span>)}
           </div>
@@ -1869,27 +1913,21 @@ function PenaltyGame({ user, onBack }) {
     const draw = myScore === theirScore;
     return (
       <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
-        <div style={{ background: CARD, border: `1px solid ${iWon ? "rgba(245,158,11,0.3)" : draw ? BORDER : "rgba(255,82,82,0.2)"}`, borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
+        <div style={{ background: CARD, border: `1px solid ${iWon ? "rgba(245,158,11,0.4)" : draw ? BORDER : "rgba(255,82,82,0.25)"}`, borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
           <div style={{ fontSize: "52px", marginBottom: "10px" }}>{iWon ? "🏆" : draw ? "🤝" : "😔"}</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: iWon ? GREEN : draw ? "#b89a6a" : "#ff5252", letterSpacing: "3px", marginBottom: "16px" }}>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: iWon ? GREEN : draw ? "#b89a6a" : "#ff5252", letterSpacing: "3px", marginBottom: "16px" }}>
             {iWon ? "¡GANASTE!" : draw ? "EMPATE" : "PERDISTE"}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", alignItems: "center" }}>
-            <div>
-              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: GREEN }}>{myScore}</div>
-              <div style={{ fontSize: "10px", color: "#7a5a2a", fontFamily: "monospace" }}>TÚ</div>
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", alignItems: "center", marginBottom: "16px" }}>
+            <div><div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: GREEN }}>{myScore}</div><div style={{ fontSize: "10px", color: "#7a5a2a", fontFamily: "monospace" }}>TÚ</div></div>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#5a3e1e" }}>VS</div>
-            <div>
-              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: "#f5e6c8" }}>{theirScore}</div>
-              <div style={{ fontSize: "10px", color: "#7a5a2a", fontFamily: "monospace" }}>{theirName?.split(" ")[0] || "Rival"}</div>
-            </div>
+            <div><div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: "#f5e6c8" }}>{theirScore}</div><div style={{ fontSize: "10px", color: "#7a5a2a", fontFamily: "monospace" }}>{theirName?.split(" ")[0] || "Rival"}</div></div>
           </div>
-          <div style={{ marginTop: "16px", display: "flex", justifyContent: "center", gap: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: "6px" }}>
             {myShots.map((s, i) => <span key={i} style={{ fontSize: "18px" }}>{s.scored ? "⚽" : "❌"}</span>)}
           </div>
         </div>
-        <button onClick={() => { setPhase("lobby"); setRoom(null); setMyRole(null); setShootDir(null); setSaveDir(null); setRoundResult(null); setWaitingForOther(false); }}
+        <button onClick={() => { setPhase("lobby"); setRoom(null); setMyRole(null); setMyChoice(null); setAnimState(null); setWaitingForOther(false); }}
           style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>
           🔄 NUEVA PARTIDA
         </button>
@@ -1898,6 +1936,7 @@ function PenaltyGame({ user, onBack }) {
   }
   return null;
 }
+
 
 // ============================================================
 // VISTA JUEGOS
