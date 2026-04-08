@@ -11,60 +11,118 @@ const supabase = createClient(
 // ⚙️ PARTIDOS — EDITA AQUÍ FECHAS Y HORAS
 // ============================================================
 const MATCH_SCHEDULE = {
-  "A_0": { date: "2026-06-11", time: "20:00" }, "A_1": { date: "2026-06-11", time: "23:00" },
-  "A_2": { date: "2026-06-12", time: "17:00" }, "A_3": { date: "2026-06-12", time: "20:00" },
-  "A_4": { date: "2026-06-12", time: "23:00" }, "A_5": { date: "2026-06-13", time: "20:00" },
-  "B_0": { date: "2026-06-12", time: "17:00" }, "B_1": { date: "2026-06-12", time: "20:00" },
-  "B_2": { date: "2026-06-12", time: "23:00" }, "B_3": { date: "2026-06-13", time: "17:00" },
-  "B_4": { date: "2026-06-13", time: "20:00" }, "B_5": { date: "2026-06-14", time: "20:00" },
-  "C_0": { date: "2026-06-13", time: "17:00" }, "C_1": { date: "2026-06-13", time: "23:00" },
-  "C_2": { date: "2026-06-14", time: "17:00" }, "C_3": { date: "2026-06-14", time: "20:00" },
-  "C_4": { date: "2026-06-14", time: "23:00" }, "C_5": { date: "2026-06-15", time: "20:00" },
-  "D_0": { date: "2026-06-14", time: "17:00" }, "D_1": { date: "2026-06-15", time: "17:00" },
-  "D_2": { date: "2026-06-15", time: "20:00" }, "D_3": { date: "2026-06-15", time: "23:00" },
-  "D_4": { date: "2026-06-16", time: "17:00" }, "D_5": { date: "2026-06-16", time: "20:00" },
-  "E_0": { date: "2026-06-15", time: "17:00" }, "E_1": { date: "2026-06-16", time: "17:00" },
-  "E_2": { date: "2026-06-16", time: "23:00" }, "E_3": { date: "2026-06-17", time: "17:00" },
-  "E_4": { date: "2026-06-17", time: "20:00" }, "E_5": { date: "2026-06-17", time: "23:00" },
-  "F_0": { date: "2026-06-16", time: "17:00" }, "F_1": { date: "2026-06-17", time: "17:00" },
-  "F_2": { date: "2026-06-18", time: "17:00" }, "F_3": { date: "2026-06-18", time: "20:00" },
-  "F_4": { date: "2026-06-18", time: "23:00" }, "F_5": { date: "2026-06-19", time: "20:00" },
-  "G_0": { date: "2026-06-17", time: "17:00" }, "G_1": { date: "2026-06-18", time: "17:00" },
-  "G_2": { date: "2026-06-19", time: "17:00" }, "G_3": { date: "2026-06-19", time: "20:00" },
-  "G_4": { date: "2026-06-19", time: "23:00" }, "G_5": { date: "2026-06-20", time: "20:00" },
-  "H_0": { date: "2026-06-18", time: "17:00" }, "H_1": { date: "2026-06-19", time: "17:00" },
-  "H_2": { date: "2026-06-20", time: "17:00" }, "H_3": { date: "2026-06-20", time: "20:00" },
-  "H_4": { date: "2026-06-20", time: "23:00" }, "H_5": { date: "2026-06-21", time: "20:00" },
-  "I_0": { date: "2026-06-19", time: "17:00" }, "I_1": { date: "2026-06-20", time: "17:00" },
-  "I_2": { date: "2026-06-21", time: "17:00" }, "I_3": { date: "2026-06-21", time: "20:00" },
-  "I_4": { date: "2026-06-21", time: "23:00" }, "I_5": { date: "2026-06-22", time: "20:00" },
-  "J_0": { date: "2026-06-20", time: "17:00" }, "J_1": { date: "2026-06-21", time: "17:00" },
-  "J_2": { date: "2026-06-22", time: "17:00" }, "J_3": { date: "2026-06-22", time: "20:00" },
-  "J_4": { date: "2026-06-22", time: "23:00" }, "J_5": { date: "2026-06-23", time: "20:00" },
-  "K_0": { date: "2026-06-21", time: "17:00" }, "K_1": { date: "2026-06-22", time: "17:00" },
-  "K_2": { date: "2026-06-23", time: "17:00" }, "K_3": { date: "2026-06-23", time: "20:00" },
-  "K_4": { date: "2026-06-23", time: "23:00" }, "K_5": { date: "2026-06-24", time: "20:00" },
-  "L_0": { date: "2026-06-22", time: "17:00" }, "L_1": { date: "2026-06-23", time: "17:00" },
-  "L_2": { date: "2026-06-24", time: "17:00" }, "L_3": { date: "2026-06-24", time: "20:00" },
-  "L_4": { date: "2026-06-24", time: "23:00" }, "L_5": { date: "2026-06-25", time: "20:00" },
-};
+  // GRUPO A — México, Sudáfrica, Corea del Sur, Rep. Checa
+  "A_0": { date: "2026-06-11", time: "21:00" },  // México vs Sudáfrica
+  "A_1": { date: "2026-06-12", time: "04:00" },  // Corea del Sur vs Rep. Checa
+  "A_2": { date: "2026-06-18", time: "18:00" },  // Rep. Checa vs Sudáfrica
+  "A_3": { date: "2026-06-19", time: "03:00" },  // México vs Corea del Sur
+  "A_4": { date: "2026-06-25", time: "03:00" },  // Sudáfrica vs Corea del Sur
+  "A_5": { date: "2026-06-25", time: "03:00" },  // Rep. Checa vs México
 
+  // GRUPO B — Canadá, Bosnia y Herz., Suiza, Qatar
+  "B_0": { date: "2026-06-12", time: "21:00" },  // Canadá vs Bosnia y Herz.
+  "B_1": { date: "2026-06-13", time: "21:00" },  // Qatar vs Suiza
+  "B_2": { date: "2026-06-18", time: "21:00" },  // Suiza vs Bosnia y Herz.
+  "B_3": { date: "2026-06-19", time: "00:00" },  // Canadá vs Qatar
+  "B_4": { date: "2026-06-24", time: "21:00" },  // Suiza vs Canadá
+  "B_5": { date: "2026-06-24", time: "21:00" },  // Bosnia y Herz. vs Qatar
+
+  // GRUPO C — Brasil, Marruecos, Escocia, Haití
+  "C_0": { date: "2026-06-13", time: "23:00" },  // Brasil vs Marruecos
+  "C_1": { date: "2026-06-14", time: "02:00" },  // Haití vs Escocia  ← madrugada del 14
+  "C_2": { date: "2026-06-20", time: "00:00" },  // Escocia vs Marruecos
+  "C_3": { date: "2026-06-20", time: "02:30" },  // Brasil vs Haití
+  "C_4": { date: "2026-06-25", time: "00:00" },  // Escocia vs Brasil
+  "C_5": { date: "2026-06-25", time: "00:00" },  // Marruecos vs Haití
+
+  // GRUPO D — Estados Unidos, Paraguay, Australia, Turquía
+  "D_0": { date: "2026-06-13", time: "02:00" },  // Estados Unidos vs Paraguay
+  "D_1": { date: "2026-06-13", time: "04:00" },  // Australia vs Turquía
+  "D_2": { date: "2026-06-19", time: "21:00" },  // Estados Unidos vs Australia
+  "D_3": { date: "2026-06-20", time: "02:00" },  // Turquía vs Paraguay
+  "D_4": { date: "2026-06-25", time: "02:00" },  // Estados Unidos vs Turquía
+  "D_5": { date: "2026-06-25", time: "02:00" },  // Paraguay vs Australia
+
+  // GRUPO E — Alemania, Curazao, Costa de Marfil, Ecuador
+  "E_0": { date: "2026-06-14", time: "19:00" },  // Alemania vs Curazao
+  "E_1": { date: "2026-06-15", time: "01:00" },  // Costa de Marfil vs Ecuador
+  "E_2": { date: "2026-06-20", time: "22:00" },  // Alemania vs Costa de Marfil
+  "E_3": { date: "2026-06-21", time: "04:00" },  // Curazao vs Ecuador
+  "E_4": { date: "2026-06-26", time: "00:00" },  // Ecuador vs Alemania
+  "E_5": { date: "2026-06-26", time: "00:00" },  // Curazao vs Costa de Marfil
+
+  // GRUPO F — Países Bajos, Japón, Túnez, Suecia
+  "F_0": { date: "2026-06-14", time: "22:00" },  // Países Bajos vs Japón
+  "F_1": { date: "2026-06-15", time: "04:00" },  // Suecia vs Túnez
+  "F_2": { date: "2026-06-21", time: "19:00" },  // Países Bajos vs Suecia
+  "F_3": { date: "2026-06-22", time: "04:00" },  // Japón vs Túnez
+  "F_4": { date: "2026-06-26", time: "02:00" },  // Túnez vs Países Bajos
+  "F_5": { date: "2026-06-26", time: "02:00" },  // Japón vs Suecia
+
+  // GRUPO G — Bélgica, Egipto, Irán, Nueva Zelanda
+  "G_0": { date: "2026-06-15", time: "21:00" },  // Bélgica vs Egipto
+  "G_1": { date: "2026-06-16", time: "01:00" },  // Irán vs Nueva Zelanda
+  "G_2": { date: "2026-06-21", time: "22:00" },  // Bélgica vs Irán
+  "G_3": { date: "2026-06-22", time: "01:00" },  // Nueva Zelanda vs Egipto
+  "G_4": { date: "2026-06-27", time: "02:00" },  // Nueva Zelanda vs Bélgica
+  "G_5": { date: "2026-06-27", time: "02:00" },  // Egipto vs Irán
+
+  // GRUPO H — España, Cabo Verde, Arabia Saudí, Uruguay
+  "H_0": { date: "2026-06-15", time: "18:00" },  // España vs Cabo Verde
+  "H_1": { date: "2026-06-16", time: "00:00" },  // Arabia Saudí vs Uruguay
+  "H_2": { date: "2026-06-21", time: "18:00" },  // España vs Arabia Saudí
+  "H_3": { date: "2026-06-22", time: "02:00" },  // Uruguay vs Cabo Verde
+  "H_4": { date: "2026-06-27", time: "02:00" },  // Uruguay vs España
+  "H_5": { date: "2026-06-27", time: "02:00" },  // Cabo Verde vs Arabia Saudí
+
+  // GRUPO I — Francia, Senegal, Noruega, Iraq
+  "I_0": { date: "2026-06-16", time: "21:00" },  // Francia vs Senegal
+  "I_1": { date: "2026-06-17", time: "00:00" },  // Iraq vs Noruega
+  "I_2": { date: "2026-06-22", time: "21:00" },  // Francia vs Noruega
+  "I_3": { date: "2026-06-23", time: "00:00" },  // Senegal vs Iraq
+  "I_4": { date: "2026-06-28", time: "21:00" },  // Noruega vs Francia
+  "I_5": { date: "2026-06-28", time: "21:00" },  // Senegal vs Iraq
+
+  // GRUPO J — Argentina, Argelia, Austria, Jordania
+  "J_0": { date: "2026-06-16", time: "18:00" },  // Argentina vs Argelia
+  "J_1": { date: "2026-06-17", time: "02:00" },  // Austria vs Jordania
+  "J_2": { date: "2026-06-22", time: "19:00" },  // Argentina vs Austria
+  "J_3": { date: "2026-06-23", time: "02:00" },  // Argelia vs Jordania
+  "J_4": { date: "2026-06-28", time: "00:00" },  // Argentina vs Jordania
+  "J_5": { date: "2026-06-28", time: "00:00" },  // Austria vs Argelia
+
+  // GRUPO K — Portugal, Colombia, Uzbekistán, RD Congo
+  "K_0": { date: "2026-06-17", time: "06:00" },  // Uzbekistán vs Colombia
+  "K_1": { date: "2026-06-18", time: "00:00" },  // Portugal vs RD Congo
+  "K_2": { date: "2026-06-23", time: "04:00" },  // Colombia vs RD Congo
+  "K_3": { date: "2026-06-23", time: "07:00" },  // Portugal vs Uzbekistán
+  "K_4": { date: "2026-06-28", time: "03:00" },  // Colombia vs Uzbekistán
+  "K_5": { date: "2026-06-28", time: "03:00" },  // Portugal vs Colombia
+
+  // GRUPO L — Inglaterra, Croacia, Panamá, Ghana
+  "L_0": { date: "2026-06-18", time: "03:00" },  // Inglaterra vs Panamá
+  "L_1": { date: "2026-06-18", time: "03:00" },  // Croacia vs Ghana
+  "L_2": { date: "2026-06-24", time: "00:00" },  // Inglaterra vs Ghana
+  "L_3": { date: "2026-06-24", time: "03:00" },  // Croacia vs Panamá
+  "L_4": { date: "2026-06-29", time: "00:00" },  // Panamá vs Ghana
+  "L_5": { date: "2026-06-29", time: "00:00" },  // Inglaterra vs Croacia
+};
 // ============================================================
-// ⚙️ GRUPOS — EDITA AQUÍ EQUIPOS Y BANDERAS
+// ⚙️ GRUPOS — datos oficiales tras playoffs marzo 2026
 // ============================================================
 const GROUPS = {
-  A: [{ name: "México", flag: "🇲🇽" }, { name: "Corea del Sur", flag: "🇰🇷" }, { name: "Sudáfrica", flag: "🇿🇦" }, { name: "Playoff UEFA D", flag: "🏳️" }],
-  B: [{ name: "Canadá", flag: "🇨🇦" }, { name: "Suiza", flag: "🇨🇭" }, { name: "Qatar", flag: "🇶🇦" }, { name: "Playoff UEFA A", flag: "🏳️" }],
+  A: [{ name: "México", flag: "🇲🇽" }, { name: "Sudáfrica", flag: "🇿🇦" }, { name: "Corea del Sur", flag: "🇰🇷" }, { name: "Rep. Checa", flag: "🇨🇿" }],
+  B: [{ name: "Canadá", flag: "🇨🇦" }, { name: "Bosnia y Herz.", flag: "🇧🇦" }, { name: "Suiza", flag: "🇨🇭" }, { name: "Qatar", flag: "🇶🇦" }],
   C: [{ name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" }, { name: "Haití", flag: "🇭🇹" }],
-  D: [{ name: "Estados Unidos", flag: "🇺🇸" }, { name: "Paraguay", flag: "🇵🇾" }, { name: "Australia", flag: "🇦🇺" }, { name: "Playoff UEFA C", flag: "🏳️" }],
-  E: [{ name: "Alemania", flag: "🇩🇪" }, { name: "Ecuador", flag: "🇪🇨" }, { name: "Costa de Marfil", flag: "🇨🇮" }, { name: "Curazao", flag: "🇨🇼" }],
-  F: [{ name: "Países Bajos", flag: "🇳🇱" }, { name: "Japón", flag: "🇯🇵" }, { name: "Túnez", flag: "🇹🇳" }, { name: "Playoff UEFA B", flag: "🏳️" }],
+  D: [{ name: "Estados Unidos", flag: "🇺🇸" }, { name: "Paraguay", flag: "🇵🇾" }, { name: "Australia", flag: "🇦🇺" }, { name: "Turquía", flag: "🇹🇷" }],
+  E: [{ name: "Alemania", flag: "🇩🇪" }, { name: "Curazao", flag: "🇨🇼" }, { name: "Costa de Marfil", flag: "🇨🇮" }, { name: "Ecuador", flag: "🇪🇨" }],
+  F: [{ name: "Países Bajos", flag: "🇳🇱" }, { name: "Japón", flag: "🇯🇵" }, { name: "Túnez", flag: "🇹🇳" }, { name: "Suecia", flag: "🇸🇪" }],
   G: [{ name: "Bélgica", flag: "🇧🇪" }, { name: "Egipto", flag: "🇪🇬" }, { name: "Irán", flag: "🇮🇷" }, { name: "Nueva Zelanda", flag: "🇳🇿" }],
   H: [{ name: "España", flag: "🇪🇸" }, { name: "Cabo Verde", flag: "🇨🇻" }, { name: "Arabia Saudí", flag: "🇸🇦" }, { name: "Uruguay", flag: "🇺🇾" }],
-  I: [{ name: "Francia", flag: "🇫🇷" }, { name: "Senegal", flag: "🇸🇳" }, { name: "Noruega", flag: "🇳🇴" }, { name: "Playoff FIFA 1", flag: "🏳️" }],
-  J: [{ name: "Argentina", flag: "🇦🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Argelia", flag: "🇩🇿" }, { name: "Playoff FIFA 2", flag: "🏳️" }],
-  K: [{ name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "Jordania", flag: "🇯🇴" }],
-  L: [{ name: "Portugal", flag: "🇵🇹" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Ghana", flag: "🇬🇭" }, { name: "Austria", flag: "🇦🇹" }],
+  I: [{ name: "Francia", flag: "🇫🇷" }, { name: "Senegal", flag: "🇸🇳" }, { name: "Noruega", flag: "🇳🇴" }, { name: "Iraq", flag: "🇮🇶" }],
+  J: [{ name: "Argentina", flag: "🇦🇷" }, { name: "Argelia", flag: "🇩🇿" }, { name: "Austria", flag: "🇦🇹" }, { name: "Jordania", flag: "🇯🇴" }],
+  K: [{ name: "Portugal", flag: "🇵🇹" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "RD Congo", flag: "🇨🇩" }],
+  L: [{ name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Ghana", flag: "🇬🇭" }],
 };
 
 const TOTAL_MATCHES = 72;
@@ -152,7 +210,7 @@ function formatDate(d) {
 // ============================================================
 // CUENTA ATRÁS
 // ============================================================
-const KICKOFF = new Date("2026-06-11T20:00:00+02:00").getTime();
+const KICKOFF = new Date("2026-06-11T21:00:00+02:00").getTime(); // 21:00h España
 function useCountdown() {
   const [time, setTime] = useState(() => Math.max(0, KICKOFF - Date.now()));
   useEffect(() => {
