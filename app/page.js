@@ -973,6 +973,8 @@ function AdminView({ matches, onDataChange }) {
   const [closingAll, setClosingAll] = useState(false);
   const [allClosed, setAllClosed] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [syncingMatches, setSyncingMatches] = useState(false);  // 👈 NUEVO
+  const [confirmSync, setConfirmSync] = useState(false);        // 👈 NUEVO
 
   useEffect(() => {
     setAllClosed(matches.length > 0 && matches.every(m => m.status === "closed"));
@@ -983,6 +985,34 @@ function AdminView({ matches, onDataChange }) {
     const ids = matches.filter(m => m.status === "open").map(m => m.id);
     for (const id of ids) await supabase.from("matches").update({ status: "closed" }).eq("id", id);
     setClosingAll(false); setConfirmClose(false);
+    onDataChange();
+  };
+
+  // 👈 NUEVO
+  const syncMatchData = async () => {
+    setSyncingMatches(true);
+    const { data: dbMatches } = await supabase.from("matches").select("*");
+    if (dbMatches) {
+      const updates = [];
+      for (const m of dbMatches) {
+        const local = ALL_MATCHES.find(x => x.id === m.id);
+        if (local) {
+          updates.push(
+            supabase.from("matches").update({
+              home: local.home,
+              away: local.away,
+              match_date: local.match_date,
+              match_time: local.match_time,
+              grp: local.grp,
+              competition: local.competition,
+            }).eq("id", m.id)
+          );
+        }
+      }
+      await Promise.all(updates);
+    }
+    setSyncingMatches(false);
+    setConfirmSync(false);
     onDataChange();
   };
 
@@ -1020,6 +1050,25 @@ function AdminView({ matches, onDataChange }) {
             : <button onClick={() => setConfirmClose(true)} style={{ width: "100%", padding: "12px", border: "1px solid rgba(255,82,82,0.3)", borderRadius: "7px", background: "rgba(255,82,82,0.08)", color: "#ff5252", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700, letterSpacing: "2px" }}>🔒 CERRAR TODOS LOS PRONÓSTICOS</button>
         }
       </div>
+
+      <div style={{ background: CARD, border: "1px solid rgba(0,176,255,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+  <p style={{ fontSize: "10px", color: "#7a5a2a", fontFamily: "monospace", marginBottom: "10px" }}>
+    🔄 Sincroniza equipos, fechas y horas desde el código sin borrar resultados ni predicciones.
+  </p>
+  {confirmSync
+    ? <div style={{ display: "flex", gap: "8px" }}>
+        <button onClick={syncMatchData} disabled={syncingMatches} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "7px", background: "#00b0ff", color: "#1c1510", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>
+          {syncingMatches ? "Sincronizando..." : "✓ SÍ, SINCRONIZAR"}
+        </button>
+        <button onClick={() => setConfirmSync(false)} style={{ padding: "12px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#5a3e1e", fontFamily: "monospace", fontSize: "12px", cursor: "pointer" }}>
+          Cancelar
+        </button>
+      </div>
+    : <button onClick={() => setConfirmSync(true)} style={{ width: "100%", padding: "12px", border: "1px solid rgba(0,176,255,0.3)", borderRadius: "7px", background: "rgba(0,176,255,0.06)", color: "#00b0ff", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700, letterSpacing: "2px" }}>
+        🔄 SINCRONIZAR PARTIDOS (SIN BORRAR RESULTADOS)
+      </button>
+  }
+</div>
 
       {saved && <div style={{ padding: "10px 14px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.3)", borderRadius: "8px", color: GREEN, fontFamily: "monospace", fontSize: "12px", marginBottom: "14px" }}>✓ Resultado guardado y puntos calculados</div>}
 
