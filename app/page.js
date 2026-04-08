@@ -2739,7 +2739,7 @@ export default function Home() {
     });
   }, []);
 
-  useEffect(() => { if (user) (); }, [user]);
+  useEffect(() => { if (user) loadData(); }, [user]);
 
   const loadData = async () => {
     const { data: dbMatches } = await supabase.from("matches").select("*").order("match_date");
