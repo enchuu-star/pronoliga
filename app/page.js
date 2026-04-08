@@ -2690,20 +2690,42 @@ export default function Home() {
     });
   }, []);
 
-  useEffect(() => { if (user) loadData(); }, [user]);
+  useEffect(() => { if (user) (); }, [user]);
 
   const loadData = async () => {
     const { data: dbMatches } = await supabase.from("matches").select("*").order("match_date");
     let finalMatches;
+
     if (dbMatches && dbMatches.length > 0) {
-      finalMatches = dbMatches;
+      // ✅ Siempre sincronizar fechas/horas desde MATCH_SCHEDULE
+      const updates = [];
+      for (const m of dbMatches) {
+        const localMatch = ALL_MATCHES.find(x => x.id === m.id);
+        if (localMatch && (m.match_date !== localMatch.match_date || m.match_time !== localMatch.match_time)) {
+          updates.push(
+            supabase.from("matches")
+              .update({ match_date: localMatch.match_date, match_time: localMatch.match_time })
+              .eq("id", m.id)
+          );
+        }
+      }
+      if (updates.length > 0) await Promise.all(updates);
+
+      // Recargar tras actualizar
+      const { data: refreshed } = await supabase.from("matches").select("*").order("match_date");
+      finalMatches = refreshed || dbMatches;
     } else {
+      // Primera vez: insertar todos los partidos
       const chunks = [];
       for (let i = 0; i < ALL_MATCHES.length; i += 10) chunks.push(ALL_MATCHES.slice(i, i + 10));
       let all = [];
-      for (const chunk of chunks) { const { data } = await supabase.from("matches").insert(chunk).select(); if (data) all = [...all, ...data]; }
+      for (const chunk of chunks) {
+        const { data } = await supabase.from("matches").insert(chunk).select();
+        if (data) all = [...all, ...data];
+      }
       finalMatches = all.length > 0 ? all : ALL_MATCHES;
     }
+
     setMatches(finalMatches);
     setAllClosed(finalMatches.length > 0 && finalMatches.every(m => m.status === "closed"));
     if (user) {
