@@ -962,6 +962,56 @@ function RankingView() {
 }
 
 // ============================================================
+// PROGRESO DE PARTICIPANTES (nuevo componente)
+// ============================================================
+function ParticipantProgress() {
+  const [progress, setProgress] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
+      const { data: preds } = await supabase.from("predictions").select("user_id");
+      const result = (profiles || []).map(p => {
+        const count = (preds || []).filter(x => x.user_id === p.id).length;
+        const pct = Math.round((count / TOTAL_MATCHES) * 100);
+        return { name: p.name, count, pct };
+      }).sort((a, b) => b.count - a.count);
+      setProgress(result);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <p style={{ color: "#8a6a3a", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p>;
+
+  return (
+    <div>
+      {progress.map((p, i) => (
+        <div key={i} style={{ marginBottom: "10px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+            <span style={{ fontFamily: "monospace", fontSize: "11px", color: "#f5e6c8" }}>{p.name}</span>
+            <span style={{ fontFamily: "monospace", fontSize: "11px", color: p.count === TOTAL_MATCHES ? GREEN : "#b89a6a" }}>
+              {p.count}/{TOTAL_MATCHES} · {p.pct}%
+            </span>
+          </div>
+          <div style={{ background: "rgba(245,158,11,0.08)", borderRadius: "4px", height: "5px", overflow: "hidden" }}>
+            <div style={{
+              height: "100%",
+              width: p.pct + "%",
+              background: p.count === TOTAL_MATCHES
+                ? `linear-gradient(90deg,${GREEN},#00c864)`
+                : `linear-gradient(90deg,${GREEN},#00b0ff)`,
+              borderRadius: "4px",
+              transition: "width 0.5s ease"
+            }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
 // ADMIN
 // ============================================================
 function AdminView({ matches, onDataChange }) {
@@ -972,8 +1022,8 @@ function AdminView({ matches, onDataChange }) {
   const [closingAll, setClosingAll] = useState(false);
   const [allClosed, setAllClosed] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
-  const [syncingMatches, setSyncingMatches] = useState(false);  // 👈 NUEVO
-  const [confirmSync, setConfirmSync] = useState(false);        // 👈 NUEVO
+  const [syncingMatches, setSyncingMatches] = useState(false);
+  const [confirmSync, setConfirmSync] = useState(false);
 
   useEffect(() => {
     setAllClosed(matches.length > 0 && matches.every(m => m.status === "closed"));
@@ -987,7 +1037,6 @@ function AdminView({ matches, onDataChange }) {
     onDataChange();
   };
 
-  // 👈 NUEVO
   const syncMatchData = async () => {
     setSyncingMatches(true);
     const { data: dbMatches } = await supabase.from("matches").select("*");
@@ -1034,6 +1083,12 @@ function AdminView({ matches, onDataChange }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <p style={{ fontSize: "9px", color: "#8a6a3a", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "16px" }}>PANEL DE ADMINISTRACIÓN</p>
 
+      {/* PROGRESO DE PARTICIPANTES */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+        <p style={{ fontSize: "9px", color: "#8a6a3a", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>PROGRESO DE PARTICIPANTES</p>
+        <ParticipantProgress />
+      </div>
+
       {/* BOTÓN CERRAR TODO */}
       <div style={{ background: CARD, border: "1px solid rgba(255,82,82,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
         <p style={{ fontSize: "10px", color: "#7a5a2a", fontFamily: "monospace", marginBottom: "10px" }}>
@@ -1050,24 +1105,25 @@ function AdminView({ matches, onDataChange }) {
         }
       </div>
 
+      {/* SINCRONIZAR PARTIDOS */}
       <div style={{ background: CARD, border: "1px solid rgba(0,176,255,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
-  <p style={{ fontSize: "10px", color: "#7a5a2a", fontFamily: "monospace", marginBottom: "10px" }}>
-    🔄 Sincroniza equipos, fechas y horas desde el código sin borrar resultados ni predicciones.
-  </p>
-  {confirmSync
-    ? <div style={{ display: "flex", gap: "8px" }}>
-        <button onClick={syncMatchData} disabled={syncingMatches} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "7px", background: "#00b0ff", color: "#1c1510", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>
-          {syncingMatches ? "Sincronizando..." : "✓ SÍ, SINCRONIZAR"}
-        </button>
-        <button onClick={() => setConfirmSync(false)} style={{ padding: "12px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#5a3e1e", fontFamily: "monospace", fontSize: "12px", cursor: "pointer" }}>
-          Cancelar
-        </button>
+        <p style={{ fontSize: "10px", color: "#7a5a2a", fontFamily: "monospace", marginBottom: "10px" }}>
+          🔄 Sincroniza equipos, fechas y horas desde el código sin borrar resultados ni predicciones.
+        </p>
+        {confirmSync
+          ? <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={syncMatchData} disabled={syncingMatches} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "7px", background: "#00b0ff", color: "#1c1510", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>
+                {syncingMatches ? "Sincronizando..." : "✓ SÍ, SINCRONIZAR"}
+              </button>
+              <button onClick={() => setConfirmSync(false)} style={{ padding: "12px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#5a3e1e", fontFamily: "monospace", fontSize: "12px", cursor: "pointer" }}>
+                Cancelar
+              </button>
+            </div>
+          : <button onClick={() => setConfirmSync(true)} style={{ width: "100%", padding: "12px", border: "1px solid rgba(0,176,255,0.3)", borderRadius: "7px", background: "rgba(0,176,255,0.06)", color: "#00b0ff", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700, letterSpacing: "2px" }}>
+              🔄 SINCRONIZAR PARTIDOS (SIN BORRAR RESULTADOS)
+            </button>
+        }
       </div>
-    : <button onClick={() => setConfirmSync(true)} style={{ width: "100%", padding: "12px", border: "1px solid rgba(0,176,255,0.3)", borderRadius: "7px", background: "rgba(0,176,255,0.06)", color: "#00b0ff", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700, letterSpacing: "2px" }}>
-        🔄 SINCRONIZAR PARTIDOS (SIN BORRAR RESULTADOS)
-      </button>
-  }
-</div>
 
       {saved && <div style={{ padding: "10px 14px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.3)", borderRadius: "8px", color: GREEN, fontFamily: "monospace", fontSize: "12px", marginBottom: "14px" }}>✓ Resultado guardado y puntos calculados</div>}
 
