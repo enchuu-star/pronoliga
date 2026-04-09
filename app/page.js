@@ -696,9 +696,6 @@ function MatchChat({ match, user }) {
   );
 }
 
-// ============================================================
-// FILA DE PARTIDO
-// ============================================================
 function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const ht = getTeam(match.home), at = getTeam(match.away);
   const [ph, setPh] = useState(userPred?.predicted_home ?? "");
@@ -773,12 +770,6 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
           )}
         </div>
       )}
-    {user.role !== "admin" && (
-        <div style={{ marginTop: "10px", display: "flex" ...  // bloque pronóstico existente
-        )}
-      )}
-
-      {/* AÑADIR ESTO: */}
       <MatchChat match={match} user={user} />
     </div>
   );
