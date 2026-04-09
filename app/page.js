@@ -232,8 +232,8 @@ const BORDER = "rgba(26,58,107,0.15)";
 const TEXT = "#1a2a3a";
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0;}body{background:#1c1510;}
-  ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:#1c1510;}::-webkit-scrollbar-thumb{background:#3a2a18;border-radius:2px;}
+  *{box-sizing:border-box;margin:0;padding:0;}body{background:#f0f4f8;}
+  ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:#f0f4f8;}::-webkit-scrollbar-thumb{background:#c0cfe0;border-radius:2px;}
   input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
