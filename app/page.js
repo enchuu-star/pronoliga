@@ -790,7 +790,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
           )}
         </div>
       )}
-      // <MatchChat match={match} user={user} />
+      
     </div>
   );
 }
