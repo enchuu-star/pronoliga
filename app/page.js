@@ -224,12 +224,12 @@ function useCountdown() {
 // ============================================================
 // TEMA
 // ============================================================
-const GREEN = "#f59e0b";
-const GREEN_DIM = "rgba(245,158,11,0.12)";
-const DARK = "#1c1510";
-const CARD = "rgba(255,255,255,0.03)";
-const BORDER = "rgba(245,158,11,0.12)";
-const TEXT = "#f5e6c8";
+const GREEN = "#1a3a6b";
+const GREEN_DIM = "rgba(26,58,107,0.10)";
+const DARK = "#f0f4f8";
+const CARD = "rgba(255,255,255,0.85)";
+const BORDER = "rgba(26,58,107,0.15)";
+const TEXT = "#1a2a3a";
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}body{background:#1c1510;}
@@ -238,9 +238,9 @@ const css = `
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 `;
-const inputSt = { width: "100%", padding: "12px 14px", marginBottom: "12px", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "8px", background: "rgba(0,0,0,0.35)", color: "#f5e6c8", fontSize: "16px", fontFamily: "monospace", outline: "none" };
-const smallSt = { padding: "8px 4px", border: "1px solid rgba(245,158,11,0.35)", borderRadius: "6px", background: "rgba(0,0,0,0.35)", color: GREEN, fontSize: "20px", fontFamily: "'Bebas Neue', monospace", outline: "none", textAlign: "center", width: "48px" };
+const inputSt = { width: "100%", padding: "12px 14px", marginBottom: "12px", border: "1px solid rgba(26,58,107,0.25)", borderRadius: "8px", background: "rgba(255,255,255,0.9)", color: "#1a2a3a", fontSize: "16px", fontFamily: "monospace", outline: "none" };
 
+const smallSt = { padding: "8px 4px", border: "1px solid rgba(26,58,107,0.35)", borderRadius: "6px", background: "rgba(255,255,255,0.9)", color: "#1a3a6b", fontSize: "20px", fontFamily: "'Bebas Neue', monospace", outline: "none", textAlign: "center", width: "48px" };
 function Stars() {
   const s = Array.from({ length: 40 }, (_, i) => ({ i, sz: Math.random() * 2 + 1, t: Math.random() * 100, l: Math.random() * 100, o: Math.random() * 0.35 + 0.08, dur: Math.random() * 3 + 2, dl: Math.random() * 3 }));
   return (
@@ -279,12 +279,12 @@ function LoginPage({ onLogin }) {
       <div style={{ width: "100%", maxWidth: "400px", animation: "fadeIn 0.4s ease" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(34px,9vw,52px)", letterSpacing: "4px", color: "#f5e6c8", lineHeight: 1 }}>PORRA <span style={{ color: GREEN }}>VALLAU</span></div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(18px,5vw,26px)", letterSpacing: "6px", color: "#8a6a3a", marginTop: "2px" }}>MUNDIAL 2026</div>
-          <div style={{ fontSize: "10px", color: "#7a5a2a", letterSpacing: "3px", fontFamily: "monospace", marginTop: "6px" }}>USA · CANADA · MEXICO</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(18px,5vw,26px)", letterSpacing: "6px", color: "#2a4a7b", marginTop: "2px" }}>MUNDIAL 2026</div>
+          <div style={{ fontSize: "10px", color: "#4a6a9b", letterSpacing: "3px", fontFamily: "monospace", marginTop: "6px" }}>USA · CANADA · MEXICO</div>
         </div>
-        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "16px", padding: "24px" }}>
-          <div style={{ display: "flex", marginBottom: "20px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
-            {["login", "register"].map(m => <button key={m} onClick={() => { setMode(m); setError(""); }} style={{ flex: 1, padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: mode === m ? GREEN : "transparent", color: mode === m ? "#1c1510" : "#b89a6a", fontWeight: 700 }}>{m === "login" ? "Entrar" : "Registro"}</button>)}
+        <div style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "16px", padding: "24px" }}>
+          <div style={{ display: "flex", marginBottom: "20px", background: "rgba(200,215,235,0.5)", borderRadius: "8px", padding: "3px" }}>
+            {["login", "register"].map(m => <button key={m} onClick={() => { setMode(m); setError(""); }} style={{ flex: 1, padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: mode === m ? GREEN : "transparent", color: mode === m ? "#1c1510" : "#4a6a9b", fontWeight: 700 }}>{m === "login" ? "Entrar" : "Registro"}</button>)}
           </div>
           {mode === "register" && <input value={name} onChange={e => setName(e.target.value)} placeholder="Tu nombre" style={inputSt} />}
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" style={inputSt} />
@@ -358,9 +358,9 @@ function NavBar({ user, view, setView, onLogout }) {
 
   return (
     <>
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(28,21,16,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(240,244,248,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto", padding: "0 14px", display: "flex", alignItems: "center", height: "50px" }}>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", letterSpacing: "2px", color: "#f5e6c8", flex: 1 }}>PORRA <span style={{ color: GREEN }}>VALLAU</span></span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", letterSpacing: "2px", color: "#1a2a3a", flex: 1 }}>PORRA <span style={{ color: GREEN }}>VALLAU</span></span>
           {/* Avatar / perfil en header */}
           <button onClick={() => setView("profile")} style={{
             width: "32px", height: "32px", borderRadius: "50%",
@@ -376,7 +376,7 @@ function NavBar({ user, view, setView, onLogout }) {
           <button onClick={onLogout} style={{ padding: "5px 10px", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "6px", background: "transparent", color: "#b89a6a", cursor: "pointer", fontSize: "11px", fontFamily: "monospace" }}>salir</button>
         </div>
       </div>
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(28,21,16,0.97)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(240,244,248,0.97)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto", display: "flex" }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "11px 2px 9px", border: "none", cursor: "pointer", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", borderTop: view === t.id ? `2px solid ${GREEN}` : "2px solid transparent" }}>
