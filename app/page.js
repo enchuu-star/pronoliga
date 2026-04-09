@@ -566,7 +566,6 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <CountdownBanner />
       <ProgressBar predictions={predictions} matches={matches} />
       <p style={{ fontSize: "9px", color: "#8a6a3a", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
