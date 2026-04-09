@@ -1457,7 +1457,7 @@ function HomeView({ user, matches, predictions, setView }) {
         {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", "#f59e0b", "rgba(245,158,11,0.15)", "rgba(245,158,11,0.04)", "games")}
         {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#2a4a7b", "rgba(245,158,11,0.15)", "rgba(255,255,255,0.03)", "profile")}
         {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#cc2222", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
-        {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
+        //{user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
       </div>
 
       {/* Mini ranking top 3 */}
@@ -3107,7 +3107,7 @@ export default function Home() {
             {view === "ranking" && <RankingView />}
             {view === "games" && <GamesView user={user} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
-            {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
+            //{view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
           {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />}
         </>
