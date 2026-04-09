@@ -474,6 +474,229 @@ function QualifierPicker({ group, userId, locked }) {
 }
 
 // ============================================================
+// CHAT DE PARTIDO
+// ============================================================
+function MatchChat({ match, user }) {
+  const [comments, setComments] = useState([]);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef(null);
+  const channelRef = useRef(null);
+
+  const loadComments = async () => {
+    const { data } = await supabase
+      .from("match_comments")
+      .select("*")
+      .eq("match_id", match.id)
+      .order("created_at", { ascending: true });
+    setComments(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    loadComments();
+
+    // Realtime
+    channelRef.current = supabase
+      .channel(`chat_${match.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "match_comments",
+        filter: `match_id=eq.${match.id}`,
+      }, payload => {
+        setComments(prev => [...prev, payload.new]);
+      })
+      .on("postgres_changes", {
+        event: "DELETE",
+        schema: "public",
+        table: "match_comments",
+        filter: `match_id=eq.${match.id}`,
+      }, payload => {
+        setComments(prev => prev.filter(c => c.id !== payload.old.id));
+      })
+      .subscribe();
+
+    return () => {
+      if (channelRef.current) channelRef.current.unsubscribe();
+    };
+  }, [open, match.id]);
+
+  useEffect(() => {
+    if (open && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments, open]);
+
+  const send = async () => {
+    if (!message.trim() || sending) return;
+    setSending(true);
+    await supabase.from("match_comments").insert({
+      match_id: match.id,
+      user_id: user.id,
+      user_name: user.name,
+      message: message.trim(),
+    });
+    setMessage("");
+    setSending(false);
+  };
+
+  const deleteComment = async (id) => {
+    await supabase.from("match_comments").delete().eq("id", id);
+  };
+
+  const formatTime = (ts) => {
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  };
+
+  const REACTIONS = ["⚽","🔥","😱","💀","🎉","👏","😅","🤞"];
+
+  const sendReaction = async (emoji) => {
+    await supabase.from("match_comments").insert({
+      match_id: match.id,
+      user_id: user.id,
+      user_name: user.name,
+      message: emoji,
+    });
+  };
+
+  return (
+    <div style={{ marginTop: "10px" }}>
+      {/* Toggle botón */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", padding: "8px", border: `1px solid ${BORDER}`,
+          borderRadius: "8px", background: open ? GREEN_DIM : "transparent",
+          color: open ? GREEN : "#4a6a9b", fontFamily: "monospace",
+          fontSize: "10px", cursor: "pointer", letterSpacing: "1px",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+        }}>
+        💬 {open ? "CERRAR CHAT" : `CHAT DEL PARTIDO ${comments.length > 0 && !open ? `(${comments.length})` : ""}`}
+      </button>
+
+      {open && (
+        <div style={{
+          marginTop: "8px", border: `1px solid ${BORDER}`,
+          borderRadius: "10px", background: "rgba(255,255,255,0.6)",
+          overflow: "hidden",
+        }}>
+          {/* Mensajes */}
+          <div style={{
+            maxHeight: "220px", overflowY: "auto",
+            padding: "10px", display: "flex", flexDirection: "column", gap: "6px",
+          }}>
+            {loading && (
+              <p style={{ color: "#6a85aa", fontFamily: "monospace", fontSize: "11px", textAlign: "center" }}>
+                Cargando...
+              </p>
+            )}
+            {!loading && comments.length === 0 && (
+              <p style={{ color: "#6a85aa", fontFamily: "monospace", fontSize: "11px", textAlign: "center", padding: "12px 0" }}>
+                Sé el primero en comentar ⚽
+              </p>
+            )}
+            {comments.map(c => {
+              const isMe = c.user_id === user.id;
+              const isAdmin = user.role === "admin";
+              const isReaction = ["⚽","🔥","😱","💀","🎉","👏","😅","🤞"].includes(c.message);
+              return (
+                <div key={c.id} style={{
+                  display: "flex", flexDirection: "column",
+                  alignItems: isMe ? "flex-end" : "flex-start",
+                }}>
+                  {!isMe && (
+                    <span style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", marginBottom: "2px", marginLeft: "4px" }}>
+                      {c.user_name}
+                    </span>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    {(isMe || isAdmin) && (
+                      <button onClick={() => deleteComment(c.id)} style={{
+                        padding: "0 4px", border: "none", background: "transparent",
+                        color: "#cc2222", cursor: "pointer", fontSize: "10px", opacity: 0.5,
+                      }}>✕</button>
+                    )}
+                    <div style={{
+                      maxWidth: "80%", padding: isReaction ? "4px 8px" : "8px 12px",
+                      borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
+                      background: isMe ? GREEN : "white",
+                      boxShadow: "0 1px 4px rgba(26,58,107,0.1)",
+                      fontSize: isReaction ? "22px" : "12px",
+                      color: isMe ? "white" : "#1a2a3a",
+                      fontFamily: "monospace", lineHeight: 1.4,
+                      wordBreak: "break-word",
+                    }}>
+                      {c.message}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: "8px", color: "#6a85aa", fontFamily: "monospace", marginTop: "2px", marginLeft: "4px", marginRight: "4px" }}>
+                    {formatTime(c.created_at)}
+                  </span>
+                </div>
+              );
+            })}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Reacciones rápidas */}
+          <div style={{
+            display: "flex", gap: "4px", padding: "6px 10px",
+            borderTop: `1px solid ${BORDER}`, flexWrap: "wrap",
+            background: "rgba(26,58,107,0.02)",
+          }}>
+            {REACTIONS.map(emoji => (
+              <button key={emoji} onClick={() => sendReaction(emoji)} style={{
+                padding: "4px 8px", border: `1px solid ${BORDER}`,
+                borderRadius: "20px", background: "white",
+                cursor: "pointer", fontSize: "16px", lineHeight: 1,
+              }}>{emoji}</button>
+            ))}
+          </div>
+
+          {/* Input mensaje */}
+          <div style={{
+            display: "flex", gap: "6px", padding: "8px 10px",
+            borderTop: `1px solid ${BORDER}`,
+            background: "rgba(26,58,107,0.02)",
+          }}>
+            <input
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && send()}
+              placeholder="Escribe algo..."
+              maxLength={200}
+              style={{
+                flex: 1, padding: "8px 12px",
+                border: `1px solid ${BORDER}`, borderRadius: "20px",
+                background: "white", color: "#1a2a3a",
+                fontFamily: "monospace", fontSize: "12px", outline: "none",
+              }}
+            />
+            <button
+              onClick={send}
+              disabled={!message.trim() || sending}
+              style={{
+                padding: "8px 14px", border: "none", borderRadius: "20px",
+                background: message.trim() ? GREEN : "rgba(26,58,107,0.1)",
+                color: message.trim() ? "white" : "#6a85aa",
+                fontFamily: "monospace", fontSize: "11px", fontWeight: 700,
+                cursor: message.trim() ? "pointer" : "default",
+              }}>
+              {sending ? "..." : "→"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // FILA DE PARTIDO
 // ============================================================
 function MatchRow({ match, userPred, user, onSaved, allClosed }) {
@@ -550,6 +773,13 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
           )}
         </div>
       )}
+    {user.role !== "admin" && (
+        <div style={{ marginTop: "10px", display: "flex" ...  // bloque pronóstico existente
+        )}
+      )}
+
+      {/* AÑADIR ESTO: */}
+      <MatchChat match={match} user={user} />
     </div>
   );
 }
