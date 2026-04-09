@@ -1522,6 +1522,55 @@ function ExportView({ matches, onBack }) {
         {exporting ? "⏳ GENERANDO IMAGEN..." : "📸 DESCARGAR IMAGEN PNG"}
       </button>
 
+      {/* Botón exportar JSON backup */}
+<button
+  onClick={() => {
+    const backup = {
+      fecha: new Date().toISOString(),
+      ranking: ranking.map(u => ({
+        nombre: u.name,
+        puntos_totales: u.total,
+        exactos: u.exactos,
+        parciales: u.parciales,
+        fallos: u.fallos,
+        partidos_evaluados: u.count,
+        puntos_clasificados: u.qualPts,
+        puntos_especiales: u.specialPts,
+      })),
+      pronosticos: profiles.map(u => ({
+        jugador: u.name,
+        predicciones: allPreds
+          .filter(p => p.user_id === u.id)
+          .map(p => {
+            const m = matches.find(x => x.id === p.match_id);
+            return {
+              partido: m ? `${m.home} vs ${m.away}` : p.match_id,
+              grupo: m?.grp || "-",
+              fecha: m?.match_date || "-",
+              pronostico: `${p.predicted_home}-${p.predicted_away}`,
+              resultado: m?.result_home !== null ? `${m.result_home}-${m.result_away}` : "pendiente",
+              puntos: p.points ?? "sin evaluar",
+            };
+          }),
+      })),
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.download = `backup-porra-vallau-${new Date().toLocaleDateString("es-ES").replace(/\//g, "-")}.json`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  }}
+  style={{
+    width: "100%", padding: "14px", border: `1px solid rgba(0,122,58,0.3)`,
+    borderRadius: "10px", marginBottom: "24px",
+    background: "rgba(0,122,58,0.08)",
+    color: "#007a3a",
+    fontFamily: "monospace", fontSize: "13px", fontWeight: 800,
+    cursor: "pointer", letterSpacing: "2px",
+  }}>
+  💾 DESCARGAR BACKUP JSON
+</button>
+
       {/* ===== PREVIEW RANKING ===== */}
       {exportType === "ranking" && (
         <div ref={rankingRef} style={{
