@@ -499,24 +499,23 @@ function MatchChat({ match, user }) {
     if (!open) return;
     loadComments();
 
-    // Realtime
     channelRef.current = supabase
-      .channel(`chat_${match.id}`)
+      .channel(`chat_${match.id}_${Math.random()}`)
       .on("postgres_changes", {
-        event: "INSERT",
+        event: "*",
         schema: "public",
         table: "match_comments",
-        filter: `match_id=eq.${match.id}`,
       }, payload => {
-        setComments(prev => [...prev, payload.new]);
-      })
-      .on("postgres_changes", {
-        event: "DELETE",
-        schema: "public",
-        table: "match_comments",
-        filter: `match_id=eq.${match.id}`,
-      }, payload => {
-        setComments(prev => prev.filter(c => c.id !== payload.old.id));
+        if (payload.eventType === "INSERT" && payload.new.match_id === match.id) {
+          setComments(prev => {
+            // evitar duplicados
+            if (prev.find(c => c.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        }
+        if (payload.eventType === "DELETE") {
+          setComments(prev => prev.filter(c => c.id !== payload.old.id));
+        }
       })
       .subscribe();
 
@@ -534,13 +533,34 @@ function MatchChat({ match, user }) {
   const send = async () => {
     if (!message.trim() || sending) return;
     setSending(true);
-    await supabase.from("match_comments").insert({
+
+    // Inserción optimista — aparece al instante
+    const optimistic = {
+      id: `temp_${Date.now()}`,
       match_id: match.id,
       user_id: user.id,
       user_name: user.name,
       message: message.trim(),
-    });
+      created_at: new Date().toISOString(),
+    };
+    setComments(prev => [...prev, optimistic]);
     setMessage("");
+
+    const { data, error } = await supabase.from("match_comments").insert({
+      match_id: match.id,
+      user_id: user.id,
+      user_name: user.name,
+      message: optimistic.message,
+    }).select().single();
+
+    if (error) {
+      // Si falla, quitar el optimista
+      setComments(prev => prev.filter(c => c.id !== optimistic.id));
+    } else {
+      // Reemplazar el optimista con el real
+      setComments(prev => prev.map(c => c.id === optimistic.id ? data : c));
+    }
+
     setSending(false);
   };
 
