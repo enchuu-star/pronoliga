@@ -1406,6 +1406,286 @@ function SpecialAwardsAdmin() {
 }
 
 // ============================================================
+// EXPORTAR RANKING Y PRONÓSTICOS (solo admin)
+// ============================================================
+function ExportView({ matches, onBack }) {
+  const [ranking, setRanking] = useState([]);
+  const [allPreds, setAllPreds] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportType, setExportType] = useState("ranking");
+  const rankingRef = useRef(null);
+  const predsRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: profs } = await supabase.from("profiles").select("*").eq("role", "user");
+      const { data: preds } = await supabase.from("predictions").select("*");
+      const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
+      const { data: special } = await supabase.from("special_predictions").select("*");
+      setProfiles(profs || []);
+      setAllPreds(preds || []);
+      const r = (profs || []).map(p => {
+        const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
+        const qualPts = (qpicks || []).filter(x => x.user_id === p.id).reduce((s, pick) => s + (pick.points || 0), 0);
+        const mySpecial = (special || []).find(x => x.user_id === p.id);
+        const specialPts = mySpecial ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0) : 0;
+        return {
+          ...p,
+          total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts,
+          exactos: myPreds.filter(x => x.points === 3).length,
+          parciales: myPreds.filter(x => x.points === 1).length,
+          fallos: myPreds.filter(x => x.points === 0).length,
+          count: myPreds.length,
+          qualPts, specialPts,
+        };
+      }).sort((a, b) => b.total - a.total);
+      setRanking(r);
+      setLoading(false);
+    })();
+  }, []);
+
+  const loadHtml2Canvas = () => new Promise(resolve => {
+    if (window.html2canvas) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.onload = resolve;
+    document.head.appendChild(s);
+  });
+
+  const exportImage = async (ref, filename) => {
+    setExporting(true);
+    try {
+      await loadHtml2Canvas();
+      const canvas = await window.html2canvas(ref.current, {
+        backgroundColor: "#f0f4f8",
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (e) {
+      console.error("Export error:", e);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const playedMatches = matches.filter(m => m.result_home !== null);
+  const getName = id => profiles.find(p => p.id === id)?.name || "?";
+  const today = new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+
+  if (loading) return (
+    <div style={{ textAlign: "center", padding: "40px" }}>
+      <p style={{ color: "#4a6a9b", fontFamily: "monospace" }}>Cargando datos...</p>
+    </div>
+  );
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#2a4a7b", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
+        <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px" }}>EXPORTAR IMÁGENES</p>
+      </div>
+
+      {/* Selector tipo */}
+      <div style={{ display: "flex", marginBottom: "16px", background: "rgba(26,58,107,0.06)", borderRadius: "8px", padding: "3px" }}>
+        {[{ id: "ranking", label: "🏆 Ranking" }, { id: "preds", label: "⚽ Pronósticos" }].map(t => (
+          <button key={t.id} onClick={() => setExportType(t.id)} style={{
+            flex: 1, padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer",
+            background: exportType === t.id ? GREEN : "transparent",
+            color: exportType === t.id ? "white" : "#2a4a7b",
+            fontFamily: "monospace", fontSize: "11px", fontWeight: 700,
+          }}>{t.label}</button>
+        ))}
+      </div>
+
+      {/* Botón exportar */}
+      <button
+        onClick={() => exportType === "ranking"
+          ? exportImage(rankingRef, `ranking-porra-vallau-${today}.png`)
+          : exportImage(predsRef, `pronosticos-porra-vallau-${today}.png`)
+        }
+        disabled={exporting}
+        style={{
+          width: "100%", padding: "14px", border: "none", borderRadius: "10px", marginBottom: "24px",
+          background: exporting ? "rgba(26,58,107,0.1)" : `linear-gradient(135deg,${GREEN},#2a5aab)`,
+          color: exporting ? "#6a85aa" : "white",
+          fontFamily: "monospace", fontSize: "13px", fontWeight: 800,
+          cursor: exporting ? "default" : "pointer", letterSpacing: "2px",
+        }}>
+        {exporting ? "⏳ GENERANDO IMAGEN..." : "📸 DESCARGAR IMAGEN PNG"}
+      </button>
+
+      {/* ===== PREVIEW RANKING ===== */}
+      {exportType === "ranking" && (
+        <div ref={rankingRef} style={{
+          background: "#f0f4f8", padding: "28px", borderRadius: "16px",
+          fontFamily: "monospace", maxWidth: "600px", margin: "0 auto",
+          border: "1px solid rgba(26,58,107,0.1)",
+        }}>
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: "24px", paddingBottom: "18px", borderBottom: "2px solid rgba(26,58,107,0.12)" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "40px", color: GREEN, letterSpacing: "4px", lineHeight: 1 }}>PORRA VALLAU</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#2a4a7b", letterSpacing: "6px", marginTop: "2px" }}>MUNDIAL 2026</div>
+            <div style={{ fontSize: "10px", color: "#6a85aa", marginTop: "6px", letterSpacing: "2px" }}>🏆 RANKING GENERAL · {today.toUpperCase()}</div>
+          </div>
+
+          {/* Podio top 3 */}
+          {ranking.length >= 3 && (
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: "8px", marginBottom: "24px" }}>
+              {[{ i: 1, h: 80, fs: 28, emoji: "🥈" }, { i: 0, h: 100, fs: 36, emoji: "🥇" }, { i: 2, h: 64, fs: 22, emoji: "🥉" }].map(({ i, h, fs, emoji }) => (
+                <div key={i} style={{ textAlign: "center", flex: 1 }}>
+                  <div style={{ fontSize: i === 0 ? "38px" : "28px", marginBottom: "4px" }}>{emoji}</div>
+                  <div style={{
+                    background: i === 0 ? GREEN : "white",
+                    borderRadius: "10px 10px 0 0", padding: "10px 6px",
+                    height: `${h}px`, display: "flex", flexDirection: "column",
+                    justifyContent: "center", alignItems: "center",
+                    boxShadow: i === 0 ? "0 4px 16px rgba(26,58,107,0.2)" : "0 2px 8px rgba(26,58,107,0.08)",
+                  }}>
+                    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${fs}px`, color: i === 0 ? "white" : GREEN, lineHeight: 1 }}>{ranking[i].total}</div>
+                    <div style={{ fontSize: "10px", color: i === 0 ? "rgba(255,255,255,0.85)" : "#2a4a7b", fontWeight: 700, marginTop: "3px" }}>{ranking[i].name?.split(" ")[0]}</div>
+                    <div style={{ fontSize: "8px", color: i === 0 ? "rgba(255,255,255,0.6)" : "#6a85aa", marginTop: "1px" }}>PTS</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Tabla completa */}
+          <div style={{ background: "white", borderRadius: "12px", overflow: "hidden", boxShadow: "0 2px 12px rgba(26,58,107,0.08)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 48px 48px 48px 56px", padding: "8px 14px", background: GREEN, gap: "4px" }}>
+              {["#", "JUGADOR", "🎯", "✓", "✗", "PTS"].map(h => (
+                <span key={h} style={{ fontSize: "9px", color: "rgba(255,255,255,0.85)", fontFamily: "monospace", letterSpacing: "1px", textAlign: h === "JUGADOR" ? "left" : "center" }}>{h}</span>
+              ))}
+            </div>
+            {ranking.map((u, i) => (
+              <div key={u.id} style={{
+                display: "grid", gridTemplateColumns: "32px 1fr 48px 48px 48px 56px",
+                padding: "10px 14px", gap: "4px", alignItems: "center",
+                background: i % 2 === 0 ? "white" : "rgba(26,58,107,0.03)",
+                borderBottom: "1px solid rgba(26,58,107,0.06)",
+              }}>
+                <span style={{ fontSize: "14px", textAlign: "center" }}>{medals[i] || `#${i + 1}`}</span>
+                <div>
+                  <div style={{ fontSize: "12px", color: "#1a2a3a", fontWeight: i < 3 ? 700 : 400 }}>{u.name}</div>
+                  <div style={{ fontSize: "8px", color: "#6a85aa" }}>{u.count} eval.</div>
+                </div>
+                <span style={{ fontSize: "11px", color: "#007a3a", textAlign: "center", fontWeight: 700 }}>{u.exactos}</span>
+                <span style={{ fontSize: "11px", color: "#b8860b", textAlign: "center" }}>{u.parciales}</span>
+                <span style={{ fontSize: "11px", color: "#cc2222", textAlign: "center" }}>{u.fallos}</span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: i === 0 ? GREEN : "#1a2a3a", textAlign: "center" }}>{u.total}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div style={{ textAlign: "center", marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(26,58,107,0.1)" }}>
+            <span style={{ fontSize: "9px", color: "#6a85aa", letterSpacing: "2px" }}>
+              🎯 EXACTO +3 · ✓ SIGNO +1 · ✗ FALLO +0
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ===== PREVIEW PRONÓSTICOS ===== */}
+      {exportType === "preds" && (
+        <div ref={predsRef} style={{
+          background: "#f0f4f8", padding: "28px", borderRadius: "16px",
+          fontFamily: "monospace", maxWidth: "700px", margin: "0 auto",
+          border: "1px solid rgba(26,58,107,0.1)",
+        }}>
+          {/* Header */}
+          <div style={{ textAlign: "center", marginBottom: "20px", paddingBottom: "16px", borderBottom: "2px solid rgba(26,58,107,0.12)" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "36px", color: GREEN, letterSpacing: "4px", lineHeight: 1 }}>PORRA VALLAU</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#2a4a7b", letterSpacing: "6px", marginTop: "2px" }}>PRONÓSTICOS · MUNDIAL 2026</div>
+            <div style={{ fontSize: "10px", color: "#6a85aa", marginTop: "6px", letterSpacing: "2px" }}>⚽ {playedMatches.length} PARTIDOS JUGADOS · {today.toUpperCase()}</div>
+          </div>
+
+          {/* Cabecera de jugadores */}
+          <div style={{ display: "grid", gap: "2px", marginBottom: "8px", gridTemplateColumns: `180px repeat(${ranking.length}, 1fr)` }}>
+            <div></div>
+            {ranking.map(u => (
+              <div key={u.id} style={{ textAlign: "center", padding: "6px 2px" }}>
+                <div style={{ fontSize: "10px", color: GREEN, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name?.split(" ")[0]}</div>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: "#2a4a7b" }}>{u.total}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Partidos jugados */}
+          {playedMatches.slice(0, 30).map((m, mi) => {
+            const ht = getTeam(m.home), at = getTeam(m.away);
+            return (
+              <div key={m.id} style={{
+                display: "grid", gap: "2px", alignItems: "center", padding: "6px 0",
+                gridTemplateColumns: `180px repeat(${ranking.length}, 1fr)`,
+                borderBottom: "1px solid rgba(26,58,107,0.07)",
+                background: mi % 2 === 0 ? "transparent" : "rgba(26,58,107,0.02)",
+                borderRadius: "4px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <span style={{ fontSize: "13px" }}>{ht.flag}</span>
+                  <span style={{ fontSize: "9px", color: "#1a2a3a", fontWeight: 700 }}>{m.result_home}-{m.result_away}</span>
+                  <span style={{ fontSize: "13px" }}>{at.flag}</span>
+                </div>
+                {ranking.map(u => {
+                  const pred = allPreds.find(p => p.match_id === m.id && p.user_id === u.id);
+                  const pts = pred?.points;
+                  return (
+                    <div key={u.id} style={{ textAlign: "center" }}>
+                      {pred ? (
+                        <span style={{
+                          fontSize: "10px", fontFamily: "monospace", fontWeight: 700,
+                          color: pts === 3 ? "#007a3a" : pts === 1 ? "#b8860b" : "#cc2222",
+                          background: pts === 3 ? "rgba(0,122,58,0.1)" : pts === 1 ? "rgba(184,134,11,0.1)" : "rgba(204,34,34,0.08)",
+                          padding: "1px 4px", borderRadius: "4px",
+                        }}>
+                          {pred.predicted_home}-{pred.predicted_away}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: "10px", color: "#c0cfe0" }}>—</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+
+          {/* Fila totales */}
+          <div style={{
+            display: "grid", gap: "2px", alignItems: "center", padding: "10px 0 0",
+            gridTemplateColumns: `180px repeat(${ranking.length}, 1fr)`,
+            borderTop: "2px solid rgba(26,58,107,0.15)", marginTop: "8px",
+          }}>
+            <div style={{ fontSize: "10px", color: "#2a4a7b", fontWeight: 700, letterSpacing: "1px" }}>TOTAL PTS</div>
+            {ranking.map(u => (
+              <div key={u.id} style={{ textAlign: "center" }}>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: GREEN }}>{u.total}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div style={{ textAlign: "center", marginTop: "16px", paddingTop: "12px", borderTop: "1px solid rgba(26,58,107,0.1)" }}>
+            <span style={{ fontSize: "9px", color: "#6a85aa", letterSpacing: "2px" }}>
+              🟢 EXACTO · 🟡 SIGNO · 🔴 FALLO
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // PANTALLA DE INICIO
 // ============================================================
 function HomeView({ user, matches, predictions, setView }) {
@@ -1457,7 +1737,7 @@ function HomeView({ user, matches, predictions, setView }) {
         {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", "#f59e0b", "rgba(245,158,11,0.15)", "rgba(245,158,11,0.04)", "games")}
         {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#2a4a7b", "rgba(245,158,11,0.15)", "rgba(255,255,255,0.03)", "profile")}
         {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#cc2222", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
-        //{user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
+        {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
       </div>
 
       {/* Mini ranking top 3 */}
@@ -3107,7 +3387,7 @@ export default function Home() {
             {view === "ranking" && <RankingView />}
             {view === "games" && <GamesView user={user} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
-            //{view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
+            {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
           {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />}
         </>
