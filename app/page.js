@@ -1146,21 +1146,6 @@ function HomeView({ user, matches, predictions, setView }) {
       {/* Cuenta atrás */}
       <CountdownBanner />
 
-      {/* Progreso pronósticos */}
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 14px", marginBottom: "20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-          <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#5a3e1e", letterSpacing: "2px" }}>TUS PRONÓSTICOS</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: sent === TOTAL_MATCHES ? GREEN : "#888" }}>{sent}/{TOTAL_MATCHES}</span>
-        </div>
-        <div style={{ background: "rgba(245,158,11,0.08)", borderRadius: "4px", height: "6px", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: pct + "%", background: `linear-gradient(90deg,${GREEN},#00b0ff)`, borderRadius: "4px", transition: "width 0.5s ease" }} />
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "5px" }}>
-          <span style={{ fontSize: "9px", color: "#8a6a3a", fontFamily: "monospace" }}>{pct}% completado</span>
-          {sent < TOTAL_MATCHES && <span style={{ fontSize: "9px", color: "#b89a6a", fontFamily: "monospace" }}>{TOTAL_MATCHES - sent} por enviar</span>}
-        </div>
-      </div>
-
       {/* Grid de accesos */}
       <p style={{ fontSize: "9px", color: "#8a6a3a", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>ACCESO RÁPIDO</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
