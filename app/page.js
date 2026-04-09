@@ -567,6 +567,7 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <ProgressBar predictions={predictions} matches={matches} />
+      <SpecialPredictions userId={user.id} locked={allClosed} />
       <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
         {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#2a4a7b" }}>{gr}</button>)}
@@ -914,21 +915,22 @@ function RankingView() {
       const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
       const { data: preds } = await supabase.from("predictions").select("*");
       const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
+      const { data: specialPreds } = await supabase.from("special_predictions").select("*");
       const r = (profiles || []).map(p => {
         const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
         const myPicks = (qpicks || []).filter(x => x.user_id === p.id);
-        const qualPts = myPicks.reduce((s, pick) => {
-          let pts = 0;
-          // +2 por cada clasificado acertado (si hay resultado real marcado)
-          // Aquí simplemente sumamos los qualifier_points si los tiene
-          return s + (pick.points || 0);
-        }, 0);
+        const qualPts = myPicks.reduce((s, pick) => s + (pick.points || 0), 0);
+        const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);          // ← AÑADIR
+        const specialPts = mySpecial                                                     // ← AÑADIR
+          ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0)   // ← AÑADIR
+          : 0;                                                                           // ← AÑADIR
         return {
           ...p,
-          total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts,
+          total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts,  // ← specialPts añadido
           exactos: myPreds.filter(x => x.points === 3).length,
           count: myPreds.length,
           qualPts,
+          specialPts,  // ← AÑADIR
         };
       }).sort((a, b) => b.total - a.total);
       setRanking(r); setLoading(false);
@@ -944,7 +946,11 @@ function RankingView() {
           <span style={{ fontSize: "20px", minWidth: "28px" }}>{medals[i] || `#${i + 1}`}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "monospace", fontSize: "14px", color: "#1a2a3a" }}>{u.name}</div>
-            <div style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", marginTop: "2px" }}>{u.exactos} exactos · {u.count} eval. {u.qualPts > 0 ? `· +${u.qualPts} clasificados` : ""}</div>
+            <div style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", marginTop: "2px" }}>
+              {u.exactos} exactos · {u.count} eval.
+              {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
+              {u.specialPts > 0 ? ` · +${u.specialPts} especiales` : ""}
+            </div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: i === 0 ? GREEN : "#1a2a3a", lineHeight: 1 }}>{u.total}</div>
@@ -1125,6 +1131,9 @@ function AdminView({ matches, onDataChange }) {
         }
       </div>
 
+      {/* ADJUDICAR PRONÓSTICOS ESPECIALES */}
+      <SpecialAwardsAdmin />
+        
       {saved && <div style={{ padding: "10px 14px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.3)", borderRadius: "8px", color: GREEN, fontFamily: "monospace", fontSize: "12px", marginBottom: "14px" }}>✓ Resultado guardado y puntos calculados</div>}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px" }}>
@@ -1156,6 +1165,242 @@ function AdminView({ matches, onDataChange }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function SpecialPredictions({ userId, locked }) {
+  const [topScorer, setTopScorer] = useState(null);
+  const [bestPlayer, setBestPlayer] = useState(null);
+  const [saved, setSaved] = useState({ scorer: false, player: false });
+  const [loading, setLoading] = useState(true);
+  const [inputScorer, setInputScorer] = useState("");
+  const [inputPlayer, setInputPlayer] = useState("");
+  const [activeTab, setActiveTab] = useState("scorer");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("special_predictions")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+      if (data) {
+        setTopScorer(data.top_scorer || null);
+        setBestPlayer(data.best_player || null);
+        setInputScorer(data.top_scorer || "");
+        setInputPlayer(data.best_player || "");
+      }
+      setLoading(false);
+    })();
+  }, [userId]);
+
+  const savePick = async (field, value) => {
+    if (locked || !value.trim()) return;
+    const { error } = await supabase
+      .from("special_predictions")
+      .upsert({ user_id: userId, [field]: value.trim() }, { onConflict: "user_id" });
+    if (!error) {
+      const key = field === "top_scorer" ? "scorer" : "player";
+      if (field === "top_scorer") setTopScorer(value.trim());
+      else setBestPlayer(value.trim());
+      setSaved(s => ({ ...s, [key]: true }));
+      setTimeout(() => setSaved(s => ({ ...s, [key]: false })), 2000);
+    }
+  };
+
+  const clearPick = async (field) => {
+    if (locked) return;
+    await supabase
+      .from("special_predictions")
+      .upsert({ user_id: userId, [field]: null }, { onConflict: "user_id" });
+    if (field === "top_scorer") { setTopScorer(null); setInputScorer(""); }
+    else { setBestPlayer(null); setInputPlayer(""); }
+  };
+
+  if (loading) return null;
+
+  const renderTab = (field) => {
+    const isScorer = field === "top_scorer";
+    const current = isScorer ? topScorer : bestPlayer;
+    const input = isScorer ? inputScorer : inputPlayer;
+    const setInput = isScorer ? setInputScorer : setInputPlayer;
+    const savedKey = isScorer ? "scorer" : "player";
+    const icon = isScorer ? "⚽" : "🏅";
+    const label = isScorer ? "máximo goleador" : "mejor jugador";
+
+    return (
+      <div>
+        {/* Selección guardada */}
+        {current ? (
+          <div style={{
+            display: "flex", alignItems: "center", gap: "10px", padding: "12px",
+            background: GREEN_DIM, border: `1px solid ${BORDER}`,
+            borderRadius: "10px", marginBottom: "14px"
+          }}>
+            <span style={{ fontSize: "26px" }}>{icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "17px", color: GREEN }}>
+                {current}
+              </div>
+              <div style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace" }}>
+                Tu pronóstico de {label}
+              </div>
+            </div>
+            {saved[savedKey] && (
+              <span style={{ color: GREEN, fontFamily: "monospace", fontSize: "12px" }}>✓ guardado</span>
+            )}
+            {!locked && (
+              <button onClick={() => clearPick(field)}
+                style={{ padding: "4px 8px", border: `1px solid rgba(204,34,34,0.3)`, borderRadius: "6px", background: "rgba(204,34,34,0.06)", color: "#cc2222", cursor: "pointer", fontSize: "10px", fontFamily: "monospace" }}>
+                ✕
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{
+            padding: "12px", background: "rgba(26,58,107,0.04)",
+            border: `1px dashed ${BORDER}`, borderRadius: "10px",
+            marginBottom: "14px", textAlign: "center"
+          }}>
+            <span style={{ fontSize: "11px", color: "#6a85aa", fontFamily: "monospace" }}>
+              {locked ? `No enviaste pronóstico de ${label}` : `Escribe el nombre del ${label}`}
+            </span>
+          </div>
+        )}
+
+        {/* Input libre */}
+        {!locked && (
+          <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+            <div style={{ flex: 1 }}>
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && savePick(field, input)}
+                placeholder={`Ej: Kylian Mbappé, Erling Haaland...`}
+                style={{ ...inputSt, marginBottom: "4px" }}
+              />
+              <p style={{ fontSize: "9px", color: "#6a85aa", fontFamily: "monospace" }}>
+                Escribe el nombre y pulsa Guardar o Enter
+              </p>
+            </div>
+            <button
+              onClick={() => savePick(field, input)}
+              disabled={!input.trim() || input.trim() === current}
+              style={{
+                padding: "12px 16px", border: "none", borderRadius: "8px",
+                background: input.trim() && input.trim() !== current ? GREEN : "rgba(26,58,107,0.1)",
+                color: input.trim() && input.trim() !== current ? "white" : "#6a85aa",
+                fontFamily: "monospace", fontSize: "11px", fontWeight: 700,
+                cursor: input.trim() && input.trim() !== current ? "pointer" : "default",
+                whiteSpace: "nowrap", letterSpacing: "1px",
+              }}>
+              GUARDAR
+            </button>
+          </div>
+        )}
+
+        {locked && current && (
+          <p style={{ fontSize: "9px", color: "#6a85aa", fontFamily: "monospace", textAlign: "center", marginTop: "8px" }}>
+            🔒 Pronóstico cerrado
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
+      <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "14px" }}>
+        PRONÓSTICOS ESPECIALES · +5 PTS c/u
+      </p>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", marginBottom: "16px", background: "rgba(26,58,107,0.06)", borderRadius: "8px", padding: "3px" }}>
+        {[
+          { id: "scorer", icon: "⚽", label: "Máx. Goleador" },
+          { id: "player", icon: "🏅", label: "Mejor Jugador" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+            flex: 1, padding: "9px 4px", border: "none", borderRadius: "6px", cursor: "pointer",
+            background: activeTab === t.id ? GREEN : "transparent",
+            color: activeTab === t.id ? "white" : "#2a4a7b",
+            fontFamily: "monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "1px",
+          }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "scorer" && renderTab("top_scorer")}
+      {activeTab === "player" && renderTab("best_player")}
+    </div>
+  );
+}
+
+function SpecialAwardsAdmin() {
+  const [topScorer, setTopScorer] = useState("");
+  const [bestPlayer, setBestPlayer] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const award = async () => {
+    if (!topScorer && !bestPlayer) return;
+    setSaving(true);
+    const { data: preds } = await supabase.from("special_predictions").select("*");
+    for (const u of (preds || [])) {
+      await supabase.from("special_predictions").update({
+        top_scorer_points: topScorer && u.top_scorer?.toLowerCase().trim() === topScorer.toLowerCase().trim() ? 5 : u.top_scorer_points,
+        best_player_points: bestPlayer && u.best_player?.toLowerCase().trim() === bestPlayer.toLowerCase().trim() ? 5 : u.best_player_points,
+      }).eq("id", u.id);
+    }
+    setSaving(false); setDone(true);
+    setTimeout(() => setDone(false), 3000);
+  };
+
+  return (
+    <div style={{ background: CARD, border: "1px solid rgba(0,200,100,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+      <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>
+        🏅 ADJUDICAR PRONÓSTICOS ESPECIALES
+      </p>
+      <p style={{ fontSize: "10px", color: "#6a85aa", fontFamily: "monospace", marginBottom: "12px" }}>
+        Escribe el nombre exacto del ganador. Se compara sin distinguir mayúsculas.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
+        <div>
+          <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", marginBottom: "4px" }}>⚽ MÁXIMO GOLEADOR</p>
+          <input
+            value={topScorer}
+            onChange={e => setTopScorer(e.target.value)}
+            placeholder="Ej: Kylian Mbappé"
+            style={{ ...inputSt, marginBottom: 0 }}
+          />
+        </div>
+        <div>
+          <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", marginBottom: "4px" }}>🏅 MEJOR JUGADOR</p>
+          <input
+            value={bestPlayer}
+            onChange={e => setBestPlayer(e.target.value)}
+            placeholder="Ej: Lamine Yamal"
+            style={{ ...inputSt, marginBottom: 0 }}
+          />
+        </div>
+      </div>
+      {done && (
+        <p style={{ color: "#007a3a", fontFamily: "monospace", fontSize: "11px", marginBottom: "8px" }}>
+          ✓ Puntos adjudicados correctamente
+        </p>
+      )}
+      <button onClick={award} disabled={saving || (!topScorer && !bestPlayer)}
+        style={{
+          width: "100%", padding: "11px", borderRadius: "7px",
+          background: "rgba(0,200,100,0.12)", color: "#007a3a",
+          fontFamily: "monospace", fontSize: "11px", fontWeight: 700,
+          cursor: "pointer", letterSpacing: "2px",
+          border: "1px solid rgba(0,200,100,0.3)"
+        }}>
+        {saving ? "Guardando..." : "✓ ADJUDICAR PUNTOS"}
+      </button>
     </div>
   );
 }
