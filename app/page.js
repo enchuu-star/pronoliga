@@ -897,7 +897,7 @@ function ResultsView({ matches }) {
 // ============================================================
 // COMUNIDAD
 // ============================================================
-function CommunityView({ matches }) {
+function CommunityView({ matches, user }) {
   const [viewMode, setViewMode] = useState("day");
   const [selectedDay, setSelectedDay] = useState(null);
   const [allPreds, setAllPreds] = useState([]);
@@ -939,6 +939,9 @@ function CommunityView({ matches }) {
               {pred.points !== null && pred.points !== undefined && <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "monospace", fontWeight: 700, background: pred.points === 3 ? GREEN_DIM : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 3 ? GREEN : pred.points === 1 ? "#b8860b" : "#cc2222" }}>{pred.points === 3 ? "🎯 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}</span>}
             </div>
           ))}
+
+        {/* ← AÑADIR ESTO */}
+        <MatchChat match={m} user={user} />
       </div>
     );
   };
@@ -3652,7 +3655,7 @@ export default function Home() {
             {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
             {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
             {view === "results" && <ResultsView matches={matches} />}
-            {view === "community" && <CommunityView matches={matches} />}
+            {view === "community" && <CommunityView matches={matches} user={user} />}
             {view === "profile" && <ProfileView user={user} matches={matches} />}
             {view === "ranking" && <RankingView />}
             {view === "games" && <GamesView user={user} />}
