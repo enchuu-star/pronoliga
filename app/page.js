@@ -915,6 +915,8 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <ProgressBar predictions={predictions} matches={matches} />
       <SpecialPredictions userId={user.id} locked={allClosed} />
+      <SpecialPredictions userId={user.id} locked={allClosed} />
+      <SpecialPredictionsTable currentUserId={user.id} />
       <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
         {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#2a4a7b" }}>{gr}</button>)}
@@ -1688,6 +1690,101 @@ function SpecialPredictions({ userId, locked }) {
   );
 }
 
+// ============================================================
+// TABLA PRONÓSTICOS ESPECIALES DE TODOS
+// ============================================================
+function SpecialPredictionsTable({ currentUserId }) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("scorer");
+
+  useEffect(() => {
+    (async () => {
+      const { data: specials } = await supabase.from("special_predictions").select("*");
+      const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
+      const merged = (profiles || []).map(p => {
+        const sp = (specials || []).find(x => x.user_id === p.id);
+        return {
+          name: p.name,
+          isMe: p.id === currentUserId,
+          top_scorer: sp?.top_scorer || null,
+          best_player: sp?.best_player || null,
+        };
+      }).sort((a, b) => a.name.localeCompare(b.name));
+      setData(merged);
+      setLoading(false);
+    })();
+  }, [currentUserId]);
+
+  if (loading) return null;
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
+      <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "14px" }}>
+        PRONÓSTICOS ESPECIALES · TODOS
+      </p>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", marginBottom: "14px", background: "rgba(26,58,107,0.06)", borderRadius: "8px", padding: "3px" }}>
+        {[
+          { id: "scorer", icon: "⚽", label: "Máx. Goleador" },
+          { id: "player", icon: "🏅", label: "Mejor Jugador" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            flex: 1, padding: "9px 4px", border: "none", borderRadius: "6px", cursor: "pointer",
+            background: tab === t.id ? GREEN : "transparent",
+            color: tab === t.id ? "white" : "#2a4a7b",
+            fontFamily: "monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "1px",
+          }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tabla */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        {/* Cabecera */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", padding: "4px 10px" }}>
+          <span style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "1px" }}>JUGADOR</span>
+          <span style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "1px" }}>
+            {tab === "scorer" ? "MÁXIMO GOLEADOR" : "MEJOR JUGADOR"}
+          </span>
+        </div>
+
+        {data.map((u, i) => {
+          const value = tab === "scorer" ? u.top_scorer : u.best_player;
+          return (
+            <div key={i} style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px",
+              padding: "10px", borderRadius: "8px",
+              background: u.isMe ? GREEN_DIM : "rgba(255,255,255,0.5)",
+              border: u.isMe ? `1px solid rgba(26,58,107,0.3)` : `1px solid ${BORDER}`,
+              borderLeft: u.isMe ? `3px solid ${GREEN}` : "3px solid transparent",
+            }}>
+              <span style={{
+                fontSize: "12px", fontFamily: "monospace",
+                color: u.isMe ? GREEN : "#1a2a3a",
+                fontWeight: u.isMe ? 700 : 400,
+                display: "flex", alignItems: "center", gap: "4px",
+              }}>
+                {u.isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
+                {u.name}
+              </span>
+              <span style={{
+                fontSize: "12px", fontFamily: "monospace",
+                color: value ? "#1a2a3a" : "#aaa",
+                fontStyle: value ? "normal" : "italic",
+              }}>
+                {value || "Sin pronóstico"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+                
 function SpecialAwardsAdmin() {
   const [topScorer, setTopScorer] = useState("");
   const [bestPlayer, setBestPlayer] = useState("");
