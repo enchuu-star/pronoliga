@@ -304,7 +304,7 @@ function CountdownBanner() {
   const { d, h, m, s, started } = useCountdown();
   if (started) return <div style={{ background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.25)", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", textAlign: "center" }}><span style={{ color: GREEN, fontFamily: "monospace", fontSize: "13px", letterSpacing: "2px" }}>⚽ ¡EL MUNDIAL HA COMENZADO!</span></div>;
   return (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
+    <div style={{ padding: "16px" }}>
       <p style={{ color: "#4a6a9b", fontFamily: "monospace", fontSize: "9px", letterSpacing: "3px", textAlign: "center", marginBottom: "12px" }}>⏱ FALTAN · 11 JUN 2026 · 20:00H</p>
       <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
         {[{ v: d, l: "DÍAS" }, { v: h, l: "HORAS" }, { v: m, l: "MIN" }, { v: s, l: "SEG" }].map(({ v, l }) => (
@@ -914,7 +914,7 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <ProgressBar predictions={predictions} matches={matches} />
-      <SpecialPredictionsTableCollapsible currentUserId={user.id} />
+      <SpecialPredictionsTable currentUserId={user.id} />
       <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
         {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#2a4a7b" }}>{gr}</button>)}
@@ -1112,7 +1112,7 @@ function CommunityView({ matches, user }) {
   if (loading) return <p style={{ color: "#4a6a9b", fontFamily: "monospace" }}>Cargando...</p>;
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-    <SpecialPredictionsTable currentUserId={user.id} />
+    <SpecialPredictionsTableCollapsible currentUserId={user.id} />
       <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>PRONÓSTICOS DE TODOS</p>
       <div style={{ display: "flex", marginBottom: "16px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
         {[{ id: "day", label: "Por día" }, { id: "all", label: "Todos" }].map(opt => <button key={opt.id} onClick={() => setViewMode(opt.id)} style={{ flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: viewMode === opt.id ? GREEN : "transparent", color: viewMode === opt.id ? "#1c1510" : "#2a4a7b", fontWeight: 700 }}>{opt.label}</button>)}
