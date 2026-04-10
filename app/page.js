@@ -3017,8 +3017,11 @@ function usePenaltyCanvas(canvasRef, animState) {
     const ballEndX = targetX[shootDir], ballEndY = targetY;
 
     const gkStartX = W / 2, gkStartY = GY + GH - 5;
-    const gkEndX = { izq: GX + 22, centro: W / 2, der: GX + GW - 22 }[saveDir];
-    const gkEndY = { izq: GY + GH * 0.25, centro: GY + GH - 5, der: GY + GH * 0.25 }[saveDir];
+    // El portero se mueve en espejo respecto al lanzador
+const mirrorDir = { izq: "der", centro: "centro", der: "izq" };
+const gkMirror = mirrorDir[saveDir];
+const gkEndX = { izq: GX + 22, centro: W / 2, der: GX + GW - 22 }[gkMirror];
+const gkEndY = { izq: GY + GH * 0.25, centro: GY + GH - 5, der: GY + GH * 0.25 }[gkMirror];
 
     const TOTAL_FRAMES = 60;
 
@@ -3127,7 +3130,7 @@ function usePenaltyCanvas(canvasRef, animState) {
       // Goalkeeper
       const gkX = gkStartX + (gkEndX - gkStartX) * ease;
       const gkY = gkStartY + (gkEndY - gkStartY) * ease;
-      const gkLean = saveDir === "izq" ? -1.1 * ease : saveDir === "der" ? 1.1 * ease : 0;
+      const gkLean = gkMirror === "izq" ? -1.1 * ease : gkMirror === "der" ? 1.1 * ease : 0;
       const gkArm = ease * 1.2;
       drawPlayer(ctx, gkX, gkY, 0.85, keeper.shirt, keeper.shorts, keeper.skin, keeper.num, keeper.name, gkLean, 0, gkArm, true);
 
