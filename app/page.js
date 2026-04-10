@@ -474,7 +474,7 @@ function QualifierPicker({ group, userId, locked }) {
 }
 
 // ============================================================
-// CHAT DE PARTIDO
+// MATCH CHAT — con realtime robusto + contador no leídos
 // ============================================================
 function MatchChat({ match, user }) {
   const [comments, setComments] = useState([]);
@@ -482,8 +482,10 @@ function MatchChat({ match, user }) {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [unread, setUnread] = useState(0);
   const bottomRef = useRef(null);
   const channelRef = useRef(null);
+  const lastSeenRef = useRef(0); // timestamp del último mensaje visto
 
   const loadComments = async () => {
     const { data } = await supabase
@@ -493,37 +495,83 @@ function MatchChat({ match, user }) {
       .order("created_at", { ascending: true });
     setComments(data || []);
     setLoading(false);
+    // Al cargar con el chat abierto, marcar todo como leído
+    if (open) {
+      lastSeenRef.current = Date.now();
+      setUnread(0);
+    }
   };
 
+  // Suscripción realtime — se monta una sola vez por match
   useEffect(() => {
-    if (!open) return;
-    loadComments();
+    // Cargar mensajes iniciales (aunque el chat esté cerrado, para saber si hay no leídos)
+    (async () => {
+      const { data } = await supabase
+        .from("match_comments")
+        .select("*")
+        .eq("match_id", match.id)
+        .order("created_at", { ascending: true });
+      setComments(data || []);
+      setLoading(false);
+    })();
 
+    // Canal realtime
     channelRef.current = supabase
-      .channel(`chat_${match.id}_${Math.random()}`)
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "match_comments",
-      }, payload => {
-        if (payload.eventType === "INSERT" && payload.new.match_id === match.id) {
+      .channel(`match_chat_${match.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "match_comments",
+          filter: `match_id=eq.${match.id}`,
+        },
+        (payload) => {
           setComments(prev => {
-            // evitar duplicados
+            // Evitar duplicados (mensaje propio ya insertado optimistamente)
             if (prev.find(c => c.id === payload.new.id)) return prev;
+            // Si el chat está cerrado y el mensaje es de otro usuario → sumar no leído
+            if (payload.new.user_id !== user.id) {
+              setUnread(u => u + 1);
+            }
             return [...prev, payload.new];
           });
         }
-        if (payload.eventType === "DELETE") {
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "match_comments",
+          filter: `match_id=eq.${match.id}`,
+        },
+        (payload) => {
           setComments(prev => prev.filter(c => c.id !== payload.old.id));
         }
-      })
+      )
       .subscribe();
 
     return () => {
-      if (channelRef.current) channelRef.current.unsubscribe();
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
     };
-  }, [open, match.id]);
+  }, [match.id]); // solo se remonta si cambia el partido
 
+  // Al abrir el chat → marcar como leído
+  useEffect(() => {
+    if (open) {
+      setUnread(0);
+      lastSeenRef.current = Date.now();
+      // Scroll al fondo
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    }
+  }, [open]);
+
+  // Scroll al fondo cuando llegan mensajes nuevos con el chat abierto
   useEffect(() => {
     if (open && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
@@ -534,7 +582,6 @@ function MatchChat({ match, user }) {
     if (!message.trim() || sending) return;
     setSending(true);
 
-    // Inserción optimista — aparece al instante
     const optimistic = {
       id: `temp_${Date.now()}`,
       match_id: match.id,
@@ -546,22 +593,52 @@ function MatchChat({ match, user }) {
     setComments(prev => [...prev, optimistic]);
     setMessage("");
 
-    const { data, error } = await supabase.from("match_comments").insert({
+    const { data, error } = await supabase
+      .from("match_comments")
+      .insert({
+        match_id: match.id,
+        user_id: user.id,
+        user_name: user.name,
+        message: optimistic.message,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      setComments(prev => prev.filter(c => c.id !== optimistic.id));
+    } else {
+      setComments(prev => prev.map(c => c.id === optimistic.id ? data : c));
+    }
+    setSending(false);
+  };
+
+  const sendReaction = async (emoji) => {
+    const optimistic = {
+      id: `temp_${Date.now()}`,
       match_id: match.id,
       user_id: user.id,
       user_name: user.name,
-      message: optimistic.message,
-    }).select().single();
+      message: emoji,
+      created_at: new Date().toISOString(),
+    };
+    setComments(prev => [...prev, optimistic]);
+
+    const { data, error } = await supabase
+      .from("match_comments")
+      .insert({
+        match_id: match.id,
+        user_id: user.id,
+        user_name: user.name,
+        message: emoji,
+      })
+      .select()
+      .single();
 
     if (error) {
-      // Si falla, quitar el optimista
       setComments(prev => prev.filter(c => c.id !== optimistic.id));
     } else {
-      // Reemplazar el optimista con el real
       setComments(prev => prev.map(c => c.id === optimistic.id ? data : c));
     }
-
-    setSending(false);
   };
 
   const deleteComment = async (id) => {
@@ -570,45 +647,71 @@ function MatchChat({ match, user }) {
 
   const formatTime = (ts) => {
     const d = new Date(ts);
-    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
 
-  const REACTIONS = ["⚽","🔥","😱","💀","🎉","👏","😅","🤞"];
-
-  const sendReaction = async (emoji) => {
-    await supabase.from("match_comments").insert({
-      match_id: match.id,
-      user_id: user.id,
-      user_name: user.name,
-      message: emoji,
-    });
-  };
+  const REACTIONS = ["⚽", "🔥", "😱", "💀", "🎉", "👏", "😅", "🤞"];
 
   return (
     <div style={{ marginTop: "10px" }}>
-      {/* Toggle botón */}
+      {/* Botón toggle con badge de no leídos */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
-          width: "100%", padding: "8px", border: `1px solid ${BORDER}`,
-          borderRadius: "8px", background: open ? GREEN_DIM : "transparent",
-          color: open ? GREEN : "#4a6a9b", fontFamily: "monospace",
-          fontSize: "10px", cursor: "pointer", letterSpacing: "1px",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+          width: "100%", padding: "8px",
+          border: `1px solid ${open ? GREEN : BORDER}`,
+          borderRadius: "8px",
+          background: open ? GREEN_DIM : "transparent",
+          color: open ? GREEN : "#4a6a9b",
+          fontFamily: "monospace", fontSize: "10px",
+          cursor: "pointer", letterSpacing: "1px",
+          display: "flex", alignItems: "center",
+          justifyContent: "center", gap: "6px",
+          position: "relative",
         }}>
-        💬 {open ? "CERRAR CHAT" : `CHAT DEL PARTIDO ${comments.length > 0 && !open ? `(${comments.length})` : ""}`}
+        💬
+        {open ? "CERRAR CHAT" : `CHAT DEL PARTIDO`}
+        {/* Badge de no leídos */}
+        {!open && unread > 0 && (
+          <span style={{
+            background: "#cc2222",
+            color: "white",
+            borderRadius: "10px",
+            fontSize: "10px",
+            fontFamily: "monospace",
+            fontWeight: 700,
+            padding: "1px 7px",
+            minWidth: "20px",
+            textAlign: "center",
+            lineHeight: "18px",
+          }}>
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+        {/* Punto verde si hay mensajes aunque no haya no leídos */}
+        {!open && unread === 0 && comments.length > 0 && (
+          <span style={{
+            fontSize: "9px", color: "#6a85aa",
+            fontFamily: "monospace",
+          }}>
+            ({comments.length})
+          </span>
+        )}
       </button>
 
       {open && (
         <div style={{
-          marginTop: "8px", border: `1px solid ${BORDER}`,
-          borderRadius: "10px", background: "rgba(255,255,255,0.6)",
+          marginTop: "8px",
+          border: `1px solid ${BORDER}`,
+          borderRadius: "10px",
+          background: "rgba(255,255,255,0.6)",
           overflow: "hidden",
         }}>
           {/* Mensajes */}
           <div style={{
             maxHeight: "220px", overflowY: "auto",
-            padding: "10px", display: "flex", flexDirection: "column", gap: "6px",
+            padding: "10px", display: "flex",
+            flexDirection: "column", gap: "6px",
           }}>
             {loading && (
               <p style={{ color: "#6a85aa", fontFamily: "monospace", fontSize: "11px", textAlign: "center" }}>
@@ -623,11 +726,12 @@ function MatchChat({ match, user }) {
             {comments.map(c => {
               const isMe = c.user_id === user.id;
               const isAdmin = user.role === "admin";
-              const isReaction = ["⚽","🔥","😱","💀","🎉","👏","😅","🤞"].includes(c.message);
+              const isReaction = ["⚽", "🔥", "😱", "💀", "🎉", "👏", "😅", "🤞"].includes(c.message);
               return (
                 <div key={c.id} style={{
                   display: "flex", flexDirection: "column",
                   alignItems: isMe ? "flex-end" : "flex-start",
+                  animation: "fadeIn 0.2s ease",
                 }}>
                   {!isMe && (
                     <span style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", marginBottom: "2px", marginLeft: "4px" }}>
@@ -642,7 +746,8 @@ function MatchChat({ match, user }) {
                       }}>✕</button>
                     )}
                     <div style={{
-                      maxWidth: "80%", padding: isReaction ? "4px 8px" : "8px 12px",
+                      maxWidth: "80%",
+                      padding: isReaction ? "4px 8px" : "8px 12px",
                       borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                       background: isMe ? GREEN : "white",
                       boxShadow: "0 1px 4px rgba(26,58,107,0.1)",
@@ -671,7 +776,8 @@ function MatchChat({ match, user }) {
           }}>
             {REACTIONS.map(emoji => (
               <button key={emoji} onClick={() => sendReaction(emoji)} style={{
-                padding: "4px 8px", border: `1px solid ${BORDER}`,
+                padding: "4px 8px",
+                border: `1px solid ${BORDER}`,
                 borderRadius: "20px", background: "white",
                 cursor: "pointer", fontSize: "16px", lineHeight: 1,
               }}>{emoji}</button>
