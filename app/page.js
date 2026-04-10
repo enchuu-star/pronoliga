@@ -914,7 +914,7 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <ProgressBar predictions={predictions} matches={matches} />
-      <SpecialPredictionsTable currentUserId={user.id} />
+      <SpecialPredictions userId={user.id} locked={allClosed} />
       <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
         {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#2a4a7b" }}>{gr}</button>)}
