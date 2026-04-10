@@ -3000,7 +3000,6 @@ function usePenaltyCanvas(canvasRef, animState) {
     frameRef.current = 0;
     const { shootDir, saveDir, scored, seed } = animState;
 
-    // Pick random players once per animation
     if (!playersRef.current || animState !== playersRef.current.state) {
       const s = seed || Math.floor(Math.random() * 999);
       playersRef.current = { state: animState, shooter: pickRandom(SHOOTERS, s), keeper: pickRandom(KEEPERS, s + 3) };
@@ -3011,44 +3010,55 @@ function usePenaltyCanvas(canvasRef, animState) {
     const GX = (W - GW) / 2, GY = H * 0.04;
     const POST = 5;
 
-    const targetX = { izq: GX + GW * 0.2, centro: GX + GW * 0.5, der: GX + GW * 0.8 };
-    const targetY = GY + GH * 0.5;
+    // Todo desde perspectiva del ESPECTADOR
+    // izq = izquierda de pantalla, der = derecha de pantalla
+    const zonasX = {
+      izq:    GX + GW * 0.2,
+      centro: GX + GW * 0.5,
+      der:    GX + GW * 0.8,
+    };
+
     const ballStartX = W / 2, ballStartY = H * 0.87;
-    const ballEndX = targetX[shootDir], ballEndY = targetY;
+    const ballEndX = zonasX[shootDir];
+    const ballEndY = GY + GH * 0.5;
 
     const gkStartX = W / 2, gkStartY = GY + GH - 5;
-    // El portero se mueve en espejo respecto al lanzador
-const mirrorDir = { izq: "der", centro: "centro", der: "izq" };
-const gkMirror = mirrorDir[saveDir];
-const gkEndX = { izq: GX + 22, centro: W / 2, der: GX + GW - 22 }[gkMirror];
-const gkEndY = { izq: GY + GH * 0.25, centro: GY + GH - 5, der: GY + GH * 0.25 }[gkMirror];
+
+    // El portero se mueve a la zona donde el lanzador disparó
+    // (desde perspectiva espectador, izq del lanzador = izq de pantalla)
+    // El portero se tira hacia donde va el balón
+    const gkZonaX = {
+      izq:    GX + 22,
+      centro: W / 2,
+      der:    GX + GW - 22,
+    };
+    const gkZonaY = {
+      izq:    GY + GH * 0.25,
+      centro: GY + GH - 5,
+      der:    GY + GH * 0.25,
+    };
+
+    const gkEndX = gkZonaX[saveDir];
+    const gkEndY = gkZonaY[saveDir];
+
+    // Lean del portero: si va a izq de pantalla, se inclina a izq (-), si va a der se inclina a der (+)
+    const gkLeanDir = saveDir === "izq" ? -1 : saveDir === "der" ? 1 : 0;
 
     const TOTAL_FRAMES = 60;
 
     const drawPitch = () => {
-      // Sky gradient (dark)
       ctx.fillStyle = "#111c0e"; ctx.fillRect(0, 0, W, H);
-
-      // Pitch stripes
       for (let i = 0; i < 6; i++) {
         ctx.fillStyle = i % 2 === 0 ? "#173212" : "#1a3a15";
         ctx.fillRect(i * (W / 6), H * 0.55, W / 6, H * 0.45);
       }
-
-      // Penalty arc
       ctx.beginPath();
       ctx.arc(W / 2, H * 0.97, H * 0.22, Math.PI * 1.15, Math.PI * 1.85);
       ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1.2; ctx.stroke();
-
-      // Penalty spot
       ctx.beginPath(); ctx.arc(W / 2, H * 0.82, 3.5, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fill();
-
-      // Goal line
       ctx.beginPath(); ctx.moveTo(GX - 14, GY + GH); ctx.lineTo(GX + GW + 14, GY + GH);
       ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 2; ctx.stroke();
-
-      // Net pattern (behind posts)
       ctx.strokeStyle = "rgba(255,255,255,0.07)"; ctx.lineWidth = 0.7;
       for (let nx = GX + 8; nx < GX + GW; nx += GW / 10) {
         ctx.beginPath(); ctx.moveTo(nx, GY + 4); ctx.lineTo(nx + 5, GY + GH - 2); ctx.stroke();
@@ -3059,44 +3069,33 @@ const gkEndY = { izq: GY + GH * 0.25, centro: GY + GH - 5, der: GY + GH * 0.25 }
     };
 
     const drawGoal = () => {
-      // Post shadows
       ctx.fillStyle = "rgba(0,0,0,0.3)";
       ctx.fillRect(GX + 3, GY + 3, POST, GH);
       ctx.fillRect(GX + GW - POST - 1, GY + 3, POST, GH);
       ctx.fillRect(GX + 3, GY + 3, GW - 6, POST);
-
-      // Posts
       ctx.fillStyle = "#f0f0e8";
       ctx.fillRect(GX, GY, POST, GH);
       ctx.fillRect(GX + GW - POST, GY, POST, GH);
       ctx.fillRect(GX, GY, GW, POST);
-
-      // Post shine
       ctx.fillStyle = "rgba(255,255,255,0.4)";
       ctx.fillRect(GX + 1, GY + 1, 2, GH);
     };
 
-    const drawBall = (bx, by, frame, scale) => {
-      const r = (10 - scale * 3.5) * Math.max(0.5, 1 - (by - ballStartY) / (ballEndY - ballStartY) * 0.3);
+    const drawBall = (bx, by, frame, t) => {
+      const r = 10 - t * 3;
       const spin = frame * 0.3;
       ctx.save(); ctx.translate(bx, by);
-
-      // Ball shadow
       ctx.save(); ctx.scale(1, 0.4);
       ctx.beginPath(); ctx.arc(0, r * 2, r * 0.9, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.fill();
       ctx.restore();
-
       ctx.rotate(spin);
-      // Main ball
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
       const ballGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
       ballGrad.addColorStop(0, "#ffffff");
       ballGrad.addColorStop(0.7, "#e8e8e8");
       ballGrad.addColorStop(1, "#c0c0c0");
       ctx.fillStyle = ballGrad; ctx.fill();
-
-      // Pentagons
       ctx.fillStyle = "#1a1a1a";
       for (let i = 0; i < 5; i++) {
         const a = (i / 5) * Math.PI * 2 + spin * 0.3;
@@ -3109,13 +3108,6 @@ const gkEndY = { izq: GY + GH * 0.25, centro: GY + GH - 5, der: GY + GH * 0.25 }
         }
         ctx.closePath(); ctx.fill();
       }
-      // Center pentagon
-      ctx.beginPath();
-      for (let v = 0; v < 5; v++) {
-        const va = (v / 5) * Math.PI * 2 + spin;
-        v === 0 ? ctx.moveTo(Math.cos(va) * r * 0.25, Math.sin(va) * r * 0.25) : ctx.lineTo(Math.cos(va) * r * 0.25, Math.sin(va) * r * 0.25);
-      }
-      ctx.closePath(); ctx.fill();
       ctx.restore();
     };
 
@@ -3127,20 +3119,19 @@ const gkEndY = { izq: GY + GH * 0.25, centro: GY + GH - 5, der: GY + GH * 0.25 }
       ctx.clearRect(0, 0, W, H);
       drawPitch();
 
-      // Goalkeeper
+      // Portero se mueve hacia donde va el balón
       const gkX = gkStartX + (gkEndX - gkStartX) * ease;
       const gkY = gkStartY + (gkEndY - gkStartY) * ease;
-      const gkLean = gkMirror === "izq" ? -1.1 * ease : gkMirror === "der" ? 1.1 * ease : 0;
+      const gkLean = gkLeanDir * 1.1 * ease;
       const gkArm = ease * 1.2;
       drawPlayer(ctx, gkX, gkY, 0.85, keeper.shirt, keeper.shorts, keeper.skin, keeper.num, keeper.name, gkLean, 0, gkArm, true);
 
-      // Ball trajectory (arc upward slightly)
+      // Balón va a donde el lanzador eligió
       const bx = ballStartX + (ballEndX - ballStartX) * ease;
       const arcY = -H * 0.08 * Math.sin(t * Math.PI);
       const by = ballStartY + (ballEndY - ballStartY) * ease + arcY;
       drawBall(bx, by, frameRef.current, ease);
 
-      // Shooter (run-up then kick)
       const runOffset = Math.min(ease, 0.4) * 18;
       const kickLean = easeIn * 0.35;
       const legSwing = easeIn * 1.1;
@@ -3148,7 +3139,6 @@ const gkEndY = { izq: GY + GH * 0.25, centro: GY + GH - 5, der: GY + GH * 0.25 }
 
       drawGoal();
 
-      // Result overlay
       if (t >= 1) {
         ctx.save();
         ctx.fillStyle = scored ? "rgba(245,158,11,0.18)" : "rgba(0,100,200,0.18)";
