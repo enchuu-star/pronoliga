@@ -914,7 +914,7 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <ProgressBar predictions={predictions} matches={matches} />
-      <SpecialPredictions userId={user.id} locked={allClosed} />
+      <SpecialPredictionsTableCollapsible currentUserId={user.id} />
       <p style={{ fontSize: "9px", color: "#4a6a9b", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
         {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#2a4a7b" }}>{gr}</button>)}
@@ -1023,6 +1023,43 @@ function ResultsView({ matches }) {
 // ============================================================
 // COMUNIDAD
 // ============================================================
+function SpecialPredictionsTableCollapsible({ currentUserId }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={{ marginBottom: "16px" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", padding: "10px 14px",
+          border: `1px solid ${open ? GREEN : BORDER}`,
+          borderRadius: open ? "10px 10px 0 0" : "10px",
+          background: open ? GREEN_DIM : CARD,
+          color: open ? GREEN : "#4a6a9b",
+          fontFamily: "monospace", fontSize: "10px",
+          cursor: "pointer", letterSpacing: "2px",
+          display: "flex", alignItems: "center",
+          justifyContent: "space-between",
+        }}>
+        <span>🏅 PRONÓSTICOS ESPECIALES</span>
+        <span style={{ fontSize: "12px" }}>{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          border: `1px solid ${GREEN}`,
+          borderTop: "none",
+          borderRadius: "0 0 10px 10px",
+          overflow: "hidden",
+        }}>
+          <SpecialPredictionsTable currentUserId={currentUserId} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function CommunityView({ matches, user }) {
   const [viewMode, setViewMode] = useState("day");
   const [selectedDay, setSelectedDay] = useState(null);
