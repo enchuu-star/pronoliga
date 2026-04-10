@@ -3691,7 +3691,7 @@ export default function Home() {
         const isOnboarded = profile?.onboarded === true;
         setUser({ ...session.user, name: profile?.name || session.user.email, role: profile?.role || "user" });
         setScreen("app");
-        if (!isOnboarded) setShowOnboarding(true);
+        // if (!isOnboarded) setShowOnboarding(true);
       }
       setLoadingSession(false);
     });
@@ -3746,7 +3746,7 @@ export default function Home() {
     setScreen("app");
     // Comprobar si ya ha hecho el onboarding
     const { data: profile } = await supabase.from("profiles").select("onboarded").eq("id", u.id).single();
-    if (!profile?.onboarded) setShowOnboarding(true);
+    // if (!profile?.onboarded) setShowOnboarding(true);
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); setUser(null); setScreen("login"); };
@@ -3781,7 +3781,7 @@ export default function Home() {
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
-          {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />}
+          {/* {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />}*/}
         </>
       )}
     </div>
