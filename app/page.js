@@ -1417,7 +1417,7 @@ function RankingView() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const prevRankingRef = useRef({});  // ← AÑADIR
+  const prevRankingRef = useRef({});
 
   const loadRanking = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -1442,14 +1442,11 @@ function RankingView() {
       };
     }).sort((a, b) => b.total - a.total);
 
-    // Calcular movimiento comparando con posición anterior
     const newRanking = r.map((u, i) => {
       const prev = prevRankingRef.current[u.id];
-      const move = prev === undefined ? null : prev - i; // positivo = subió, negativo = bajó
+      const move = prev === undefined ? null : prev - i;
       return { ...u, move };
     });
-
-    // Guardar posiciones actuales para la próxima comparación
     r.forEach((u, i) => { prevRankingRef.current[u.id] = i; });
 
     setRanking(newRanking);
@@ -1459,18 +1456,16 @@ function RankingView() {
   };
 
   useEffect(() => {
-  loadRanking();
-
-  const channel = supabase
-    .channel("ranking_realtime")
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "predictions" }, () => loadRanking())
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "predictions" }, () => loadRanking())
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "qualifier_picks" }, () => loadRanking())
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "special_predictions" }, () => loadRanking())
-    .subscribe();
-
-  return () => supabase.removeChannel(channel);
-}, []);
+    loadRanking();
+    const channel = supabase
+      .channel("ranking_realtime")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "predictions" }, () => loadRanking())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "predictions" }, () => loadRanking())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "qualifier_picks" }, () => loadRanking())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "special_predictions" }, () => loadRanking())
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
 
   const medals = ["🥇", "🥈", "🥉"];
   const formatTime = d => d
@@ -1515,44 +1510,24 @@ function RankingView() {
           borderRadius: "10px", padding: "14px 16px", marginBottom: "6px",
         }}>
           <span style={{ fontSize: "20px", minWidth: "28px" }}>{medals[i] || `#${i + 1}`}</span>
-          {ranking.map((u, i) => (
-  <div key={u.id} style={{
-    display: "flex", alignItems: "center", gap: "12px",
-    background: i === 0 ? GREEN_DIM : CARD,
-    border: i === 0 ? `1px solid rgba(79,195,247,0.3)` : `1px solid ${BORDER}`,
-    borderRadius: "10px", padding: "14px 16px", marginBottom: "6px",
-  }}>
-    <span style={{ fontSize: "20px", minWidth: "28px" }}>{medals[i] || `#${i + 1}`}</span>
-    <div style={{ flex: 1 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</span>
-        {/* INDICADOR DE MOVIMIENTO */}
-        {u.move === null ? (
-          <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace" }}>—</span>
-        ) : u.move > 0 ? (
-          <span style={{ fontSize: "10px", color: "#4fc3f7", fontFamily: "monospace", fontWeight: 700 }}>
-            ▲{u.move}
-          </span>
-        ) : u.move < 0 ? (
-          <span style={{ fontSize: "10px", color: "#ff6b4a", fontFamily: "monospace", fontWeight: 700 }}>
-            ▼{Math.abs(u.move)}
-          </span>
-        ) : (
-          <span style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "monospace" }}>—</span>
-        )}
-      </div>
-      <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "2px" }}>
-        {u.exactos} exactos · {u.count} eval.
-        {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
-        {u.specialPts > 0 ? ` · +${u.specialPts} especiales` : ""}
-      </div>
-    </div>
-    <div style={{ textAlign: "right" }}>
-      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: i === 0 ? GREEN : "#e0eaf8", lineHeight: 1 }}>{u.total}</div>
-      <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>PTS</div>
-    </div>
-  </div>
-))}
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</span>
+              {u.move === null ? (
+                <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace" }}>—</span>
+              ) : u.move > 0 ? (
+                <span style={{ fontSize: "10px", color: "#00c853", fontFamily: "monospace", fontWeight: 700 }}>▲{u.move}</span>
+              ) : u.move < 0 ? (
+                <span style={{ fontSize: "10px", color: "#ff3d3d", fontFamily: "monospace", fontWeight: 700 }}>▼{Math.abs(u.move)}</span>
+              ) : (
+                <span style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "monospace" }}>—</span>
+              )}
+            </div>
+            <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "2px" }}>
+              {u.exactos} exactos · {u.count} eval.
+              {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
+              {u.specialPts > 0 ? ` · +${u.specialPts} especiales` : ""}
+            </div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: i === 0 ? GREEN : "#e0eaf8", lineHeight: 1 }}>{u.total}</div>
