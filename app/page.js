@@ -222,25 +222,38 @@ function useCountdown() {
 }
 
 // ============================================================
-// TEMA
+// TEMA — Azul marino profesional
 // ============================================================
-const GREEN = "#1a3a6b";
-const GREEN_DIM = "rgba(26,58,107,0.10)";
-const DARK = "#1e3a5f";
-const CARD = "rgba(255,255,255,0.92)";  // tarjetas bien blancas
-const BORDER = "rgba(255,255,255,0.25)";
-const TEXT = "#1a2a3a";
+const GREEN = "#4fc3f7";           // Azul claro brillante (acentos)
+const GREEN_DIM = "rgba(79,195,247,0.12)";
+const DARK = "#0a1628";            // Fondo principal — azul muy oscuro
+const CARD = "rgba(255,255,255,0.06)";  // Tarjetas translúcidas
+const BORDER = "rgba(79,195,247,0.2)";
+const TEXT = "#e8f4fd";
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0;}body{background:#1e3a5f; color:#1a2a3a;}
-  ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:#f0f4f8;}::-webkit-scrollbar-thumb{background:#c0cfe0;border-radius:2px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0a1628; color:#e8f4fd;}
+  ::-webkit-scrollbar{width:3px;}
+  ::-webkit-scrollbar-track{background:#0a1628;}
+  ::-webkit-scrollbar-thumb{background:#4fc3f7;border-radius:2px;}
   input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 `;
-const inputSt = { width: "100%", padding: "12px 14px", marginBottom: "12px", border: "1px solid rgba(26,58,107,0.25)", borderRadius: "8px", background: "rgba(255,255,255,0.9)", color: "#e0eaf8", fontSize: "16px", fontFamily: "monospace", outline: "none" };
-
-const smallSt = { padding: "8px 4px", border: "1px solid rgba(26,58,107,0.35)", borderRadius: "6px", background: "rgba(255,255,255,0.9)", color: "#1a3a6b", fontSize: "20px", fontFamily: "'Bebas Neue', monospace", outline: "none", textAlign: "center", width: "48px" };
+const inputSt = {
+  width: "100%", padding: "12px 14px", marginBottom: "12px",
+  border: "1px solid rgba(79,195,247,0.3)", borderRadius: "8px",
+  background: "rgba(255,255,255,0.07)", color: "#e8f4fd",
+  fontSize: "16px", fontFamily: "monospace", outline: "none"
+};
+const smallSt = {
+  padding: "8px 4px", border: "1px solid rgba(79,195,247,0.4)",
+  borderRadius: "6px", background: "rgba(255,255,255,0.08)",
+  color: "#4fc3f7", fontSize: "20px",
+  fontFamily: "'Bebas Neue', monospace", outline: "none",
+  textAlign: "center", width: "48px"
+};
 function Stars() {
   const s = Array.from({ length: 40 }, (_, i) => ({ i, sz: Math.random() * 2 + 1, t: Math.random() * 100, l: Math.random() * 100, o: Math.random() * 0.35 + 0.08, dur: Math.random() * 3 + 2, dl: Math.random() * 3 }));
   return (
@@ -282,15 +295,15 @@ function LoginPage({ onLogin }) {
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(18px,5vw,26px)", letterSpacing: "6px", color: "#e0eefa", marginTop: "2px" }}>MUNDIAL 2026</div>
           <div style={{ fontSize: "10px", color: "#d0e4f7", letterSpacing: "3px", fontFamily: "monospace", marginTop: "6px" }}>USA · CANADA · MEXICO</div>
         </div>
-        <div style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "16px", padding: "24px" }}>
+        <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "16px", padding: "24px" }}>
           <div style={{ display: "flex", marginBottom: "20px", background: "rgba(200,215,235,0.5)", borderRadius: "8px", padding: "3px" }}>
-            {["login", "register"].map(m => <button key={m} onClick={() => { setMode(m); setError(""); }} style={{ flex: 1, padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: mode === m ? GREEN : "transparent", color: mode === m ? "#1c1510" : "#d0e4f7", fontWeight: 700 }}>{m === "login" ? "Entrar" : "Registro"}</button>)}
+            {["login", "register"].map(m => <button key={m} onClick={() => { setMode(m); setError(""); }} style={{ flex: 1, padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: mode === m ? GREEN : "transparent", color: mode === m ? "#0a1628" : "#d0e4f7", fontWeight: 700 }}>{m === "login" ? "Entrar" : "Registro"}</button>)}
           </div>
           {mode === "register" && <input value={name} onChange={e => setName(e.target.value)} placeholder="Tu nombre" style={inputSt} />}
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" style={inputSt} />
           <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Contraseña" type="password" style={inputSt} onKeyDown={e => e.key === "Enter" && go()} />
           {error && <p style={{ color: "#cc2222", fontSize: "13px", marginBottom: "12px", fontFamily: "monospace" }}>⚠ {error}</p>}
-          <button onClick={go} disabled={loading} style={{ width: "100%", padding: "14px", border: "none", borderRadius: "8px", cursor: "pointer", background: loading ? "#1c1510" : `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#1c1510", fontWeight: 800, fontSize: "13px", letterSpacing: "3px", fontFamily: "monospace", textTransform: "uppercase" }}>{loading ? "..." : mode === "login" ? "⚡ ENTRAR" : "🚀 REGISTRARME"}</button>
+          <button onClick={go} disabled={loading} style={{ width: "100%", padding: "14px", border: "none", borderRadius: "8px", cursor: "pointer", background: loading ? "#0a1628" : `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontWeight: 800, fontSize: "13px", letterSpacing: "3px", fontFamily: "monospace", textTransform: "uppercase" }}>{loading ? "..." : mode === "login" ? "⚡ ENTRAR" : "🚀 REGISTRARME"}</button>
         </div>
       </div>
     </div>
@@ -331,7 +344,7 @@ function ProgressBar({ predictions, matches }) {
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 14px", marginBottom: "16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
         <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#cce0f5", letterSpacing: "2px" }}>TUS PRONÓSTICOS</span>
-        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: sent === TOTAL_MATCHES ? GREEN : "#888" }}>{sent}/{TOTAL_MATCHES}</span>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: sent === TOTAL_MATCHES ? GREEN : "#7ab8e0" }}>{sent}/{TOTAL_MATCHES}</span>
       </div>
       <div style={{ background: "rgba(245,158,11,0.08)", borderRadius: "4px", height: "6px", overflow: "hidden" }}>
         <div style={{ height: "100%", width: pct + "%", background: `linear-gradient(90deg,${GREEN},#005599)`, borderRadius: "4px", transition: "width 0.5s ease" }} />
@@ -358,7 +371,7 @@ function NavBar({ user, view, setView, onLogout }) {
 
   return (
     <>
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(240,244,248,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,22,40,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto", padding: "0 14px", display: "flex", alignItems: "center", height: "50px" }}>
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", letterSpacing: "2px", color: "#e0eaf8", flex: 1 }}>PORRA <span style={{ color: GREEN }}>VALLAU</span></span>
           {/* Avatar / perfil en header */}
@@ -369,19 +382,19 @@ function NavBar({ user, view, setView, onLogout }) {
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
             marginRight: "10px", flexShrink: 0,
           }}>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: view === "profile" ? "#1c1510" : GREEN }}>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: view === "profile" ? "#0a1628" : GREEN }}>
               {user.name?.charAt(0).toUpperCase()}
             </span>
           </button>
           <button onClick={onLogout} style={{ padding: "5px 10px", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "6px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontSize: "11px", fontFamily: "monospace" }}>salir</button>
         </div>
       </div>
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(240,244,248,0.97)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,22,40,0.97)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto", display: "flex" }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "11px 2px 9px", border: "none", cursor: "pointer", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", borderTop: view === t.id ? `2px solid ${GREEN}` : "2px solid transparent" }}>
               <span style={{ fontSize: "17px", lineHeight: 1 }}>{t.icon}</span>
-              <span style={{ fontSize: "7px", fontFamily: "monospace", color: view === t.id ? GREEN : "#999", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center" }}>{t.label}</span>
+              <span style={{ fontSize: "7px", fontFamily: "monospace", color: view === t.id ? GREEN : "#7ab8e0", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center" }}>{t.label}</span>
             </button>
           ))}
         </div>
@@ -403,7 +416,7 @@ function StandingTable({ standings }) {
         <div key={t.name} style={{ display: "grid", gridTemplateColumns: "1fr 28px 28px 28px 36px", gap: "1px", padding: "8px", borderRadius: "7px", marginBottom: "3px", background: i < 2 ? GREEN_DIM : CARD, border: i < 2 ? "1px solid rgba(245,158,11,0.18)" : `1px solid ${BORDER}`, borderLeft: i < 2 ? `3px solid ${GREEN}` : "3px solid transparent" }}>
           <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
             <span style={{ fontSize: "15px" }}>{t.flag}</span>
-            <span style={{ fontSize: "11px", color: i < 2 ? "#e0eaf8" : "#555", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</span>
+            <span style={{ fontSize: "11px", color: i < 2 ? "#e0eaf8" : "#a8d4f0", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</span>
           </span>
           {[t.pj, t.gf, t.gc].map((v, vi) => <span key={vi} style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "monospace", textAlign: "center" }}>{v}</span>)}
           <span style={{ fontSize: "14px", fontWeight: 700, color: GREEN, fontFamily: "'Bebas Neue', monospace", textAlign: "center" }}>{t.pts}</span>
@@ -461,7 +474,7 @@ function QualifierPicker({ group, userId, locked }) {
               display: "flex", alignItems: "center", gap: "5px", opacity: locked && !sel ? 0.4 : 1,
             }}>
               <span style={{ fontSize: "16px" }}>{t.flag}</span>
-              <span style={{ fontSize: "11px", color: sel ? GREEN : "#666", fontFamily: "monospace" }}>{t.name}</span>
+              <span style={{ fontSize: "11px", color: sel ? GREEN : "#a8d4f0", fontFamily: "monospace" }}>{t.name}</span>
               {sel && <span style={{ fontSize: "10px", color: GREEN }}>✓</span>}
             </button>
           );
@@ -848,7 +861,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
     if (newPh !== "" && newPa !== "") timerRef.current = setTimeout(() => save(newPh, newPa), 800);
   };
 
-  const statusColor = status === "saved" ? GREEN : status === "saving" ? "#555" : status === "error" ? "#cc2222" : "#999";
+  const statusColor = status === "saved" ? GREEN : status === "saving" ? "#a8d4f0" : status === "error" ? "#cc2222" : "#7ab8e0";
   const statusText = status === "saved" ? "✓" : status === "saving" ? "···" : status === "error" ? "✗" : "";
 
   return (
@@ -1001,13 +1014,13 @@ function ResultsView({ matches }) {
                   <div style={{ textAlign: "center", fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", marginBottom: "5px" }}>📅 {formatDate(m.match_date)} · {m.match_time}h</div>
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "5px" }}>
-                      <span style={{ fontSize: "11px", color: "#3a5a8a", fontFamily: "monospace" }}>{m.home}</span>
+                      <span style={{ fontSize: "11px", color: "#a8d4f0", fontFamily: "monospace" }}>{m.home}</span>
                       <span style={{ fontSize: "20px" }}>{ht.flag}</span>
                     </div>
                     <div style={{ minWidth: "44px", textAlign: "center" }}><span style={{ fontSize: "10px", color: "#b8d4ee", fontFamily: "monospace", letterSpacing: "2px" }}>VS</span></div>
                     <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "5px" }}>
                       <span style={{ fontSize: "20px" }}>{at.flag}</span>
-                      <span style={{ fontSize: "11px", color: "#3a5a8a", fontFamily: "monospace" }}>{m.away}</span>
+                      <span style={{ fontSize: "11px", color: "#a8d4f0", fontFamily: "monospace" }}>{m.away}</span>
                     </div>
                   </div>
                 </div>
@@ -1115,13 +1128,13 @@ function CommunityView({ matches, user }) {
     <SpecialPredictionsTableCollapsible currentUserId={user.id} />
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>PRONÓSTICOS DE TODOS</p>
       <div style={{ display: "flex", marginBottom: "16px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
-        {[{ id: "day", label: "Por día" }, { id: "all", label: "Todos" }].map(opt => <button key={opt.id} onClick={() => setViewMode(opt.id)} style={{ flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: viewMode === opt.id ? GREEN : "transparent", color: viewMode === opt.id ? "#1c1510" : "#e0eefa", fontWeight: 700 }}>{opt.label}</button>)}
+        {[{ id: "day", label: "Por día" }, { id: "all", label: "Todos" }].map(opt => <button key={opt.id} onClick={() => setViewMode(opt.id)} style={{ flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: viewMode === opt.id ? GREEN : "transparent", color: viewMode === opt.id ? "#0a1628" : "#e0eefa", fontWeight: 700 }}>{opt.label}</button>)}
       </div>
       {viewMode === "day" && (
         <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px", marginBottom: "16px" }}>
           {days.map(day => {
             const hasClosed = closedMatches.some(m => m.match_date === day);
-            return <button key={day} onClick={() => setSelectedDay(day)} disabled={!hasClosed} style={{ padding: "7px 12px", border: `1px solid ${currentDay === day ? GREEN : BORDER}`, borderRadius: "8px", cursor: hasClosed ? "pointer" : "default", whiteSpace: "nowrap", background: currentDay === day ? GREEN_DIM : CARD, color: currentDay === day ? GREEN : hasClosed ? "#666" : "#888", fontFamily: "monospace", fontSize: "11px", flexShrink: 0, opacity: hasClosed ? 1 : 0.4 }}>{formatDate(day)}</button>;
+            return <button key={day} onClick={() => setSelectedDay(day)} disabled={!hasClosed} style={{ padding: "7px 12px", border: `1px solid ${currentDay === day ? GREEN : BORDER}`, borderRadius: "8px", cursor: hasClosed ? "pointer" : "default", whiteSpace: "nowrap", background: currentDay === day ? GREEN_DIM : CARD, color: currentDay === day ? GREEN : hasClosed ? "#a8d4f0" : "#7ab8e0", fontFamily: "monospace", fontSize: "11px", flexShrink: 0, opacity: hasClosed ? 1 : 0.4 }}>{formatDate(day)}</button>;
           })}
         </div>
       )}
@@ -1205,7 +1218,7 @@ function ProfileView({ user, matches }) {
 
       <div style={{ display: "flex", marginBottom: "20px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
         {[{ id: "stats", label: "Estadísticas" }, { id: "compare", label: "Comparar" }].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: tab === t.id ? GREEN : "transparent", color: tab === t.id ? "#1c1510" : "#e0eefa", fontWeight: 700 }}>{t.label}</button>
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: tab === t.id ? GREEN : "transparent", color: tab === t.id ? "#0a1628" : "#e0eefa", fontWeight: 700 }}>{t.label}</button>
         ))}
       </div>
 
@@ -1244,7 +1257,7 @@ function ProfileView({ user, matches }) {
           <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "10px" }}>COMPARA CON OTRO JUGADOR</p>
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "16px" }}>
             {profiles.filter(p => p.id !== user.id).map(p => (
-              <button key={p.id} onClick={() => setCompareWith(compareWith === p.id ? null : p.id)} style={{ padding: "7px 12px", border: `1px solid ${compareWith === p.id ? GREEN : BORDER}`, borderRadius: "8px", background: compareWith === p.id ? GREEN_DIM : CARD, color: compareWith === p.id ? GREEN : "#666", fontFamily: "monospace", fontSize: "11px", cursor: "pointer" }}>{p.name}</button>
+              <button key={p.id} onClick={() => setCompareWith(compareWith === p.id ? null : p.id)} style={{ padding: "7px 12px", border: `1px solid ${compareWith === p.id ? GREEN : BORDER}`, borderRadius: "8px", background: compareWith === p.id ? GREEN_DIM : CARD, color: compareWith === p.id ? GREEN : "#a8d4f0", fontFamily: "monospace", fontSize: "11px", cursor: "pointer" }}>{p.name}</button>
             ))}
           </div>
 
@@ -1506,7 +1519,7 @@ function AdminView({ matches, onDataChange }) {
         </p>
         {confirmSync
           ? <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={syncMatchData} disabled={syncingMatches} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "7px", background: "#005599", color: "#1c1510", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>
+              <button onClick={syncMatchData} disabled={syncingMatches} style={{ flex: 1, padding: "12px", border: "none", borderRadius: "7px", background: "#005599", color: "#0a1628", fontFamily: "monospace", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>
                 {syncingMatches ? "Sincronizando..." : "✓ SÍ, SINCRONIZAR"}
               </button>
               <button onClick={() => setConfirmSync(false)} style={{ padding: "12px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#cce0f5", fontFamily: "monospace", fontSize: "12px", cursor: "pointer" }}>
@@ -1535,7 +1548,7 @@ function AdminView({ matches, onDataChange }) {
           <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px", marginBottom: "6px" }}>
             <div style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", marginBottom: "6px" }}>📅 {formatDate(m.match_date)} · ⏰ {m.match_time}h</div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <span style={{ flex: 1, fontSize: "12px", color: "#3a5a8a", fontFamily: "monospace", minWidth: "150px" }}>{ht.flag} {m.home} vs {at.flag} {m.away}</span>
+              <span style={{ flex: 1, fontSize: "12px", color: "#a8d4f0", fontFamily: "monospace", minWidth: "150px" }}>{ht.flag} {m.home} vs {at.flag} {m.away}</span>
               <span style={{ fontSize: "9px", fontFamily: "monospace", padding: "2px 7px", borderRadius: "8px", background: m.status === "open" ? "rgba(0,200,100,0.08)" : "rgba(255,100,50,0.08)", color: m.status === "open" ? "#007a3a" : "#cc4422" }}>{m.status === "open" ? "ABIERTO" : "CERRADO"}</span>
               {m.result_home !== null && <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{m.result_home}-{m.result_away}</span>}
               <button onClick={() => toggleStatus(m)} style={{ padding: "4px 10px", border: `1px solid ${BORDER}`, borderRadius: "5px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontSize: "9px", fontFamily: "monospace" }}>{m.status === "open" ? "Cerrar" : "Reabrir"}</button>
@@ -1544,7 +1557,7 @@ function AdminView({ matches, onDataChange }) {
                   <input value={hr} onChange={e => setHr(e.target.value)} type="number" min="0" style={{ ...smallSt, width: "44px" }} placeholder="0" />
                   <span style={{ color: "#b8d4ee" }}>-</span>
                   <input value={ar} onChange={e => setAr(e.target.value)} type="number" min="0" style={{ ...smallSt, width: "44px" }} placeholder="0" />
-                  <button onClick={handleResult} style={{ padding: "6px 14px", border: "none", borderRadius: "6px", background: GREEN, color: "#1c1510", cursor: "pointer", fontSize: "11px", fontFamily: "monospace", fontWeight: 700 }}>OK</button>
+                  <button onClick={handleResult} style={{ padding: "6px 14px", border: "none", borderRadius: "6px", background: GREEN, color: "#0a1628", cursor: "pointer", fontSize: "11px", fontFamily: "monospace", fontWeight: 700 }}>OK</button>
                   <button onClick={() => setSel(null)} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "6px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontSize: "11px", fontFamily: "monospace" }}>✕</button>
                 </div>
                 : <button onClick={() => { setSel(m.id); setHr(""); setAr(""); }} style={{ padding: "5px 12px", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "5px", background: GREEN_DIM, color: GREEN, cursor: "pointer", fontSize: "9px", fontFamily: "monospace" }}>Resultado</button>
@@ -1808,7 +1821,7 @@ function SpecialPredictionsTable({ currentUserId }) {
               </span>
               <span style={{
                 fontSize: "12px", fontFamily: "monospace",
-                color: value ? "#e0eaf8" : "#aaa",
+                color: value ? "#e0eaf8" : "#6aacda",
                 fontStyle: value ? "normal" : "italic",
               }}>
                 {value || "Sin pronóstico"}
@@ -2491,7 +2504,7 @@ function TriviaGame({ user, onBack }) {
         <div style={{ fontSize: "48px", marginBottom: "12px" }}>🧠</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>TRIVIAL MUNDIAL 2026</div>
         <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>10 preguntas · 15 segundos por pregunta<br/><span style={{ color: GREEN }}>+3</span> rápido · <span style={{ color: "#b8860b" }}>+2</span> normal · <span style={{ color: "#ff8a00" }}>+1</span> lento · <span style={{ color: "#cc2222" }}>+0</span> fallo</p>
-        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#1c1510", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
       {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
@@ -2524,7 +2537,7 @@ function TriviaGame({ user, onBack }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
         {q.opts.map((opt, i) => {
-          let bg = CARD, border = BORDER, color = "#ccc";
+          let bg = CARD, border = BORDER, color = "#a8d4f0";
           if (answered) {
             if (i === q.a) { bg = GREEN_DIM; border = "rgba(245,158,11,0.5)"; color = GREEN; }
             else if (i === selected) { bg = "rgba(255,82,82,0.1)"; border = "rgba(255,82,82,0.4)"; color = "#cc2222"; }
@@ -2539,7 +2552,7 @@ function TriviaGame({ user, onBack }) {
       {answered && (
         <div style={{ marginTop: "14px", textAlign: "center" }}>
           {selected === q.a ? <p style={{ color: GREEN, fontFamily: "monospace", fontSize: "13px", marginBottom: "12px" }}>✓ ¡Correcto! +{timeLeft >= 10 ? 3 : timeLeft >= 5 ? 2 : 1} pts</p> : <p style={{ color: "#cc2222", fontFamily: "monospace", fontSize: "13px", marginBottom: "12px" }}>✗ Era: {q.opts[q.a]}</p>}
-          <button onClick={next} style={{ padding: "12px 32px", border: "none", borderRadius: "9px", background: GREEN, color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>{current + 1 >= questions.length ? "VER RESULTADO" : "SIGUIENTE →"}</button>
+          <button onClick={next} style={{ padding: "12px 32px", border: "none", borderRadius: "9px", background: GREEN, color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>{current + 1 >= questions.length ? "VER RESULTADO" : "SIGUIENTE →"}</button>
         </div>
       )}
     </div>
@@ -2555,7 +2568,7 @@ function TriviaGame({ user, onBack }) {
         <div style={{ fontFamily: "monospace", fontSize: "11px", color: "#c0d8f0", marginTop: "4px" }}>de 30 posibles</div>
         <p style={{ marginTop: "14px", fontSize: "12px", color: "#e0eefa", fontFamily: "monospace" }}>{score >= 25 ? "¡Crack del balón! 🔥" : score >= 15 ? "Buen nivel futbolero ⚽" : "A repasar el mundial 😅"}</p>
       </div>
-      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
+      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
       {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
@@ -2680,7 +2693,7 @@ function FlappyGame({ user, onBack }) {
             <div style={{ fontSize: "52px", marginBottom: "10px" }}>⚽</div>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>FLAPPY BALÓN</div>
             <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>Esquiva las porterías · Toca para saltar</p>
-            <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#1c1510", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+            <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
           </div>
           <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FLAPPY</p>
           {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
@@ -2702,7 +2715,7 @@ function FlappyGame({ user, onBack }) {
                 <div style={{ fontSize: "40px" }}>💥</div>
                 <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#e0eaf8", letterSpacing: "3px" }}>GAME OVER</div>
                 <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: GREEN, lineHeight: 1 }}>{score}</div>
-                <div style={{ padding: "12px 28px", background: GREEN, color: "#1c1510", borderRadius: "9px", fontFamily: "monospace", fontSize: "12px", fontWeight: 800 }}>TOCA PARA REPETIR</div>
+                <div style={{ padding: "12px 28px", background: GREEN, color: "#0a1628", borderRadius: "9px", fontFamily: "monospace", fontSize: "12px", fontWeight: 800 }}>TOCA PARA REPETIR</div>
               </div>
             )}
           </div>
@@ -2809,7 +2822,7 @@ function FlagsGame({ user, onBack }) {
         <div style={{ fontSize: "48px", marginBottom: "12px" }}>🌍</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>ADIVINA LA BANDERA</div>
         <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>15 banderas del Mundial 2026<br/><span style={{ color: GREEN }}>+1</span> acierto · <span style={{ color: "#b8860b" }}>+2</span> con racha de 3 seguidas 🔥</p>
-        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#1c1510", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
       {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
@@ -2837,11 +2850,11 @@ function FlagsGame({ user, onBack }) {
       </div>
       <div style={{ textAlign: "center", marginBottom: "28px" }}>
         <div style={{ fontSize: "96px", lineHeight: 1, marginBottom: "12px" }}>{q.correct.flag}</div>
-        <p style={{ fontSize: "12px", color: "#3a5a8a", fontFamily: "monospace" }}>¿De qué país es esta bandera?</p>
+        <p style={{ fontSize: "12px", color: "#a8d4f0", fontFamily: "monospace" }}>¿De qué país es esta bandera?</p>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
         {q.opts.map(opt => {
-          let bg = CARD, border = BORDER, color = "#ccc";
+          let bg = CARD, border = BORDER, color = "#a8d4f0";
           if (answered) {
             if (opt.name === q.correct.name) { bg = GREEN_DIM; border = "rgba(245,158,11,0.5)"; color = GREEN; }
             else if (opt.name === selected) { bg = "rgba(255,82,82,0.1)"; border = "rgba(255,82,82,0.4)"; color = "#cc2222"; }
@@ -2859,7 +2872,7 @@ function FlagsGame({ user, onBack }) {
           {selected === q.correct.name
             ? <p style={{ color: GREEN, fontFamily: "monospace", fontSize: "13px", marginBottom: "12px" }}>✓ ¡Correcto! {streak >= 3 ? "+2 🔥 RACHA!" : "+1"}</p>
             : <p style={{ color: "#cc2222", fontFamily: "monospace", fontSize: "13px", marginBottom: "12px" }}>✗ Era {q.correct.name}</p>}
-          <button onClick={next} style={{ padding: "12px 32px", border: "none", borderRadius: "9px", background: "#b8860b", color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>{current + 1 >= questions.length ? "VER RESULTADO" : "SIGUIENTE →"}</button>
+          <button onClick={next} style={{ padding: "12px 32px", border: "none", borderRadius: "9px", background: "#b8860b", color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>{current + 1 >= questions.length ? "VER RESULTADO" : "SIGUIENTE →"}</button>
         </div>
       )}
     </div>
@@ -2874,7 +2887,7 @@ function FlagsGame({ user, onBack }) {
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: "#b8860b", lineHeight: 1 }}>{score}</div>
         <p style={{ marginTop: "10px", fontSize: "12px", color: "#e0eefa", fontFamily: "monospace" }}>{score >= 20 ? "¡Experto en geografía! 🌍" : score >= 12 ? "Buen conocimiento ⚽" : "A practicar geografía 😅"}</p>
       </div>
-      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
+      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
       {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(255,193,7,0.1)" : CARD, border: i === 0 ? "1px solid rgba(255,193,7,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
@@ -3493,7 +3506,7 @@ function PenaltyGame({ user, onBack }) {
           <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "monospace", marginBottom: "8px", letterSpacing: "2px" }}>UNIRSE CON CÓDIGO</p>
           <input value={inputCode} onChange={e => setInputCode(e.target.value.toUpperCase())} placeholder="XXXXX" maxLength={5}
             style={{ width: "100%", padding: "10px", marginBottom: "8px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "rgba(0,0,0,0.3)", color: "#e0eaf8", fontSize: "18px", fontFamily: "'Bebas Neue', monospace", letterSpacing: "4px", textAlign: "center", outline: "none" }} />
-          <button onClick={joinRoom} style={{ width: "100%", padding: "10px", border: "none", borderRadius: "7px", background: GREEN, color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>UNIRSE</button>
+          <button onClick={joinRoom} style={{ width: "100%", padding: "10px", border: "none", borderRadius: "7px", background: GREEN, color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>UNIRSE</button>
         </div>
       </div>
     </div>
@@ -3591,7 +3604,7 @@ function PenaltyGame({ user, onBack }) {
           disabled={!myChoice}
           style={{ width: "100%", padding: "13px", border: "none", borderRadius: "9px",
             background: myChoice ? `linear-gradient(135deg,${GREEN},#e07b00)` : "rgba(0,0,0,0.2)",
-            color: myChoice ? "#1c1510" : "#cce0f5",
+            color: myChoice ? "#0a1628" : "#cce0f5",
             fontFamily: "'Bebas Neue', cursive", fontSize: "16px", fontWeight: 800,
             cursor: myChoice ? "pointer" : "default", letterSpacing: "3px" }}>
           {myChoice ? `CONFIRMAR ${PENALTY_LABELS[myChoice]}` : "TAP EN LA PORTERÍA"}
@@ -3633,7 +3646,7 @@ function PenaltyGame({ user, onBack }) {
           </div>
         </div>
         <button onClick={() => { setPhase("lobby"); setRoom(null); setMyRole(null); setMyChoice(null); setAnimState(null); setWaitingForOther(false); if (pollRef.current) clearInterval(pollRef.current); }}
-          style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>
+          style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>
           🔄 NUEVA PARTIDA
         </button>
       </div>
@@ -3790,7 +3803,7 @@ function OnboardingTooltips({ user, onFinish, setView }) {
             <button onClick={next} style={{
               padding: "10px 22px", border: "none", borderRadius: "8px",
               background: `linear-gradient(135deg,${GREEN},#e07b00)`,
-              color: "#1c1510", fontFamily: "monospace", fontSize: "12px", fontWeight: 800,
+              color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800,
               cursor: "pointer", letterSpacing: "2px",
             }}>
               {isLast ? "¡EMPEZAR! 🚀" : "SIGUIENTE →"}
