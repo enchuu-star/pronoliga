@@ -113,7 +113,7 @@ const MATCH_SCHEDULE = {
 const GROUPS = {
   A: [{ name: "México", flag: "🇲🇽" }, { name: "Sudáfrica", flag: "🇿🇦" }, { name: "Corea del Sur", flag: "🇰🇷" }, { name: "Rep. Checa", flag: "🇨🇿" }],
   B: [{ name: "Canadá", flag: "🇨🇦" }, { name: "Bosnia y Herz.", flag: "🇧🇦" }, { name: "Suiza", flag: "🇨🇭" }, { name: "Qatar", flag: "🇶🇦" }],
-  C: [{ name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🏴󠁧󠁢󠁳󠁣󠁴U+E007F" }, { name: "Haití", flag: "🇭🇹" }],
+  C: [{ name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🇬🇧" }, { name: "Haití", flag: "🇭🇹" }],
   D: [{ name: "Estados Unidos", flag: "🇺🇸" }, { name: "Paraguay", flag: "🇵🇾" }, { name: "Australia", flag: "🇦🇺" }, { name: "Turquía", flag: "🇹🇷" }],
   E: [{ name: "Alemania", flag: "🇩🇪" }, { name: "Curazao", flag: "🇨🇼" }, { name: "Costa de Marfil", flag: "🇨🇮" }, { name: "Ecuador", flag: "🇪🇨" }],
   F: [{ name: "Países Bajos", flag: "🇳🇱" }, { name: "Japón", flag: "🇯🇵" }, { name: "Túnez", flag: "🇹🇳" }, { name: "Suecia", flag: "🇸🇪" }],
@@ -122,7 +122,7 @@ const GROUPS = {
   I: [{ name: "Francia", flag: "🇫🇷" }, { name: "Senegal", flag: "🇸🇳" }, { name: "Noruega", flag: "🇳🇴" }, { name: "Iraq", flag: "🇮🇶" }],
   J: [{ name: "Argentina", flag: "🇦🇷" }, { name: "Argelia", flag: "🇩🇿" }, { name: "Austria", flag: "🇦🇹" }, { name: "Jordania", flag: "🇯🇴" }],
   K: [{ name: "Portugal", flag: "🇵🇹" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "RD Congo", flag: "🇨🇩" }],
-  L: [{ name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧U+E007F" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Ghana", flag: "🇬🇭" }],
+  L: [{ name: "Inglaterra", flag: "🇬🇧" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Ghana", flag: "🇬🇭" }],
 };
 
 const TOTAL_MATCHES = 72;
