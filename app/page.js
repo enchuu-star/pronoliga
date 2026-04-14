@@ -876,7 +876,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const [pa, setPa] = useState(userPred?.predicted_away ?? "");
   const [status, setStatus] = useState(userPred ? "saved" : "idle");
   const timerRef = useRef(null);
-  const { toast, show } = useToast();  // ← AÑADIR
+  const { toast, show } = useToast();
   const isOpen = !allClosed && match.status === "open";
   const hasResult = match.result_home !== null && match.result_away !== null;
   const predPoints = userPred && hasResult ? calcPoints(userPred, match.result_home, match.result_away) : null;
@@ -890,7 +890,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
     );
     if (error) { setStatus("error"); return; }
     setStatus("saved");
-    show(`${match.home} ${newPh} - ${newPa} ${match.away} guardado`);  // ← AÑADIR
+    show(`${match.home} ${newPh} - ${newPa} ${match.away} guardado`);
     onSaved();
   }, [user.id, match.id, onSaved]);
 
@@ -906,51 +906,64 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const statusText = status === "saved" ? "✓" : status === "saving" ? "···" : status === "error" ? "✗" : "";
 
   return (
+    <>
       <Toast message={toast.message} visible={toast.visible} />
-      <div style={{ padding: "12px", borderRadius: "10px", marginBottom: "6px", background: CARD, border: `1px solid ${BORDER}` }}>      <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
-        <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace" }}>📅 {formatDate(match.match_date)} · ⏰ {match.match_time || "??:??"}h</span>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
-          <span style={{ fontSize: "11px", color: "#c0d8f0", textAlign: "right", fontFamily: "monospace" }}>{match.home}</span>
-          <span style={{ fontSize: "22px" }}>{ht.flag}</span>
+      <div style={{ padding: "12px", borderRadius: "10px", marginBottom: "6px", background: CARD, border: `1px solid ${BORDER}` }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
+          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace" }}>📅 {formatDate(match.match_date)} · ⏰ {match.match_time || "??:??"}h</span>
         </div>
-        {hasResult ? (
-          <div style={{ minWidth: "64px", textAlign: "center" }}>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: GREEN }}>{match.result_home}</span>
-            <span style={{ color: "#b8d4ee", fontSize: "16px", margin: "0 3px" }}>-</span>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: GREEN }}>{match.result_away}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+            <span style={{ fontSize: "11px", color: "#c0d8f0", textAlign: "right", fontFamily: "monospace" }}>{match.home}</span>
+            <span style={{ fontSize: "22px" }}>{ht.flag}</span>
           </div>
-        ) : (
-          <div style={{ minWidth: "44px", textAlign: "center" }}><span style={{ fontSize: "11px", color: "#b8d4ee", fontFamily: "monospace", letterSpacing: "2px" }}>VS</span></div>
-        )}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ fontSize: "22px" }}>{at.flag}</span>
-          <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace" }}>{match.away}</span>
-        </div>
-      </div>
-      {user.role !== "admin" && (
-        <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-          {isOpen ? (
-            <>
-              <span style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace" }}>pronóst.:</span>
-              <input value={ph} onChange={e => handleChange("h", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
-              <span style={{ color: "#b8d4ee", fontSize: "16px" }}>-</span>
-              <input value={pa} onChange={e => handleChange("a", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
-              <span style={{ fontSize: "13px", fontFamily: "monospace", color: statusColor, minWidth: "20px" }}>{statusText}</span>
-            </>
-          ) : userPred ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "monospace" }}>{userPred.predicted_home}-{userPred.predicted_away}</span>
-              {predPoints !== null && <span style={{ padding: "3px 10px", borderRadius: "12px", fontSize: "12px", fontFamily: "monospace", fontWeight: 700, background: predPoints === 3 ? GREEN_DIM : predPoints === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: predPoints === 3 ? GREEN : predPoints === 1 ? "#b8860b" : "#cc2222" }}>{predPoints === 3 ? "🎯 +3" : predPoints === 1 ? "✓ +1" : "✗ +0"}</span>}
+          {hasResult ? (
+            <div style={{ minWidth: "64px", textAlign: "center" }}>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: GREEN }}>{match.result_home}</span>
+              <span style={{ color: "#b8d4ee", fontSize: "16px", margin: "0 3px" }}>-</span>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: GREEN }}>{match.result_away}</span>
             </div>
           ) : (
-            <span style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace" }}>cerrado · sin pronóstico</span>
+            <div style={{ minWidth: "44px", textAlign: "center" }}>
+              <span style={{ fontSize: "11px", color: "#b8d4ee", fontFamily: "monospace", letterSpacing: "2px" }}>VS</span>
+            </div>
           )}
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "22px" }}>{at.flag}</span>
+            <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace" }}>{match.away}</span>
+          </div>
         </div>
-      )}
-      
-    </div>
+        {user.role !== "admin" && (
+          <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+            {isOpen ? (
+              <>
+                <span style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace" }}>pronóst.:</span>
+                <input value={ph} onChange={e => handleChange("h", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
+                <span style={{ color: "#b8d4ee", fontSize: "16px" }}>-</span>
+                <input value={pa} onChange={e => handleChange("a", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
+                <span style={{ fontSize: "13px", fontFamily: "monospace", color: statusColor, minWidth: "20px" }}>{statusText}</span>
+              </>
+            ) : userPred ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "monospace" }}>{userPred.predicted_home}-{userPred.predicted_away}</span>
+                {predPoints !== null && (
+                  <span style={{
+                    padding: "3px 10px", borderRadius: "12px", fontSize: "12px",
+                    fontFamily: "monospace", fontWeight: 700,
+                    background: predPoints === 3 ? GREEN_DIM : predPoints === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)",
+                    color: predPoints === 3 ? GREEN : predPoints === 1 ? "#b8860b" : "#cc2222",
+                  }}>
+                    {predPoints === 3 ? "🎯 +3" : predPoints === 1 ? "✓ +1" : "✗ +0"}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace" }}>cerrado · sin pronóstico</span>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
