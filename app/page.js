@@ -971,6 +971,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
 // VISTA GRUPOS
 // ============================================================
 function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
+  const [tab, setTab] = useState("groups");
   const [g, setG] = useState("A");
   const [showPending, setShowPending] = useState(false);
   const predMap = {};
@@ -987,126 +988,168 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
     pendingByGroup[m.grp].push(m);
   });
 
+  const groupRows = [
+    ["A", "B", "C", "D"],
+    ["E", "F", "G", "H"],
+    ["I", "J", "K", "L"],
+  ];
+
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <ProgressBar predictions={predictions} matches={matches} />
-      <SpecialPredictions userId={user.id} locked={allClosed} />
 
-      {/* Botón filtro pendientes */}
-      <button
-        onClick={() => setShowPending(v => !v)}
-        style={{
-          width: "100%", marginBottom: "16px",
-          padding: "12px 16px",
-          border: `1px solid ${showPending ? "#ff6b4a" : BORDER}`,
-          borderRadius: "10px",
-          background: showPending ? "rgba(255,107,74,0.1)" : CARD,
-          color: showPending ? "#ff6b4a" : "#d0e4f7",
-          fontFamily: "monospace", fontSize: "11px",
-          cursor: "pointer", letterSpacing: "2px",
-          display: "flex", alignItems: "center",
-          justifyContent: "space-between",
-        }}>
-        <span>⚠️ VER SOLO SIN RELLENAR</span>
-        <span style={{
-          background: pendingMatches.length > 0 ? "#ff6b4a" : "#007a3a",
-          color: "white", borderRadius: "10px",
-          fontSize: "10px", fontFamily: "monospace",
-          fontWeight: 700, padding: "2px 10px",
-        }}>
-          {pendingMatches.length > 0 ? `${pendingMatches.length} pendientes` : "✓ Todo rellenado"}
-        </span>
-      </button>
+      {/* TABS PRINCIPALES */}
+      <div style={{ display: "flex", marginBottom: "16px", background: "rgba(0,0,0,0.3)", borderRadius: "10px", padding: "3px" }}>
+        {[
+          { id: "groups", label: "⚽ Grupos" },
+          { id: "special", label: "🏅 Especiales" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            flex: 1, padding: "10px", border: "none", borderRadius: "8px",
+            cursor: "pointer", fontFamily: "monospace", fontSize: "11px",
+            letterSpacing: "2px", fontWeight: 700, textTransform: "uppercase",
+            background: tab === t.id ? GREEN : "transparent",
+            color: tab === t.id ? "#0a1628" : "#d0e4f7",
+          }}>{t.label}</button>
+        ))}
+      </div>
 
-      {showPending ? (
-        <div>
-          {pendingMatches.length === 0 ? (
-            <div style={{
-              background: "rgba(0,122,58,0.1)", border: "1px solid rgba(0,122,58,0.3)",
-              borderRadius: "12px", padding: "28px", textAlign: "center",
+      {/* TAB ESPECIALES */}
+      {tab === "special" && (
+        <SpecialPredictions userId={user.id} locked={allClosed} />
+      )}
+
+      {/* TAB GRUPOS */}
+      {tab === "groups" && (
+        <>
+          {/* Botón filtro pendientes */}
+          <button
+            onClick={() => setShowPending(v => !v)}
+            style={{
+              width: "100%", marginBottom: "16px",
+              padding: "12px 16px",
+              border: `1px solid ${showPending ? "#ff6b4a" : BORDER}`,
+              borderRadius: "10px",
+              background: showPending ? "rgba(255,107,74,0.1)" : CARD,
+              color: showPending ? "#ff6b4a" : "#d0e4f7",
+              fontFamily: "monospace", fontSize: "11px",
+              cursor: "pointer", letterSpacing: "2px",
+              display: "flex", alignItems: "center",
+              justifyContent: "space-between",
             }}>
-              <div style={{ fontSize: "36px", marginBottom: "10px" }}>🎉</div>
-              <p style={{ fontFamily: "monospace", fontSize: "13px", color: "#4fc3f7" }}>
-                ¡Has rellenado todos los pronósticos abiertos!
-              </p>
+            <span>⚠️ VER SOLO SIN RELLENAR</span>
+            <span style={{
+              background: pendingMatches.length > 0 ? "#ff6b4a" : "#007a3a",
+              color: "white", borderRadius: "10px",
+              fontSize: "10px", fontFamily: "monospace",
+              fontWeight: 700, padding: "2px 10px",
+            }}>
+              {pendingMatches.length > 0 ? `${pendingMatches.length} pendientes` : "✓ Todo rellenado"}
+            </span>
+          </button>
+
+          {showPending ? (
+            <div>
+              {pendingMatches.length === 0 ? (
+                <div style={{
+                  background: "rgba(0,122,58,0.1)", border: "1px solid rgba(0,122,58,0.3)",
+                  borderRadius: "12px", padding: "28px", textAlign: "center",
+                }}>
+                  <div style={{ fontSize: "36px", marginBottom: "10px" }}>🎉</div>
+                  <p style={{ fontFamily: "monospace", fontSize: "13px", color: GREEN }}>
+                    ¡Has rellenado todos los pronósticos abiertos!
+                  </p>
+                </div>
+              ) : (
+                Object.entries(pendingByGroup).map(([grp, ms]) => (
+                  <div key={grp} style={{ marginBottom: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                      <div style={{
+                        width: "30px", height: "30px", borderRadius: "6px",
+                        background: GREEN_DIM, border: `1px solid ${BORDER}`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: GREEN }}>{grp}</span>
+                      </div>
+                      <span style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "monospace", letterSpacing: "2px" }}>
+                        GRUPO {grp} · {ms.length} sin rellenar
+                      </span>
+                    </div>
+                    {ms.map(m => (
+                      <MatchRow key={m.id} match={m} userPred={predMap[m.id]}
+                        user={user} onSaved={onDataChange} allClosed={allClosed} />
+                    ))}
+                  </div>
+                ))
+              )}
             </div>
           ) : (
-            Object.entries(pendingByGroup).map(([grp, ms]) => (
-              <div key={grp} style={{ marginBottom: "20px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+            <>
+              <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
+
+              {/* GRUPOS EN 3 FILAS DE 4 */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "20px" }}>
+                {groupRows.map((row, ri) => (
+                  <div key={ri} style={{ display: "flex", gap: "6px" }}>
+                    {row.map(gr => {
+                      const pending = matches.filter(m =>
+                        m.grp === gr && m.status === "open" && !allClosed && !predMap[m.id]
+                      ).length;
+                      return (
+                        <button key={gr} onClick={() => setG(gr)} style={{
+                          flex: 1, height: "40px",
+                          border: `1px solid ${g === gr ? GREEN : BORDER}`,
+                          borderRadius: "8px", cursor: "pointer",
+                          fontFamily: "'Bebas Neue', cursive", fontSize: "18px",
+                          background: g === gr ? GREEN_DIM : CARD,
+                          color: g === gr ? GREEN : "#e0eefa",
+                          position: "relative",
+                        }}>
+                          {gr}
+                          {pending > 0 && (
+                            <span style={{
+                              position: "absolute", top: "2px", right: "2px",
+                              width: "7px", height: "7px",
+                              borderRadius: "50%", background: "#ff6b4a",
+                            }} />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                   <div style={{
-                    width: "30px", height: "30px", borderRadius: "6px",
+                    width: "36px", height: "36px", borderRadius: "7px",
                     background: GREEN_DIM, border: `1px solid ${BORDER}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: GREEN }}>{grp}</span>
+                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{g}</span>
                   </div>
-                  <span style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "monospace", letterSpacing: "2px" }}>
-                    GRUPO {grp} · {ms.length} sin rellenar
-                  </span>
+                  <div>
+                    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "17px", color: "#e0eaf8" }}>GRUPO {g}</div>
+                    <div style={{ display: "flex", gap: "5px", marginTop: "3px" }}>
+                      {GROUPS[g].map(t => <span key={t.name} style={{ fontSize: "15px" }} title={t.name}>{t.flag}</span>)}
+                    </div>
+                  </div>
                 </div>
-                {ms.map(m => (
-                  <MatchRow key={m.id} match={m} userPred={predMap[m.id]}
-                    user={user} onSaved={onDataChange} allClosed={allClosed} />
-                ))}
+                <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "6px" }}>TU CLASIFICACIÓN</p>
+                {!hasAnyPred && <p style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace", marginBottom: "8px" }}>Introduce pronósticos abajo para ver tu clasificación</p>}
+                <StandingTable standings={personalStandings} />
+                <QualifierPicker group={g} userId={user.id} locked={allClosed} />
+                <div style={{ marginTop: "20px" }}>
+                  <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>PARTIDOS</p>
+                  {matches.filter(m => m.grp === g).map(m => (
+                    <MatchRow key={m.id} match={m} userPred={predMap[m.id]}
+                      user={user} onSaved={onDataChange} allClosed={allClosed} />
+                  ))}
+                </div>
               </div>
-            ))
+            </>
           )}
-        </div>
-      ) : (
-        <>
-          <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
-            {Object.keys(GROUPS).map(gr => {
-              const pending = matches.filter(m =>
-                m.grp === gr && m.status === "open" && !allClosed && !predMap[m.id]
-              ).length;
-              return (
-                <button key={gr} onClick={() => setG(gr)} style={{
-                  width: "40px", height: "40px",
-                  border: `1px solid ${g === gr ? GREEN : BORDER}`,
-                  borderRadius: "8px", cursor: "pointer",
-                  fontFamily: "'Bebas Neue', cursive", fontSize: "18px",
-                  background: g === gr ? GREEN_DIM : CARD,
-                  color: g === gr ? GREEN : "#e0eefa",
-                  position: "relative",
-                }}>
-                  {gr}
-                  {pending > 0 && (
-                    <span style={{
-                      position: "absolute", top: "2px", right: "2px",
-                      width: "7px", height: "7px",
-                      borderRadius: "50%", background: "#ff6b4a",
-                    }} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-              <div style={{ width: "36px", height: "36px", borderRadius: "7px", background: GREEN_DIM, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{g}</span>
-              </div>
-              <div>
-                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "17px", color: "#e0eaf8" }}>GRUPO {g}</div>
-                <div style={{ display: "flex", gap: "5px", marginTop: "3px" }}>
-                  {GROUPS[g].map(t => <span key={t.name} style={{ fontSize: "15px" }} title={t.name}>{t.flag}</span>)}
-                </div>
-              </div>
-            </div>
-            <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "6px" }}>TU CLASIFICACIÓN</p>
-            {!hasAnyPred && <p style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace", marginBottom: "8px" }}>Introduce pronósticos abajo para ver tu clasificación</p>}
-            <StandingTable standings={personalStandings} />
-            <QualifierPicker group={g} userId={user.id} locked={allClosed} />
-            <div style={{ marginTop: "20px" }}>
-              <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>PARTIDOS</p>
-              {matches.filter(m => m.grp === g).map(m => (
-                <MatchRow key={m.id} match={m} userPred={predMap[m.id]}
-                  user={user} onSaved={onDataChange} allClosed={allClosed} />
-              ))}
-            </div>
-          </div>
         </>
       )}
     </div>
