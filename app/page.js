@@ -836,6 +836,39 @@ function MatchChat({ match, user }) {
     </div>
   );
 }
+// ============================================================
+// TOAST NOTIFICATION
+// ============================================================
+function Toast({ message, visible }) {
+  if (!visible) return null;
+  return (
+    <div style={{
+      position: "fixed", bottom: "80px", left: "50%",
+      transform: "translateX(-50%)",
+      background: "rgba(10,22,40,0.95)",
+      border: `1px solid ${GREEN}`,
+      borderRadius: "20px", padding: "10px 20px",
+      display: "flex", alignItems: "center", gap: "8px",
+      zIndex: 999, animation: "fadeIn 0.2s ease",
+      boxShadow: "0 4px 20px rgba(79,195,247,0.2)",
+      pointerEvents: "none",
+    }}>
+      <span style={{ fontSize: "14px" }}>✓</span>
+      <span style={{ fontFamily: "monospace", fontSize: "12px", color: "#e0eaf8", whiteSpace: "nowrap" }}>
+        {message}
+      </span>
+    </div>
+  );
+}
+
+function useToast() {
+  const [toast, setToast] = useState({ visible: false, message: "" });
+  const show = (message) => {
+    setToast({ visible: true, message });
+    setTimeout(() => setToast({ visible: false, message: "" }), 2000);
+  };
+  return { toast, show };
+}
 
 function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const ht = getTeam(match.home), at = getTeam(match.away);
@@ -843,6 +876,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const [pa, setPa] = useState(userPred?.predicted_away ?? "");
   const [status, setStatus] = useState(userPred ? "saved" : "idle");
   const timerRef = useRef(null);
+  const { toast, show } = useToast();  // ← AÑADIR
   const isOpen = !allClosed && match.status === "open";
   const hasResult = match.result_home !== null && match.result_away !== null;
   const predPoints = userPred && hasResult ? calcPoints(userPred, match.result_home, match.result_away) : null;
@@ -850,9 +884,14 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const save = useCallback(async (newPh, newPa) => {
     if (newPh === "" || newPa === "") return;
     setStatus("saving");
-    const { error } = await supabase.from("predictions").upsert({ user_id: user.id, match_id: match.id, predicted_home: parseInt(newPh), predicted_away: parseInt(newPa), points: null }, { onConflict: "user_id,match_id" });
+    const { error } = await supabase.from("predictions").upsert(
+      { user_id: user.id, match_id: match.id, predicted_home: parseInt(newPh), predicted_away: parseInt(newPa), points: null },
+      { onConflict: "user_id,match_id" }
+    );
     if (error) { setStatus("error"); return; }
-    setStatus("saved"); onSaved();
+    setStatus("saved");
+    show(`${match.home} ${newPh} - ${newPa} ${match.away} guardado`);  // ← AÑADIR
+    onSaved();
   }, [user.id, match.id, onSaved]);
 
   const handleChange = (field, val) => {
@@ -867,8 +906,8 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const statusText = status === "saved" ? "✓" : status === "saving" ? "···" : status === "error" ? "✗" : "";
 
   return (
-    <div style={{ padding: "12px", borderRadius: "10px", marginBottom: "6px", background: CARD, border: `1px solid ${BORDER}` }}>
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
+      <Toast message={toast.message} visible={toast.visible} />
+      <div style={{ padding: "12px", borderRadius: "10px", marginBottom: "6px", background: CARD, border: `1px solid ${BORDER}` }}>      <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
         <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace" }}>📅 {formatDate(match.match_date)} · ⏰ {match.match_time || "??:??"}h</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
