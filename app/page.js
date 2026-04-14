@@ -2076,13 +2076,21 @@ function SpecialPredictionsTable({ currentUserId }) {
     (async () => {
       const { data: specials } = await supabase.from("special_predictions").select("*");
       const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
+      const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
       const merged = (profiles || []).map(p => {
         const sp = (specials || []).find(x => x.user_id === p.id);
+        const myPicks = (qpicks || []).filter(x => x.user_id === p.id);
+        // Agrupar clasificados por grupo
+        const qualifiers = {};
+        myPicks.forEach(pick => {
+          qualifiers[pick.grp] = [pick.pick1, pick.pick2].filter(Boolean);
+        });
         return {
           name: p.name,
           isMe: p.id === currentUserId,
           top_scorer: sp?.top_scorer || null,
           best_player: sp?.best_player || null,
+          qualifiers,
         };
       }).sort((a, b) => a.name.localeCompare(b.name));
       setData(merged);
@@ -2092,6 +2100,12 @@ function SpecialPredictionsTable({ currentUserId }) {
 
   if (loading) return null;
 
+  const tabs = [
+    { id: "scorer", icon: "⚽", label: "Máx. Goleador" },
+    { id: "player", icon: "🏅", label: "Mejor Jugador" },
+    { id: "qualifiers", icon: "🏆", label: "Clasificados" },
+  ];
+
   return (
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "14px" }}>
@@ -2100,14 +2114,11 @@ function SpecialPredictionsTable({ currentUserId }) {
 
       {/* Tabs */}
       <div style={{ display: "flex", marginBottom: "14px", background: "rgba(26,58,107,0.06)", borderRadius: "8px", padding: "3px" }}>
-        {[
-          { id: "scorer", icon: "⚽", label: "Máx. Goleador" },
-          { id: "player", icon: "🏅", label: "Mejor Jugador" },
-        ].map(t => (
+        {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             flex: 1, padding: "9px 4px", border: "none", borderRadius: "6px", cursor: "pointer",
             background: tab === t.id ? GREEN : "transparent",
-            color: tab === t.id ? "white" : "#e0eefa",
+            color: tab === t.id ? "#0a1628" : "#e0eefa",
             fontFamily: "monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "1px",
           }}>
             {t.icon} {t.label}
@@ -2115,46 +2126,121 @@ function SpecialPredictionsTable({ currentUserId }) {
         ))}
       </div>
 
-      {/* Tabla */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        {/* Cabecera */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", padding: "4px 10px" }}>
-          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px" }}>JUGADOR</span>
-          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px" }}>
-            {tab === "scorer" ? "MÁXIMO GOLEADOR" : "MEJOR JUGADOR"}
-          </span>
+      {/* Goleador y mejor jugador */}
+      {(tab === "scorer" || tab === "player") && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", padding: "4px 10px" }}>
+            <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px" }}>JUGADOR</span>
+            <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px" }}>
+              {tab === "scorer" ? "MÁXIMO GOLEADOR" : "MEJOR JUGADOR"}
+            </span>
+          </div>
+          {data.map((u, i) => {
+            const value = tab === "scorer" ? u.top_scorer : u.best_player;
+            return (
+              <div key={i} style={{
+                display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px",
+                padding: "10px", borderRadius: "8px",
+                background: u.isMe ? GREEN_DIM : "rgba(255,255,255,0.03)",
+                border: u.isMe ? `1px solid rgba(79,195,247,0.3)` : `1px solid ${BORDER}`,
+                borderLeft: u.isMe ? `3px solid ${GREEN}` : "3px solid transparent",
+              }}>
+                <span style={{
+                  fontSize: "12px", fontFamily: "monospace",
+                  color: u.isMe ? GREEN : "#e0eaf8",
+                  fontWeight: u.isMe ? 700 : 400,
+                  display: "flex", alignItems: "center", gap: "4px",
+                }}>
+                  {u.isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
+                  {u.name}
+                </span>
+                <span style={{
+                  fontSize: "12px", fontFamily: "monospace",
+                  color: value ? "#e0eaf8" : "#6aacda",
+                  fontStyle: value ? "normal" : "italic",
+                }}>
+                  {value || "Sin pronóstico"}
+                </span>
+              </div>
+            );
+          })}
         </div>
+      )}
 
-        {data.map((u, i) => {
-          const value = tab === "scorer" ? u.top_scorer : u.best_player;
-          return (
-            <div key={i} style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px",
-              padding: "10px", borderRadius: "8px",
-              background: u.isMe ? GREEN_DIM : "rgba(255,255,255,0.5)",
-              border: u.isMe ? `1px solid rgba(26,58,107,0.3)` : `1px solid ${BORDER}`,
-              borderLeft: u.isMe ? `3px solid ${GREEN}` : "3px solid transparent",
-            }}>
-              <span style={{
-                fontSize: "12px", fontFamily: "monospace",
-                color: u.isMe ? GREEN : "#e0eaf8",
-                fontWeight: u.isMe ? 700 : 400,
-                display: "flex", alignItems: "center", gap: "4px",
+      {/* Clasificados por grupo */}
+      {tab === "qualifiers" && (
+        <div>
+          {Object.keys(GROUPS).map(grp => (
+            <div key={grp} style={{ marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <div style={{
+                  width: "26px", height: "26px", borderRadius: "6px",
+                  background: GREEN_DIM, border: `1px solid ${BORDER}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: GREEN }}>{grp}</span>
+                </div>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  {GROUPS[grp].map(t => (
+                    <span key={t.name} style={{ fontSize: "14px" }} title={t.name}>{t.flag}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cabecera */}
+              <div style={{
+                display: "grid", gap: "4px", padding: "4px 8px",
+                gridTemplateColumns: `1fr repeat(${data.length}, 1fr)`,
               }}>
-                {u.isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
-                {u.name}
-              </span>
-              <span style={{
-                fontSize: "12px", fontFamily: "monospace",
-                color: value ? "#e0eaf8" : "#6aacda",
-                fontStyle: value ? "normal" : "italic",
-              }}>
-                {value || "Sin pronóstico"}
-              </span>
+                <span style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "monospace" }}>EQUIPO</span>
+                {data.map((u, i) => (
+                  <span key={i} style={{
+                    fontSize: "8px", color: u.isMe ? GREEN : "#7ab8e0",
+                    fontFamily: "monospace", textAlign: "center",
+                    fontWeight: u.isMe ? 700 : 400,
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  }}>
+                    {u.name.split(" ")[0]}
+                  </span>
+                ))}
+              </div>
+
+              {/* Equipos del grupo */}
+              {GROUPS[grp].map(team => (
+                <div key={team.name} style={{
+                  display: "grid", gap: "4px", padding: "5px 8px",
+                  gridTemplateColumns: `1fr repeat(${data.length}, 1fr)`,
+                  borderRadius: "6px", marginBottom: "2px",
+                  background: "rgba(255,255,255,0.02)",
+                }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span style={{ fontSize: "13px" }}>{team.flag}</span>
+                    <span style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {team.name}
+                    </span>
+                  </span>
+                  {data.map((u, i) => {
+                    const picks = u.qualifiers[grp] || [];
+                    const selected = picks.includes(team.name);
+                    return (
+                      <div key={i} style={{ textAlign: "center" }}>
+                        {selected ? (
+                          <span style={{
+                            fontSize: "13px",
+                            filter: u.isMe ? "none" : "opacity(0.7)",
+                          }}>✅</span>
+                        ) : (
+                          <span style={{ fontSize: "10px", color: "#3a5a8a" }}>—</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
