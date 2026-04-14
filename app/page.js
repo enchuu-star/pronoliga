@@ -1448,15 +1448,18 @@ function RankingView() {
   };
 
   useEffect(() => {
-    loadRanking();
-    const channel = supabase
-      .channel("ranking_realtime")
-      .on("postgres_changes", {
-        event: "UPDATE", schema: "public", table: "predictions",
-      }, () => loadRanking())
-      .subscribe();
-    return () => supabase.removeChannel(channel);
-  }, []);
+  loadRanking();
+
+  const channel = supabase
+    .channel("ranking_realtime")
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "predictions" }, () => loadRanking())
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "predictions" }, () => loadRanking())
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "qualifier_picks" }, () => loadRanking())
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "special_predictions" }, () => loadRanking())
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, []);
 
   const medals = ["🥇", "🥈", "🥉"];
   const formatTime = d => d
