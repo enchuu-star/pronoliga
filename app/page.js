@@ -226,13 +226,13 @@ function useCountdown() {
 // ============================================================
 const GREEN = "#1a3a6b";
 const GREEN_DIM = "rgba(26,58,107,0.10)";
-const DARK = "#0d1b2a";
-const CARD = "rgba(20,40,70,0.85)";
+const DARK = "#1e3a5f";
+const CARD = "rgba(255,255,255,0.88)";
 const BORDER = "rgba(80,140,220,0.2)";
 const TEXT = "#c8d8f0";
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0;}body{background:#0d1b2a;}
+  *{box-sizing:border-box;margin:0;padding:0;}body{background:#1e3a5f;}
   ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:#f0f4f8;}::-webkit-scrollbar-thumb{background:#c0cfe0;border-radius:2px;}
   input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
