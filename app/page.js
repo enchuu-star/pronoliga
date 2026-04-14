@@ -714,17 +714,19 @@ function MatchChat({ match, user }) {
 
       {open && (
         <div style={{
-          marginTop: "8px",
-          border: `1px solid ${BORDER}`,
-          borderRadius: "10px",
-          background: "rgba(255,255,255,0.6)",
-          overflow: "hidden",
-        }}>
+            marginTop: "8px",
+            border: `1px solid ${BORDER}`,
+            borderRadius: "10px",
+            background: "rgba(10,22,40,0.95)",
+            overflow: "hidden",
+          }}>
           {/* Mensajes */}
           <div style={{
             maxHeight: "220px", overflowY: "auto",
             padding: "10px", display: "flex",
             flexDirection: "column", gap: "6px",
+            wordBreak: "break-word",
+            whiteSpace: "pre-wrap",
           }}>
             {loading && (
               <p style={{ color: "#c0d8f0", fontFamily: "monospace", fontSize: "11px", textAlign: "center" }}>
@@ -762,10 +764,10 @@ function MatchChat({ match, user }) {
                       maxWidth: "80%",
                       padding: isReaction ? "4px 8px" : "8px 12px",
                       borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
-                      background: isMe ? GREEN : "white",
-                      boxShadow: "0 1px 4px rgba(26,58,107,0.1)",
+                      background: isMe ? GREEN : "rgba(255,255,255,0.12)",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
                       fontSize: isReaction ? "22px" : "12px",
-                      color: isMe ? "white" : "#e0eaf8",
+                      color: "#e0eaf8",
                       fontFamily: "monospace", lineHeight: 1.4,
                       wordBreak: "break-word",
                     }}>
@@ -812,7 +814,7 @@ function MatchChat({ match, user }) {
               style={{
                 flex: 1, padding: "8px 12px",
                 border: `1px solid ${BORDER}`, borderRadius: "20px",
-                background: "white", color: "#e0eaf8",
+                background: "rgba(255,255,255,0.12)", color: "#e0eaf8",
                 fontFamily: "monospace", fontSize: "12px", outline: "none",
               }}
             />
