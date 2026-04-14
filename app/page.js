@@ -430,11 +430,14 @@ function StandingTable({ standings }) {
 // ============================================================
 // PRONÓSTICO CLASIFICADOS POR GRUPO
 // ============================================================
-function QualifierPicker({ group, userId, locked }) {
+function QualifierPicker({ group, userId, locked, matches, predMap }) {
   const teams = GROUPS[group];
   const [picks, setPicks] = useState([]);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tieExists, setTieExists] = useState(false);
+
+  const standings = calcPersonalStandings(group, matches, predMap);
 
   useEffect(() => {
     (async () => {
@@ -444,44 +447,111 @@ function QualifierPicker({ group, userId, locked }) {
     })();
   }, [group, userId]);
 
+  useEffect(() => {
+    if (loading) return;
+
+    const top = standings[0];
+    const second = standings[1];
+    const third = standings[2];
+
+    if (!top || !second) return;
+
+    // Comprobar si hay empate entre 2º y 3º
+    const isTie = second && third &&
+      second.pts === third.pts &&
+      second.dg === third.dg &&
+      second.gf === third.gf;
+
+    setTieExists(isTie);
+
+    // Si no hay empate, guardar automáticamente 1º y 2º
+    if (!isTie) {
+      const auto = [top.name, second.name];
+      if (JSON.stringify(auto) !== JSON.stringify(picks)) {
+        setPicks(auto);
+        supabase.from("qualifier_picks").upsert(
+          { user_id: userId, grp: group, pick1: auto[0], pick2: auto[1] },
+          { onConflict: "user_id,grp" }
+        );
+      }
+    }
+  }, [standings.map(s => s.pts + s.dg + s.gf).join(","), loading]);
+
   const toggle = async (name) => {
-    if (locked) return;
+    if (locked || !tieExists) return;
     let next;
     if (picks.includes(name)) next = picks.filter(p => p !== name);
     else if (picks.length < 2) next = [...picks, name];
     else next = [picks[1], name];
     setPicks(next);
     setSaved(false);
-    const { error } = await supabase.from("qualifier_picks").upsert({ user_id: userId, grp: group, pick1: next[0] || null, pick2: next[1] || null }, { onConflict: "user_id,grp" });
+    const { error } = await supabase.from("qualifier_picks").upsert(
+      { user_id: userId, grp: group, pick1: next[0] || null, pick2: next[1] || null },
+      { onConflict: "user_id,grp" }
+    );
     if (!error) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
   };
 
   if (loading) return null;
 
+  // Si no hay ningún pronóstico introducido aún, no mostrar nada
+  const hasAnyPred = matches.filter(m => m.grp === group).some(m => predMap[m.id]);
+  if (!hasAnyPred) return (
+    <div style={{ marginTop: "16px" }}>
+      <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace", letterSpacing: "2px" }}>
+        CLASIFICADOS (+2 PTS c/u) · Introduce pronósticos para calcular automáticamente
+      </p>
+    </div>
+  );
+
   return (
     <div style={{ marginTop: "16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-        <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px" }}>¿QUIÉN PASA DE GRUPO? (+2 PTS c/u)</p>
+        <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px" }}>
+          CLASIFICADOS (+2 PTS c/u) · {tieExists ? "⚠️ Empate — selecciona manualmente" : "✓ Calculado automáticamente"}
+        </p>
         {saved && <span style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace" }}>✓</span>}
       </div>
+
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
         {teams.map(t => {
           const sel = picks.includes(t.name);
+          const pos = standings.findIndex(s => s.name === t.name);
+          const isAuto = !tieExists && (pos === 0 || pos === 1);
+
           return (
-            <button key={t.name} onClick={() => toggle(t.name)} disabled={locked} style={{
-              padding: "7px 10px", border: `1px solid ${sel ? GREEN : BORDER}`, borderRadius: "8px",
-              background: sel ? GREEN_DIM : CARD, cursor: locked ? "default" : "pointer",
-              display: "flex", alignItems: "center", gap: "5px", opacity: locked && !sel ? 0.4 : 1,
-            }}>
+            <button
+              key={t.name}
+              onClick={() => toggle(t.name)}
+              disabled={locked || !tieExists}
+              style={{
+                padding: "7px 10px",
+                border: `1px solid ${sel ? GREEN : BORDER}`,
+                borderRadius: "8px",
+                background: sel ? GREEN_DIM : CARD,
+                cursor: locked || !tieExists ? "default" : "pointer",
+                display: "flex", alignItems: "center", gap: "5px",
+                opacity: locked && !sel ? 0.4 : 1,
+              }}>
               <span style={{ fontSize: "16px" }}>{t.flag}</span>
               <span style={{ fontSize: "11px", color: sel ? GREEN : "#a8d4f0", fontFamily: "monospace" }}>{t.name}</span>
-              {sel && <span style={{ fontSize: "10px", color: GREEN }}>✓</span>}
+              {isAuto && <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace" }}>#{pos + 1}</span>}
+              {sel && tieExists && <span style={{ fontSize: "10px", color: GREEN }}>✓</span>}
             </button>
           );
         })}
       </div>
-      {!locked && <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", marginTop: "6px" }}>Selecciona 2 equipos · {picks.length}/2</p>}
-      {locked && <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "monospace", marginTop: "6px" }}>Pronósticos cerrados</p>}
+
+      {tieExists && !locked && (
+        <p style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "monospace", marginTop: "6px" }}>
+          ⚠️ Hay empate entre 2º y 3º — selecciona quién pasa · {picks.length}/2
+        </p>
+      )}
+      {locked && (
+        <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace", marginTop: "6px" }}>
+          🔒 Pronósticos cerrados
+        </p>
+      )}
     </div>
   );
 }
@@ -1139,7 +1209,7 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
                 <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "6px" }}>TU CLASIFICACIÓN</p>
                 {!hasAnyPred && <p style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace", marginBottom: "8px" }}>Introduce pronósticos abajo para ver tu clasificación</p>}
                 <StandingTable standings={personalStandings} />
-                <QualifierPicker group={g} userId={user.id} locked={allClosed} />
+                <QualifierPicker group={g} userId={user.id} locked={allClosed} matches={matches} predMap={predMap} />
                 <div style={{ marginTop: "20px" }}>
                   <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>PARTIDOS</p>
                   {matches.filter(m => m.grp === g).map(m => (
