@@ -1625,14 +1625,6 @@ function CommunityView({ matches, user }) {
               );
             })
       }
-
-      {/* TABLA CLASIFICADOS AL FINAL */}
-      <div style={{ marginTop: "24px" }}>
-        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>
-          🏆 CLASIFICADOS
-        </p>
-        <QualifiersTable currentUserId={user.id} />
-      </div>
     </div>
   );
 }
