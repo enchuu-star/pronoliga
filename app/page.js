@@ -113,7 +113,7 @@ const MATCH_SCHEDULE = {
 const GROUPS = {
   A: [{ name: "México", flag: "🇲🇽" }, { name: "Sudáfrica", flag: "🇿🇦" }, { name: "Corea del Sur", flag: "🇰🇷" }, { name: "Rep. Checa", flag: "🇨🇿" }],
   B: [{ name: "Canadá", flag: "🇨🇦" }, { name: "Bosnia y Herz.", flag: "🇧🇦" }, { name: "Suiza", flag: "🇨🇭" }, { name: "Qatar", flag: "🇶🇦" }],
-  C: [{ name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" }, { name: "Haití", flag: "🇭🇹" }],
+  C: [{ name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🏴󠁧󠁢󠁳󠁣󠁴U+E007F" }, { name: "Haití", flag: "🇭🇹" }],
   D: [{ name: "Estados Unidos", flag: "🇺🇸" }, { name: "Paraguay", flag: "🇵🇾" }, { name: "Australia", flag: "🇦🇺" }, { name: "Turquía", flag: "🇹🇷" }],
   E: [{ name: "Alemania", flag: "🇩🇪" }, { name: "Curazao", flag: "🇨🇼" }, { name: "Costa de Marfil", flag: "🇨🇮" }, { name: "Ecuador", flag: "🇪🇨" }],
   F: [{ name: "Países Bajos", flag: "🇳🇱" }, { name: "Japón", flag: "🇯🇵" }, { name: "Túnez", flag: "🇹🇳" }, { name: "Suecia", flag: "🇸🇪" }],
@@ -122,7 +122,7 @@ const GROUPS = {
   I: [{ name: "Francia", flag: "🇫🇷" }, { name: "Senegal", flag: "🇸🇳" }, { name: "Noruega", flag: "🇳🇴" }, { name: "Iraq", flag: "🇮🇶" }],
   J: [{ name: "Argentina", flag: "🇦🇷" }, { name: "Argelia", flag: "🇩🇿" }, { name: "Austria", flag: "🇦🇹" }, { name: "Jordania", flag: "🇯🇴" }],
   K: [{ name: "Portugal", flag: "🇵🇹" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "RD Congo", flag: "🇨🇩" }],
-  L: [{ name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Ghana", flag: "🇬🇭" }],
+  L: [{ name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧U+E007F" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Ghana", flag: "🇬🇭" }],
 };
 
 const TOTAL_MATCHES = 72;
@@ -1307,214 +1307,42 @@ function ResultsView({ matches }) {
 // ============================================================
 // COMUNIDAD
 // ============================================================
-function SpecialPredictionsTable({ currentUserId }) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("scorer");
-
-  useEffect(() => {
-    (async () => {
-      const { data: specials } = await supabase.from("special_predictions").select("*");
-      const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
-      const merged = (profiles || []).map(p => {
-        const sp = (specials || []).find(x => x.user_id === p.id);
-        return {
-          name: p.name,
-          isMe: p.id === currentUserId,
-          top_scorer: sp?.top_scorer || null,
-          best_player: sp?.best_player || null,
-        };
-      }).sort((a, b) => a.name.localeCompare(b.name));
-      setData(merged);
-      setLoading(false);
-    })();
-  }, [currentUserId]);
-
-  if (loading) return null;
-
-  return (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
-      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "14px" }}>
-        PRONÓSTICOS ESPECIALES · TODOS
-      </p>
-      <div style={{ display: "flex", marginBottom: "14px", background: "rgba(26,58,107,0.06)", borderRadius: "8px", padding: "3px" }}>
-        {[{ id: "scorer", icon: "⚽", label: "Máx. Goleador" }, { id: "player", icon: "🏅", label: "Mejor Jugador" }].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: 1, padding: "9px 4px", border: "none", borderRadius: "6px", cursor: "pointer",
-            background: tab === t.id ? GREEN : "transparent",
-            color: tab === t.id ? "#0a1628" : "#e0eefa",
-            fontFamily: "monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "1px",
-          }}>
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", padding: "4px 10px" }}>
-          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px" }}>JUGADOR</span>
-          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px" }}>
-            {tab === "scorer" ? "MÁXIMO GOLEADOR" : "MEJOR JUGADOR"}
-          </span>
-        </div>
-        {data.map((u, i) => {
-          const value = tab === "scorer" ? u.top_scorer : u.best_player;
-          return (
-            <div key={i} style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px",
-              padding: "10px", borderRadius: "8px",
-              background: u.isMe ? GREEN_DIM : "rgba(255,255,255,0.03)",
-              border: u.isMe ? `1px solid rgba(79,195,247,0.3)` : `1px solid ${BORDER}`,
-              borderLeft: u.isMe ? `3px solid ${GREEN}` : "3px solid transparent",
-            }}>
-              <span style={{
-                fontSize: "12px", fontFamily: "monospace",
-                color: u.isMe ? GREEN : "#e0eaf8", fontWeight: u.isMe ? 700 : 400,
-                display: "flex", alignItems: "center", gap: "4px",
-              }}>
-                {u.isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
-                {u.name}
-              </span>
-              <span style={{
-                fontSize: "12px", fontFamily: "monospace",
-                color: value ? "#e0eaf8" : "#6aacda",
-                fontStyle: value ? "normal" : "italic",
-              }}>
-                {value || "Sin pronóstico"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-// ============================================================
-// TABLA CLASIFICADOS POR GRUPO — TODOS LOS JUGADORES
-// ============================================================
-function QualifiersTable({ currentUserId }) {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
-      const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
-      const merged = (profiles || []).map(p => {
-        const myPicks = (qpicks || []).filter(x => x.user_id === p.id);
-        const qualifiers = {};
-        myPicks.forEach(pick => {
-          qualifiers[pick.grp] = [pick.pick1, pick.pick2].filter(Boolean);
-        });
-        return { name: p.name, isMe: p.id === currentUserId, qualifiers };
-      }).sort((a, b) => a.name.localeCompare(b.name));
-      setData(merged);
-      setLoading(false);
-    })();
-  }, [currentUserId]);
-
-  if (loading) return null;
-
-  return (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
-      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "16px" }}>
-        🏆 CLASIFICADOS · TODOS
-      </p>
-      {Object.keys(GROUPS).map(grp => (
-        <div key={grp} style={{ marginBottom: "20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <div style={{
-              width: "26px", height: "26px", borderRadius: "6px",
-              background: GREEN_DIM, border: `1px solid ${BORDER}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: GREEN }}>{grp}</span>
-            </div>
-            <div style={{ display: "flex", gap: "4px" }}>
-              {GROUPS[grp].map(t => (
-                <span key={t.name} style={{ fontSize: "14px" }} title={t.name}>{t.flag}</span>
-              ))}
-            </div>
-          </div>
-
-          {/* Cabecera jugadores */}
-          <div style={{
-            display: "grid", gap: "4px", padding: "4px 8px", marginBottom: "4px",
-            gridTemplateColumns: `1fr repeat(${data.length}, 1fr)`,
-          }}>
-            <span style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "monospace" }}>EQUIPO</span>
-            {data.map((u, i) => (
-              <span key={i} style={{
-                fontSize: "8px", color: u.isMe ? GREEN : "#7ab8e0",
-                fontFamily: "monospace", textAlign: "center", fontWeight: u.isMe ? 700 : 400,
-                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              }}>
-                {u.name.split(" ")[0]}
-              </span>
-            ))}
-          </div>
-
-          {/* Filas equipos */}
-          {GROUPS[grp].map(team => (
-            <div key={team.name} style={{
-              display: "grid", gap: "4px", padding: "5px 8px",
-              gridTemplateColumns: `1fr repeat(${data.length}, 1fr)`,
-              borderRadius: "6px", marginBottom: "2px",
-              background: "rgba(255,255,255,0.02)",
-              border: `1px solid ${BORDER}`,
-            }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <span style={{ fontSize: "13px" }}>{team.flag}</span>
-                <span style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {team.name}
-                </span>
-              </span>
-              {data.map((u, i) => {
-                const picks = u.qualifiers[grp] || [];
-                const selected = picks.includes(team.name);
-                return (
-                  <div key={i} style={{ textAlign: "center" }}>
-                    {selected
-                      ? <span style={{ fontSize: "13px", opacity: u.isMe ? 1 : 0.75 }}>✅</span>
-                      : <span style={{ fontSize: "10px", color: "#3a5a8a" }}>—</span>
-                    }
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-// ============================================================
-// COMUNIDAD
-// ============================================================
 function SpecialPredictionsTableCollapsible({ currentUserId }) {
   const [open, setOpen] = useState(false);
+
   return (
     <div style={{ marginBottom: "16px" }}>
-      <button onClick={() => setOpen(o => !o)} style={{
-        width: "100%", padding: "10px 14px",
-        border: `1px solid ${open ? GREEN : BORDER}`,
-        borderRadius: open ? "10px 10px 0 0" : "10px",
-        background: open ? GREEN_DIM : CARD,
-        color: open ? GREEN : "#d0e4f7",
-        fontFamily: "monospace", fontSize: "10px",
-        cursor: "pointer", letterSpacing: "2px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", padding: "10px 14px",
+          border: `1px solid ${open ? GREEN : BORDER}`,
+          borderRadius: open ? "10px 10px 0 0" : "10px",
+          background: open ? GREEN_DIM : CARD,
+          color: open ? GREEN : "#d0e4f7",
+          fontFamily: "monospace", fontSize: "10px",
+          cursor: "pointer", letterSpacing: "2px",
+          display: "flex", alignItems: "center",
+          justifyContent: "space-between",
+        }}>
         <span>🏅 PRONÓSTICOS ESPECIALES</span>
         <span style={{ fontSize: "12px" }}>{open ? "▲" : "▼"}</span>
       </button>
+
       {open && (
-        <div style={{ border: `1px solid ${GREEN}`, borderTop: "none", borderRadius: "0 0 10px 10px", overflow: "hidden" }}>
+        <div style={{
+          border: `1px solid ${GREEN}`,
+          borderTop: "none",
+          borderRadius: "0 0 10px 10px",
+          overflow: "hidden",
+        }}>
           <SpecialPredictionsTable currentUserId={currentUserId} />
         </div>
       )}
     </div>
   );
 }
+
 
 function CommunityView({ matches, user }) {
   const [viewMode, setViewMode] = useState("day");
@@ -1545,9 +1373,7 @@ function CommunityView({ matches, user }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "18px" }}>{ht.flag}</span>
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: "#e0eaf8" }}>{m.home}</span>
-          {m.result_home !== null
-            ? <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{m.result_home}-{m.result_away}</span>
-            : <span style={{ fontFamily: "monospace", fontSize: "11px", color: "#d0e4f7" }}>vs</span>}
+          {m.result_home !== null ? <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{m.result_home}-{m.result_away}</span> : <span style={{ fontFamily: "monospace", fontSize: "11px", color: "#d0e4f7" }}>vs</span>}
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: "#e0eaf8" }}>{m.away}</span>
           <span style={{ fontSize: "18px" }}>{at.flag}</span>
         </div>
@@ -1557,73 +1383,35 @@ function CommunityView({ matches, user }) {
             <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
               <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "monospace", flex: 1 }}>{getName(pred.user_id)}</span>
               <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>{pred.predicted_home}-{pred.predicted_away}</span>
-              {pred.points !== null && pred.points !== undefined && (
-                <span style={{
-                  padding: "2px 8px", borderRadius: "10px", fontSize: "11px",
-                  fontFamily: "monospace", fontWeight: 700,
-                  background: pred.points === 3 ? GREEN_DIM : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)",
-                  color: pred.points === 3 ? GREEN : pred.points === 1 ? "#b8860b" : "#cc2222",
-                }}>
-                  {pred.points === 3 ? "🎯 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}
-                </span>
-              )}
+              {pred.points !== null && pred.points !== undefined && <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "monospace", fontWeight: 700, background: pred.points === 3 ? GREEN_DIM : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 3 ? GREEN : pred.points === 1 ? "#b8860b" : "#cc2222" }}>{pred.points === 3 ? "🎯 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}</span>}
             </div>
           ))}
+
+        {/* ← AÑADIR ESTO */}
         <MatchChat match={m} user={user} />
       </div>
     );
   };
 
   if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "monospace" }}>Cargando...</p>;
-
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <SpecialPredictionsTableCollapsible currentUserId={user.id} />
+    <SpecialPredictionsTableCollapsible currentUserId={user.id} />
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>PRONÓSTICOS DE TODOS</p>
       <div style={{ display: "flex", marginBottom: "16px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
-        {[{ id: "day", label: "Por día" }, { id: "all", label: "Todos" }].map(opt => (
-          <button key={opt.id} onClick={() => setViewMode(opt.id)} style={{
-            flex: 1, padding: "9px", border: "none", borderRadius: "6px",
-            cursor: "pointer", fontSize: "11px", letterSpacing: "2px",
-            fontFamily: "monospace", textTransform: "uppercase",
-            background: viewMode === opt.id ? GREEN : "transparent",
-            color: viewMode === opt.id ? "#0a1628" : "#e0eefa", fontWeight: 700,
-          }}>{opt.label}</button>
-        ))}
+        {[{ id: "day", label: "Por día" }, { id: "all", label: "Todos" }].map(opt => <button key={opt.id} onClick={() => setViewMode(opt.id)} style={{ flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "monospace", textTransform: "uppercase", background: viewMode === opt.id ? GREEN : "transparent", color: viewMode === opt.id ? "#0a1628" : "#e0eefa", fontWeight: 700 }}>{opt.label}</button>)}
       </div>
       {viewMode === "day" && (
         <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px", marginBottom: "16px" }}>
           {days.map(day => {
             const hasClosed = closedMatches.some(m => m.match_date === day);
-            return (
-              <button key={day} onClick={() => setSelectedDay(day)} disabled={!hasClosed} style={{
-                padding: "7px 12px", border: `1px solid ${currentDay === day ? GREEN : BORDER}`,
-                borderRadius: "8px", cursor: hasClosed ? "pointer" : "default",
-                whiteSpace: "nowrap", background: currentDay === day ? GREEN_DIM : CARD,
-                color: currentDay === day ? GREEN : hasClosed ? "#a8d4f0" : "#7ab8e0",
-                fontFamily: "monospace", fontSize: "11px", flexShrink: 0,
-                opacity: hasClosed ? 1 : 0.4,
-              }}>{formatDate(day)}</button>
-            );
+            return <button key={day} onClick={() => setSelectedDay(day)} disabled={!hasClosed} style={{ padding: "7px 12px", border: `1px solid ${currentDay === day ? GREEN : BORDER}`, borderRadius: "8px", cursor: hasClosed ? "pointer" : "default", whiteSpace: "nowrap", background: currentDay === day ? GREEN_DIM : CARD, color: currentDay === day ? GREEN : hasClosed ? "#a8d4f0" : "#7ab8e0", fontFamily: "monospace", fontSize: "11px", flexShrink: 0, opacity: hasClosed ? 1 : 0.4 }}>{formatDate(day)}</button>;
           })}
         </div>
       )}
       {viewMode === "day"
-        ? matchesByDay(currentDay).length === 0
-          ? <p style={{ color: "#c0d8f0", fontFamily: "monospace" }}>No hay partidos cerrados este día</p>
-          : matchesByDay(currentDay).map(m => renderMatchPreds(m))
-        : closedMatches.length === 0
-          ? <p style={{ color: "#c0d8f0", fontFamily: "monospace" }}>Aún no hay partidos cerrados</p>
-          : days.map(day => {
-              const dm = matchesByDay(day);
-              if (!dm.length) return null;
-              return (
-                <div key={day} style={{ marginBottom: "20px" }}>
-                  <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>📅 {formatDate(day)}</p>
-                  {dm.map(m => renderMatchPreds(m))}
-                </div>
-              );
-            })
+        ? matchesByDay(currentDay).length === 0 ? <p style={{ color: "#c0d8f0", fontFamily: "monospace" }}>No hay partidos cerrados este día</p> : matchesByDay(currentDay).map(m => renderMatchPreds(m))
+        : closedMatches.length === 0 ? <p style={{ color: "#c0d8f0", fontFamily: "monospace" }}>Aún no hay partidos cerrados</p> : days.map(day => { const dm = matchesByDay(day); if (!dm.length) return null; return <div key={day} style={{ marginBottom: "20px" }}><p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>📅 {formatDate(day)}</p>{dm.map(m => renderMatchPreds(m))}</div>; })
       }
     </div>
   );
@@ -3372,7 +3160,7 @@ function FlappyGame({ user, onBack }) {
 const FLAG_COUNTRIES = [
   { name: "México", flag: "🇲🇽" }, { name: "Corea del Sur", flag: "🇰🇷" }, { name: "Sudáfrica", flag: "🇿🇦" },
   { name: "Canadá", flag: "🇨🇦" }, { name: "Suiza", flag: "🇨🇭" }, { name: "Qatar", flag: "🇶🇦" },
-  { name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" }, { name: "Haití", flag: "🇭🇹" },
+  { name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🏴󠁧󠁢󠁳󠁣󠁴U+E007F" }, { name: "Haití", flag: "🇭🇹" },
   { name: "Estados Unidos", flag: "🇺🇸" }, { name: "Paraguay", flag: "🇵🇾" }, { name: "Australia", flag: "🇦🇺" },
   { name: "Alemania", flag: "🇩🇪" }, { name: "Ecuador", flag: "🇪🇨" }, { name: "Costa de Marfil", flag: "🇨🇮" }, { name: "Curazao", flag: "🇨🇼" },
   { name: "Países Bajos", flag: "🇳🇱" }, { name: "Japón", flag: "🇯🇵" }, { name: "Túnez", flag: "🇹🇳" },
@@ -3380,7 +3168,7 @@ const FLAG_COUNTRIES = [
   { name: "España", flag: "🇪🇸" }, { name: "Cabo Verde", flag: "🇨🇻" }, { name: "Arabia Saudí", flag: "🇸🇦" }, { name: "Uruguay", flag: "🇺🇾" },
   { name: "Francia", flag: "🇫🇷" }, { name: "Senegal", flag: "🇸🇳" }, { name: "Noruega", flag: "🇳🇴" },
   { name: "Argentina", flag: "🇦🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Argelia", flag: "🇩🇿" },
-  { name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "Jordania", flag: "🇯🇴" },
+  { name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧U+E007F" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "Jordania", flag: "🇯🇴" },
   { name: "Portugal", flag: "🇵🇹" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Ghana", flag: "🇬🇭" }, { name: "Austria", flag: "🇦🇹" },
 ];
 
