@@ -919,38 +919,143 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
 // ============================================================
 function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
   const [g, setG] = useState("A");
+  const [showPending, setShowPending] = useState(false);
   const predMap = {};
   predictions.forEach(p => { predMap[p.match_id] = p; });
   const personalStandings = calcPersonalStandings(g, matches, predMap);
   const hasAnyPred = matches.filter(m => m.grp === g).some(m => predMap[m.id]);
 
+  const pendingMatches = matches.filter(m =>
+    m.status === "open" && !allClosed && !predMap[m.id]
+  );
+  const pendingByGroup = {};
+  pendingMatches.forEach(m => {
+    if (!pendingByGroup[m.grp]) pendingByGroup[m.grp] = [];
+    pendingByGroup[m.grp].push(m);
+  });
+
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <ProgressBar predictions={predictions} matches={matches} />
       <SpecialPredictions userId={user.id} locked={allClosed} />
-      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
-        {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#e0eefa" }}>{gr}</button>)}
-      </div>
-      <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.1)", borderRadius: "12px", padding: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-          <div style={{ width: "36px", height: "36px", borderRadius: "7px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{g}</span>
-          </div>
-          <div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "17px", color: "#e0eaf8" }}>GRUPO {g}</div>
-            <div style={{ display: "flex", gap: "5px", marginTop: "3px" }}>{GROUPS[g].map(t => <span key={t.name} style={{ fontSize: "15px" }} title={t.name}>{t.flag}</span>)}</div>
-          </div>
+
+      {/* Botón filtro pendientes */}
+      <button
+        onClick={() => setShowPending(v => !v)}
+        style={{
+          width: "100%", marginBottom: "16px",
+          padding: "12px 16px",
+          border: `1px solid ${showPending ? "#ff6b4a" : BORDER}`,
+          borderRadius: "10px",
+          background: showPending ? "rgba(255,107,74,0.1)" : CARD,
+          color: showPending ? "#ff6b4a" : "#d0e4f7",
+          fontFamily: "monospace", fontSize: "11px",
+          cursor: "pointer", letterSpacing: "2px",
+          display: "flex", alignItems: "center",
+          justifyContent: "space-between",
+        }}>
+        <span>⚠️ VER SOLO SIN RELLENAR</span>
+        <span style={{
+          background: pendingMatches.length > 0 ? "#ff6b4a" : "#007a3a",
+          color: "white", borderRadius: "10px",
+          fontSize: "10px", fontFamily: "monospace",
+          fontWeight: 700, padding: "2px 10px",
+        }}>
+          {pendingMatches.length > 0 ? `${pendingMatches.length} pendientes` : "✓ Todo rellenado"}
+        </span>
+      </button>
+
+      {showPending ? (
+        <div>
+          {pendingMatches.length === 0 ? (
+            <div style={{
+              background: "rgba(0,122,58,0.1)", border: "1px solid rgba(0,122,58,0.3)",
+              borderRadius: "12px", padding: "28px", textAlign: "center",
+            }}>
+              <div style={{ fontSize: "36px", marginBottom: "10px" }}>🎉</div>
+              <p style={{ fontFamily: "monospace", fontSize: "13px", color: "#4fc3f7" }}>
+                ¡Has rellenado todos los pronósticos abiertos!
+              </p>
+            </div>
+          ) : (
+            Object.entries(pendingByGroup).map(([grp, ms]) => (
+              <div key={grp} style={{ marginBottom: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                  <div style={{
+                    width: "30px", height: "30px", borderRadius: "6px",
+                    background: GREEN_DIM, border: `1px solid ${BORDER}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: GREEN }}>{grp}</span>
+                  </div>
+                  <span style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "monospace", letterSpacing: "2px" }}>
+                    GRUPO {grp} · {ms.length} sin rellenar
+                  </span>
+                </div>
+                {ms.map(m => (
+                  <MatchRow key={m.id} match={m} userPred={predMap[m.id]}
+                    user={user} onSaved={onDataChange} allClosed={allClosed} />
+                ))}
+              </div>
+            ))
+          )}
         </div>
-        <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "6px" }}>TU CLASIFICACIÓN</p>
-        {!hasAnyPred && <p style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace", marginBottom: "8px" }}>Introduce pronósticos abajo para ver tu clasificación</p>}
-        <StandingTable standings={personalStandings} />
-        <QualifierPicker group={g} userId={user.id} locked={allClosed} />
-        <div style={{ marginTop: "20px" }}>
-          <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>PARTIDOS</p>
-          {matches.filter(m => m.grp === g).map(m => <MatchRow key={m.id} match={m} userPred={predMap[m.id]} user={user} onSaved={onDataChange} allClosed={allClosed} />)}
-        </div>
-      </div>
+      ) : (
+        <>
+          <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>SELECCIONA GRUPO</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
+            {Object.keys(GROUPS).map(gr => {
+              const pending = matches.filter(m =>
+                m.grp === gr && m.status === "open" && !allClosed && !predMap[m.id]
+              ).length;
+              return (
+                <button key={gr} onClick={() => setG(gr)} style={{
+                  width: "40px", height: "40px",
+                  border: `1px solid ${g === gr ? GREEN : BORDER}`,
+                  borderRadius: "8px", cursor: "pointer",
+                  fontFamily: "'Bebas Neue', cursive", fontSize: "18px",
+                  background: g === gr ? GREEN_DIM : CARD,
+                  color: g === gr ? GREEN : "#e0eefa",
+                  position: "relative",
+                }}>
+                  {gr}
+                  {pending > 0 && (
+                    <span style={{
+                      position: "absolute", top: "2px", right: "2px",
+                      width: "7px", height: "7px",
+                      borderRadius: "50%", background: "#ff6b4a",
+                    }} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <div style={{ width: "36px", height: "36px", borderRadius: "7px", background: GREEN_DIM, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{g}</span>
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "17px", color: "#e0eaf8" }}>GRUPO {g}</div>
+                <div style={{ display: "flex", gap: "5px", marginTop: "3px" }}>
+                  {GROUPS[g].map(t => <span key={t.name} style={{ fontSize: "15px" }} title={t.name}>{t.flag}</span>)}
+                </div>
+              </div>
+            </div>
+            <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "6px" }}>TU CLASIFICACIÓN</p>
+            {!hasAnyPred && <p style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace", marginBottom: "8px" }}>Introduce pronósticos abajo para ver tu clasificación</p>}
+            <StandingTable standings={personalStandings} />
+            <QualifierPicker group={g} userId={user.id} locked={allClosed} />
+            <div style={{ marginTop: "20px" }}>
+              <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>PARTIDOS</p>
+              {matches.filter(m => m.grp === g).map(m => (
+                <MatchRow key={m.id} match={m} userPred={predMap[m.id]}
+                  user={user} onSaved={onDataChange} allClosed={allClosed} />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1311,43 +1416,94 @@ function ProfileView({ user, matches }) {
 function RankingView() {
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadRanking = async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
+    const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
+    const { data: preds } = await supabase.from("predictions").select("*");
+    const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
+    const { data: specialPreds } = await supabase.from("special_predictions").select("*");
+    const r = (profiles || []).map(p => {
+      const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
+      const myPicks = (qpicks || []).filter(x => x.user_id === p.id);
+      const qualPts = myPicks.reduce((s, pick) => s + (pick.points || 0), 0);
+      const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);
+      const specialPts = mySpecial
+        ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0)
+        : 0;
+      return {
+        ...p,
+        total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts,
+        exactos: myPreds.filter(x => x.points === 3).length,
+        count: myPreds.length,
+        qualPts, specialPts,
+      };
+    }).sort((a, b) => b.total - a.total);
+    setRanking(r);
+    setLoading(false);
+    setLastUpdated(new Date());
+    if (showRefresh) setRefreshing(false);
+  };
+
   useEffect(() => {
-    (async () => {
-      const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
-      const { data: preds } = await supabase.from("predictions").select("*");
-      const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
-      const { data: specialPreds } = await supabase.from("special_predictions").select("*");
-      const r = (profiles || []).map(p => {
-        const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
-        const myPicks = (qpicks || []).filter(x => x.user_id === p.id);
-        const qualPts = myPicks.reduce((s, pick) => s + (pick.points || 0), 0);
-        const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);          // ← AÑADIR
-        const specialPts = mySpecial                                                     // ← AÑADIR
-          ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0)   // ← AÑADIR
-          : 0;                                                                           // ← AÑADIR
-        return {
-          ...p,
-          total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts,  // ← specialPts añadido
-          exactos: myPreds.filter(x => x.points === 3).length,
-          count: myPreds.length,
-          qualPts,
-          specialPts,  // ← AÑADIR
-        };
-      }).sort((a, b) => b.total - a.total);
-      setRanking(r); setLoading(false);
-    })();
+    loadRanking();
+    const channel = supabase
+      .channel("ranking_realtime")
+      .on("postgres_changes", {
+        event: "UPDATE", schema: "public", table: "predictions",
+      }, () => loadRanking())
+      .subscribe();
+    return () => supabase.removeChannel(channel);
   }, []);
+
   const medals = ["🥇", "🥈", "🥉"];
+  const formatTime = d => d
+    ? `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`
+    : "";
+
   if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "monospace" }}>Cargando...</p>;
+
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "16px" }}>RANKING GENERAL</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px" }}>
+          RANKING GENERAL
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {lastUpdated && (
+            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace" }}>
+              🟢 {formatTime(lastUpdated)}
+            </span>
+          )}
+          <button
+            onClick={() => loadRanking(true)}
+            disabled={refreshing}
+            style={{
+              padding: "5px 10px", border: `1px solid ${BORDER}`,
+              borderRadius: "6px", background: "transparent",
+              color: refreshing ? "#7ab8e0" : GREEN,
+              fontFamily: "monospace", fontSize: "10px",
+              cursor: refreshing ? "default" : "pointer",
+              animation: refreshing ? "pulse 1s infinite" : "none",
+            }}>
+            {refreshing ? "···" : "↻ Actualizar"}
+          </button>
+        </div>
+      </div>
+
       {ranking.map((u, i) => (
-        <div key={u.id} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px 16px", marginBottom: "6px" }}>
+        <div key={u.id} style={{
+          display: "flex", alignItems: "center", gap: "12px",
+          background: i === 0 ? GREEN_DIM : CARD,
+          border: i === 0 ? `1px solid rgba(79,195,247,0.3)` : `1px solid ${BORDER}`,
+          borderRadius: "10px", padding: "14px 16px", marginBottom: "6px",
+        }}>
           <span style={{ fontSize: "20px", minWidth: "28px" }}>{medals[i] || `#${i + 1}`}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</div>
-            <div style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", marginTop: "2px" }}>
+            <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "2px" }}>
               {u.exactos} exactos · {u.count} eval.
               {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
               {u.specialPts > 0 ? ` · +${u.specialPts} especiales` : ""}
@@ -1355,13 +1511,14 @@ function RankingView() {
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: i === 0 ? GREEN : "#e0eaf8", lineHeight: 1 }}>{u.total}</div>
-            <div style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace" }}>PTS</div>
+            <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>PTS</div>
           </div>
         </div>
       ))}
+
       <div style={{ marginTop: "16px", padding: "12px 14px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
         <p style={{ color: "#c0d8f0", fontFamily: "monospace", fontSize: "10px", lineHeight: 2 }}>
-          <span style={{ color: GREEN }}>+3</span> exacto · <span style={{ color: "#b8860b" }}>+1</span> signo · <span style={{ color: "#cc2222" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
+          <span style={{ color: GREEN }}>+3</span> exacto · <span style={{ color: "#b8860b" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
         </p>
       </div>
     </div>
@@ -2520,6 +2677,13 @@ function TriviaGame({ user, onBack }) {
 
   if (phase === "playing" && q) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
+    {/* BOTÓN SALIR */}
+    <button onClick={() => setPhase("menu")}
+      style={{ marginBottom: "12px", padding: "6px 12px", border: `1px solid ${BORDER}`,
+        borderRadius: "7px", background: "transparent", color: "#c0d8f0",
+        cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>
+      ← Salir
+    </button>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#d0e4f7" }}>Pregunta {current + 1}/10</span>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -2707,6 +2871,16 @@ function FlappyGame({ user, onBack }) {
       )}
       {(phase === "playing" || phase === "dead") && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        {/* BOTÓN SALIR */}
+    <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+      <button onClick={() => { cancelAnimationFrame(rafRef.current); setPhase("menu"); }}
+        style={{ padding: "6px 12px", border: `1px solid ${BORDER}`, borderRadius: "7px",
+          background: "transparent", color: "#c0d8f0",
+          cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>
+        ← Salir
+      </button>
+      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: GREEN }}>{score}</span>
+    </div>
           <div style={{ position: "relative", borderRadius: "14px", overflow: "hidden", border: `1px solid ${BORDER}`, cursor: "pointer", userSelect: "none" }}
             onClick={handleTap} onTouchStart={e => { e.preventDefault(); handleTap(); }}>
             <canvas ref={canvasRef} width={W} height={H} style={{ display: "block", maxWidth: "100%" }} />
@@ -2838,6 +3012,13 @@ function FlagsGame({ user, onBack }) {
 
   if (phase === "playing" && q) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
+    {/* BOTÓN SALIR */}
+    <button onClick={() => { clearInterval(timerRef.current); setPhase("menu"); }}
+      style={{ marginBottom: "12px", padding: "6px 12px", border: `1px solid ${BORDER}`,
+        borderRadius: "7px", background: "transparent", color: "#c0d8f0",
+        cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>
+      ← Salir
+    </button>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#d0e4f7" }}>{current + 1}/15</span>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
