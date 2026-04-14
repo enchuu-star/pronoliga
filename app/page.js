@@ -508,7 +508,7 @@ function QualifierPicker({ group, userId, locked, matches, predMap }) {
     <div style={{ marginTop: "16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
         <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px" }}>
-          CLASIFICADOS (+2 PTS c/u) · {tieExists ? "⚠️ Empate — selecciona manualmente" : "✓ Calculado automáticamente"}
+          CLASIFICADOS (+2 PTS c/u) · {tieExists ? "⚠️ Empate — selecciona manualmente" : ""}
         </p>
         {saved && <span style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace" }}>✓</span>}
       </div>
