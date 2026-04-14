@@ -866,9 +866,8 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
 
   return (
     <div style={{ padding: "12px", borderRadius: "10px", marginBottom: "6px", background: CARD, border: `1px solid ${BORDER}` }}>
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px", gap: "8px" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
         <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace" }}>📅 {formatDate(match.match_date)} · ⏰ {match.match_time || "??:??"}h</span>
-        <span style={{ fontSize: "9px", fontFamily: "monospace", padding: "1px 6px", borderRadius: "6px", background: isOpen ? "rgba(0,200,100,0.08)" : "rgba(255,100,50,0.08)", color: isOpen ? "#007a3a" : "#cc4422" }}>{isOpen ? "ABIERTO" : "CERRADO"}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
