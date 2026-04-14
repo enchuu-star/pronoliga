@@ -1417,7 +1417,6 @@ function RankingView() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const prevRankingRef = useRef({});
 
   const loadRanking = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -1442,14 +1441,7 @@ function RankingView() {
       };
     }).sort((a, b) => b.total - a.total);
 
-    const newRanking = r.map((u, i) => {
-      const prev = prevRankingRef.current[u.id];
-      const move = prev === undefined ? null : prev - i;
-      return { ...u, move };
-    });
-    r.forEach((u, i) => { prevRankingRef.current[u.id] = i; });
-
-    setRanking(newRanking);
+    setRanking(r);
     setLoading(false);
     setLastUpdated(new Date());
     if (showRefresh) setRefreshing(false);
@@ -1511,18 +1503,7 @@ function RankingView() {
         }}>
           <span style={{ fontSize: "20px", minWidth: "28px" }}>{medals[i] || `#${i + 1}`}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</span>
-              {u.move === null ? (
-                <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace" }}>—</span>
-              ) : u.move > 0 ? (
-                <span style={{ fontSize: "10px", color: "#00c853", fontFamily: "monospace", fontWeight: 700 }}>▲{u.move}</span>
-              ) : u.move < 0 ? (
-                <span style={{ fontSize: "10px", color: "#ff3d3d", fontFamily: "monospace", fontWeight: 700 }}>▼{Math.abs(u.move)}</span>
-              ) : (
-                <span style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "monospace" }}>—</span>
-              )}
-            </div>
+            <div style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</div>
             <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "2px" }}>
               {u.exactos} exactos · {u.count} eval.
               {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
