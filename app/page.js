@@ -2929,13 +2929,12 @@ function FlappyGame({ user, onBack }) {
   const [loadingRank, setLoadingRank] = useState(false);
 
   const W = 360, H = 500;
-  const BALL_X = 80, GRAVITY = 0.35, JUMP = -8, PIPE_W = 52, GAP = 185, PIPE_SPEED = 2.2;
+  const BALL_X = 80, GRAVITY = 0.35, JUMP = -6, PIPE_W = 52, GAP = 185, PIPE_SPEED = 2.2;
   const FLAGS = ["🇧🇷","🇩🇪","🇪🇸","🇫🇷","🇦🇷","🇵🇹","🇳🇱","🇧🇪","🇮🇹","🇲🇽","🇦🇺","🇯🇵","🇰🇷","🇺🇸","🇨🇦","🇳🇴","🇸🇳","🇨🇴","🇺🇾","🇭🇷"];
 
   const initState = () => ({
     ballY: H / 2, ballVY: 0, pipes: [], powerups: [],
     frame: 0, score: 0, alive: true,
-    shield: false, slowmo: 0, doubleScore: 0
   });
 
   const jump = () => { if (stateRef.current?.alive) stateRef.current.ballVY = JUMP; };
@@ -2954,65 +2953,51 @@ function FlappyGame({ user, onBack }) {
       // Física
       s.ballVY += GRAVITY; s.ballY += s.ballVY; s.frame++;
 
-      // Timers power-ups
-      if (s.slowmo > 0) s.slowmo--;
-      if (s.doubleScore > 0) s.doubleScore--;
-
       // Generar tubos
       if (s.frame % 90 === 0) {
         const gapY = 100 + Math.random() * (H - GAP - 180);
         s.pipes.push({ x: W + 10, gapY, flag: FLAGS[Math.floor(Math.random() * FLAGS.length)], scored: false });
       }
 
-      // Generar power-up cada ~180 frames
-      if (s.frame % 180 === 0) {
-        const types = ["slow", "shield", "double"];
-        s.powerups.push({ x: W + 10, y: 80 + Math.random() * (H - 200), type: types[Math.floor(Math.random() * 3)] });
+      // Generar bonificación ⭐ cada ~200 frames
+      if (s.frame % 200 === 0) {
+        s.powerups.push({ x: W + 10, y: 100 + Math.random() * (H - 220) });
       }
-
-      // Velocidad según slowmo
-      const pipeSpeed = s.slowmo > 0 ? PIPE_SPEED * 0.4 : PIPE_SPEED;
 
       // Mover tubos y puntuar
       s.pipes = s.pipes.filter(p => p.x > -PIPE_W - 10);
       s.pipes.forEach(p => {
-        p.x -= pipeSpeed;
+        p.x -= PIPE_SPEED;
         if (!p.scored && p.x + PIPE_W < BALL_X) {
           p.scored = true;
-          s.score += s.doubleScore > 0 ? 2 : 1;
+          s.score += 1;
           setScore(s.score);
         }
       });
 
-      // Mover power-ups
+      // Mover bonificaciones
       s.powerups = s.powerups.filter(p => p.x > -20);
-      s.powerups.forEach(p => { p.x -= pipeSpeed * 0.8; });
+      s.powerups.forEach(p => { p.x -= PIPE_SPEED * 0.8; });
 
       // Colisión límites
       const br = 16;
       if (s.ballY - br < 0 || s.ballY + br > H) { endGame(); return; }
 
-      // Colisión tubos (con escudo)
+      // Colisión tubos
       for (const p of s.pipes) {
         if (BALL_X + br > p.x && BALL_X - br < p.x + PIPE_W) {
           if (s.ballY - br < p.gapY || s.ballY + br > p.gapY + GAP) {
-            if (s.shield) {
-              s.shield = false;
-              s.pipes = s.pipes.filter(x => x !== p);
-              break;
-            }
             endGame(); return;
           }
         }
       }
 
-      // Colisión power-ups
+      // Colisión bonificaciones → +5 puntos
       s.powerups = s.powerups.filter(p => {
         const hit = Math.abs(p.x - BALL_X) < 22 && Math.abs(p.y - s.ballY) < 22;
         if (hit) {
-          if (p.type === "slow")   s.slowmo = 180;
-          if (p.type === "shield") s.shield = true;
-          if (p.type === "double") s.doubleScore = 300;
+          s.score += 5;
+          setScore(s.score);
         }
         return !hit;
       });
@@ -3021,13 +3006,9 @@ function FlappyGame({ user, onBack }) {
 
       ctx.clearRect(0, 0, W, H);
 
-      // Fondo — azulado durante slowmo
+      // Fondo
       const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-      if (s.slowmo > 0) {
-        bgGrad.addColorStop(0, "#0a0a2a"); bgGrad.addColorStop(1, "#0a1a2a");
-      } else {
-        bgGrad.addColorStop(0, "#0a0a1a"); bgGrad.addColorStop(1, "#0a1a0a");
-      }
+      bgGrad.addColorStop(0, "#0a0a1a"); bgGrad.addColorStop(1, "#0a1a0a");
       ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
 
       // Estrellas
@@ -3055,57 +3036,38 @@ function FlappyGame({ user, onBack }) {
         ctx.font = "20px serif"; ctx.textAlign = "center"; ctx.fillText(p.flag, p.x + PIPE_W / 2, p.gapY + GAP / 2 + 7);
       });
 
-      // Power-ups flotantes con halo pulsante
+      // Bonificaciones ⭐ con halo pulsante
       s.powerups.forEach(p => {
-        const emoji = p.type === "slow" ? "⭐" : p.type === "shield" ? "🛡️" : "2️⃣";
-        const pulse = 0.6 + 0.4 * Math.sin(s.frame * 0.15);
+        const pulse = 0.5 + 0.5 * Math.sin(s.frame * 0.18);
         ctx.save();
-        ctx.globalAlpha = pulse * 0.35;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
-        ctx.fillStyle = p.type === "double" ? "#ff8a00" : "#4fc3f7";
+        ctx.globalAlpha = pulse * 0.4;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
+        ctx.fillStyle = "#f59e0b";
         ctx.fill();
         ctx.globalAlpha = 1;
-        ctx.font = "20px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(emoji, p.x, p.y);
+        ctx.font = "22px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("⭐", p.x, p.y);
+        // Etiqueta +5
+        ctx.font = "bold 10px monospace";
+        ctx.fillStyle = "#f59e0b";
+        ctx.fillText("+5", p.x, p.y + 18);
         ctx.restore();
       });
 
-      // Balón (halo azul si escudo activo)
+      // Balón
       ctx.save();
       ctx.translate(BALL_X, s.ballY);
-      if (s.shield) {
-        ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2);
-        ctx.strokeStyle = "#4fc3f7"; ctx.lineWidth = 3;
-        ctx.globalAlpha = 0.6 + 0.4 * Math.sin(s.frame * 0.2);
-        ctx.stroke(); ctx.globalAlpha = 1;
-      }
       ctx.rotate(s.frame * 0.08);
       ctx.font = "32px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText("⚽", 0, 0);
       ctx.restore();
 
-      // Marcador — naranja si doble puntos activo
+      // Marcador
       ctx.fillStyle = "rgba(0,0,0,0.5)";
       ctx.beginPath(); ctx.roundRect(W / 2 - 36, 14, 72, 32, 8); ctx.fill();
-      ctx.fillStyle = s.doubleScore > 0 ? "#ff8a00" : "#f59e0b";
+      ctx.fillStyle = "#f59e0b";
       ctx.font = "bold 20px 'Courier New'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(s.score, W / 2, 30);
-
-      // Indicadores power-ups activos (esquina superior izquierda)
-      ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.font = "bold 11px monospace";
-      let indicY = 22;
-      if (s.slowmo > 0) {
-        ctx.fillStyle = "#4fc3f7";
-        ctx.fillText(`⭐ ${Math.ceil(s.slowmo / 60)}s`, 8, indicY); indicY += 16;
-      }
-      if (s.shield) {
-        ctx.fillStyle = "#4fc3f7";
-        ctx.fillText("🛡️ ON", 8, indicY); indicY += 16;
-      }
-      if (s.doubleScore > 0) {
-        ctx.fillStyle = "#ff8a00";
-        ctx.fillText(`2x ${Math.ceil(s.doubleScore / 60)}s`, 8, indicY);
-      }
 
       rafRef.current = requestAnimationFrame(draw);
     };
@@ -3152,10 +3114,8 @@ function FlappyGame({ user, onBack }) {
           <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.15)", borderRadius: "14px", padding: "24px", marginBottom: "20px" }}>
             <div style={{ fontSize: "52px", marginBottom: "10px" }}>⚽</div>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>FLAPPY BALÓN</div>
-            <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "8px" }}>Esquiva las porterías · Toca para saltar</p>
-            <p style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>
-              ⭐ Slow-mo · 🛡️ Escudo · 2️⃣ Doble puntos
-            </p>
+            <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "6px" }}>Esquiva las porterías · Toca para saltar</p>
+            <p style={{ fontSize: "10px", color: "#f59e0b", fontFamily: "monospace", marginBottom: "20px" }}>⭐ Recoge la estrella para +5 puntos</p>
             <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
           </div>
           <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FLAPPY</p>
