@@ -224,7 +224,7 @@ function useCountdown() {
 // ============================================================
 // PULL TO REFRESH — RULETA
 // ============================================================
-ffunction PullToRefreshRuleta({ onRefresh }) {
+function PullToRefreshRuleta({ onRefresh }) {
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState(0);
   const startY = useRef(null);
