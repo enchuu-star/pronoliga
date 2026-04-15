@@ -238,13 +238,15 @@ function PullToRefreshRuleta({ onRefresh }) {
 
   useEffect(() => {
     const onTouchStart = (e) => {
-      if (window.scrollY === 0) startY.current = e.touches[0].clientY;
+      startY.current = e.touches[0].clientY;
     };
     const onTouchMove = (e) => {
       if (startY.current === null) return;
       const dy = e.touches[0].clientY - startY.current;
-      if (dy > 0 && window.scrollY === 0) {
+      if (dy > 0) {
         setProgress(Math.min(dy / THRESHOLD, 1));
+      } else {
+        setProgress(0);
       }
     };
     const onTouchEnd = () => {
@@ -263,6 +265,7 @@ function PullToRefreshRuleta({ onRefresh }) {
   }, [progress, handleRefresh]);
 
   const visible = progress > 0.05 || refreshing;
+  const height = refreshing ? THRESHOLD : Math.round(progress * THRESHOLD);
 
   return (
     <div style={{
@@ -273,10 +276,12 @@ function PullToRefreshRuleta({ onRefresh }) {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      height: visible ? `${refreshing ? THRESHOLD : progress * THRESHOLD}px` : 0,
+      height: visible ? `${height}px` : 0,
       overflow: "hidden",
       transition: refreshing ? "height 0.2s ease" : "none",
       pointerEvents: "none",
+      background: "rgba(10,22,40,0.95)",
+      borderBottom: visible ? `1px solid ${BORDER}` : "none",
     }}>
       {visible && (
         <span style={{
@@ -286,9 +291,9 @@ function PullToRefreshRuleta({ onRefresh }) {
           color: progress >= 1 || refreshing ? GREEN : "rgba(79,195,247,0.5)",
           textTransform: "uppercase",
           transition: "color 0.2s",
-          opacity: refreshing ? 1 : progress,
+          opacity: refreshing ? 1 : Math.min(progress * 2, 1),
         }}>
-          {refreshing ? "actualizando..." : "actualizar"}
+          {refreshing ? "actualizando..." : progress >= 1 ? "↑ suelta" : "↓ actualizar"}
         </span>
       )}
     </div>
