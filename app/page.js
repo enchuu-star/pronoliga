@@ -3344,6 +3344,10 @@ function FlagsGame({ user, onBack }) {
   return null;
 }
 
+// ============================================================
+// JUEGO TRAGAPERRAS
+// ============================================================
+
 function SlotGame({ user, onBack }) {
   const SYMBOLS = [
     { s: "⚽", w: 3 }, { s: "🏆", w: 4 }, { s: "🥅", w: 5 }, { s: "🌟", w: 6 }, { s: "🥇", w: 7 },
@@ -3375,8 +3379,6 @@ function SlotGame({ user, onBack }) {
       if (a === "🥇") return { mult: 10, label: "🥇 Tres medallas!", type: "win" };
       if (FLAGS.includes(a)) return { mult: 8, label: "🏴 Tres banderas iguales!", type: "win" };
     }
-    if ([a, b, c].every(x => FLAGS.includes(x))) return { mult: 5, label: "Tres banderas!", type: "win" };
-    if (a === b || b === c || a === c) return { mult: 2, label: "Dos iguales!", type: "win" };
     return { mult: 0, label: "Sin premio. Suerte la próxima!", type: "lose" };
   };
 
@@ -3569,8 +3571,6 @@ function SlotGame({ user, onBack }) {
           ["🌟🌟🌟", "x15"],
           ["🥇🥇🥇", "x10"],
           ["Bandera x3 iguales", "x8"],
-          ["3 banderas distintas", "x5"],
-          ["2 iguales", "x2"],
         ].map(([sym, pay]) => (
           <div key={sym} style={{ display: "flex", justifyContent: "space-between", padding: "7px 14px", borderTop: `1px solid ${BORDER}`, fontSize: "12px" }}>
             <span style={{ color: "#e0eaf8", fontFamily: "monospace" }}>{sym}</span>
