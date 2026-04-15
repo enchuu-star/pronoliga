@@ -222,91 +222,6 @@ function useCountdown() {
 }
 
 // ============================================================
-// PULL TO REFRESH
-// ============================================================
-function PullToRefreshWrapper({ onRefresh, children }) {
-  const [refreshing, setRefreshing] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const startY = useRef(null);
-  const THRESHOLD = 80;
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await onRefresh();
-    setTimeout(() => { setRefreshing(false); setProgress(0); }, 700);
-  }, [onRefresh]);
-
-  useEffect(() => {
-    const onTouchStart = (e) => {
-      if (window.scrollY === 0) startY.current = e.touches[0].clientY;
-    };
-    const onTouchMove = (e) => {
-      if (startY.current === null) return;
-      const dy = e.touches[0].clientY - startY.current;
-      if (dy > 0 && window.scrollY === 0) {
-        setProgress(Math.min(dy / THRESHOLD, 1));
-      } else {
-        setProgress(0);
-        startY.current = null;
-      }
-    };
-    const onTouchEnd = () => {
-      if (progress >= 1) handleRefresh();
-      else setProgress(0);
-      startY.current = null;
-    };
-
-    document.addEventListener("touchstart", onTouchStart, { passive: true });
-    document.addEventListener("touchmove", onTouchMove, { passive: true });
-    document.addEventListener("touchend", onTouchEnd);
-    return () => {
-      document.removeEventListener("touchstart", onTouchStart);
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onTouchEnd);
-    };
-  }, [progress, handleRefresh]);
-
-  const visible = progress > 0.05 || refreshing;
-  const height = refreshing ? THRESHOLD : Math.round(progress * THRESHOLD);
-
-  return (
-    <>
-      {/* Indicador fixed, debajo del navbar */}
-      {visible && (
-        <div style={{
-          position: "fixed",
-          top: "50px",
-          left: 0, right: 0,
-          zIndex: 98,
-          height: `${height}px`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "rgba(10,22,40,0.97)",
-          borderBottom: `1px solid ${BORDER}`,
-          transition: refreshing ? "height 0.2s ease" : "none",
-          pointerEvents: "none",
-        }}>
-          <span style={{
-            fontFamily: "monospace",
-            fontSize: "10px",
-            letterSpacing: "3px",
-            textTransform: "uppercase",
-            color: progress >= 1 || refreshing ? GREEN : "rgba(79,195,247,0.5)",
-            transition: "color 0.2s",
-          }}>
-            {refreshing ? "actualizando..." : progress >= 1 ? "↑ suelta" : "↓ actualizar"}
-          </span>
-        </div>
-      )}
-
-      {/* Contenido normal — el scroll es del body */}
-      {children}
-    </>
-  );
-}
-
-// ============================================================
 // TEMA — Azul marino profesional
 // ============================================================
 const GREEN = "#4fc3f7";           // Azul claro brillante (acentos)
@@ -325,7 +240,6 @@ const css = `
   input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes spin { to { transform: rotate(360deg); } }
 `;
 const inputSt = {
   width: "100%", padding: "12px 14px", marginBottom: "12px",
@@ -4451,19 +4365,17 @@ export default function Home() {
       {screen === "app" && user && (
         <>
           <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
-          <PullToRefreshWrapper onRefresh={loadData}>
-              <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
-              {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
-              {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
-              {view === "results" && <ResultsView matches={matches} />}
-              {view === "community" && <CommunityView matches={matches} user={user} />}
-              {view === "profile" && <ProfileView user={user} matches={matches} />}
-              {view === "ranking" && <RankingView />}
-              {view === "games" && <GamesView user={user} />}
-              {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
-              {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
-            </div>
-          </PullToRefreshWrapper>
+          <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
+            {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
+            {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
+            {view === "results" && <ResultsView matches={matches} />}
+            {view === "community" && <CommunityView matches={matches} user={user} />}
+            {view === "profile" && <ProfileView user={user} matches={matches} />}
+            {view === "ranking" && <RankingView />}
+            {view === "games" && <GamesView user={user} />}
+            {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
+            {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
+          </div>
           {/* {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />} */}
         </>
       )}
