@@ -3379,7 +3379,8 @@ function SlotGame({ user, onBack }) {
       if (a === "🥇") return { mult: 10, label: "🥇 Tres medallas!", type: "win" };
       if (FLAGS.includes(a)) return { mult: 8, label: "Tres banderas iguales!", type: "win" };
     }
-    if ([a, b, c].every(x => FLAGS.includes(x))) return { mult: 2, label: "Tres banderas distintas!", type: "win" };
+    if ([a, b, c].every(x => FLAGS.includes(x))) return { mult: 5, label: "Tres banderas distintas!", type: "win" };
+    if ([a, b, c].filter(x => FLAGS.includes(x)).length === 2) return { mult: 2, label: "Dos banderas!", type: "win" };
     return { mult: 0, label: "Sin premio. Suerte la próxima!", type: "lose" };
   };
 
@@ -3572,7 +3573,8 @@ function SlotGame({ user, onBack }) {
           ["🌟🌟🌟", "x15"],
           ["🥇🥇🥇", "x10"],
           ["Bandera x3 iguales", "x8"],
-          ["Bandera x3 distintas", "x2"],
+          ["Bandera x3 distintas", "x5"],
+          ["2 banderas", "x2"],
         ].map(([sym, pay]) => (
           <div key={sym} style={{ display: "flex", justifyContent: "space-between", padding: "7px 14px", borderTop: `1px solid ${BORDER}`, fontSize: "12px" }}>
             <span style={{ color: "#e0eaf8", fontFamily: "monospace" }}>{sym}</span>
