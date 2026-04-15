@@ -273,46 +273,54 @@ function PullToRefreshWrapper({ onRefresh, children }) {
 
   return (
     <div ref={containerRef} style={{ height: "100%", overflowY: "auto" }}>
-      {/* Ruleta */}
+
+      {/* RULETA */}
       <div style={{
-        overflow: "hidden",
+        overflow: "visible",
         height: refreshing ? `${THRESHOLD}px` : `${progress * THRESHOLD}px`,
+        minHeight: 0,
         transition: refreshing ? "height 0.2s ease" : "none",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        paddingTop: "8px",
       }}>
-        <div style={{
-          width: "52px", height: "52px",
-          border: `2px solid ${progress >= 1 || refreshing ? GREEN : BORDER}`,
-          borderRadius: "12px", overflow: "hidden",
-          background: "rgba(10,22,40,0.95)",
-          position: "relative",
-          transition: "border-color 0.2s",
-        }}>
-          {/* Tira de emojis */}
+        {(progress > 0.04 || refreshing) && (
           <div style={{
-            display: "flex", flexDirection: "column",
-            transform: refreshing ? undefined : `translateY(-${scrollY}px)`,
-            animation: refreshing ? "rouletteScroll 0.2s linear infinite" : "none",
+            width: "52px",
+            height: "52px",
+            border: `2px solid ${progress >= 1 || refreshing ? GREEN : BORDER}`,
+            borderRadius: "12px",
+            overflow: "hidden",
+            background: "rgba(10,22,40,0.95)",
+            position: "relative",
+            transition: "border-color 0.2s",
+            flexShrink: 0,
           }}>
-            {[...EMOJIS, ...EMOJIS, ...EMOJIS].map((e, i) => (
-              <div key={i} style={{
-                height: `${SLOT_H}px`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "26px",
-              }}>{e}</div>
-            ))}
+            {/* Tira de emojis */}
+            <div style={{
+              display: "flex", flexDirection: "column",
+              transform: refreshing ? undefined : `translateY(-${scrollY}px)`,
+              animation: refreshing ? "rouletteScroll 0.2s linear infinite" : "none",
+            }}>
+              {[...EMOJIS, ...EMOJIS, ...EMOJIS].map((e, i) => (
+                <div key={i} style={{
+                  height: `${SLOT_H}px`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "26px",
+                }}>{e}</div>
+              ))}
+            </div>
+            {/* Sombra top/bottom */}
+            <div style={{
+              position: "absolute", inset: 0,
+              background: `linear-gradient(to bottom,
+                rgba(10,22,40,0.75) 0%,
+                transparent 30%,
+                transparent 70%,
+                rgba(10,22,40,0.75) 100%)`,
+              pointerEvents: "none",
+            }}/>
           </div>
-          {/* Sombra top/bottom */}
-          <div style={{
-            position: "absolute", inset: 0,
-            background: `linear-gradient(to bottom,
-              rgba(10,22,40,0.75) 0%,
-              transparent 30%,
-              transparent 70%,
-              rgba(10,22,40,0.75) 100%)`,
-            pointerEvents: "none",
-          }}/>
-        </div>
+        )}
       </div>
 
       {children}
