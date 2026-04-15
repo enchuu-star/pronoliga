@@ -3350,9 +3350,9 @@ function FlagsGame({ user, onBack }) {
 
 function SlotGame({ user, onBack }) {
   const SYMBOLS = [
-    { s: "⚽", w: 12 }, { s: "🏆", w: 16 }, { s: "🥅", w: 20 }, { s: "🌟", w: 24 }, { s: "🥇", w: 28 },
-    { s: "🇪🇸", w: 12 }, { s: "🇧🇷", w: 12 }, { s: "🇫🇷", w: 12 }, { s: "🇦🇷", w: 12 }, { s: "🇩🇪", w: 12 },
-    { s: "🇵🇹", w: 12 }, { s: "🇳🇱", w: 12 }, { s: "🇧🇪", w: 12 }, { s: "🇯🇵", w: 12 }, { s: "🇲🇽", w: 12 },
+    { s: "⚽", w: 30 }, { s: "🏆", w: 35 }, { s: "🥅", w: 40 }, { s: "🌟", w: 45 }, { s: "🥇", w: 50 },
+    { s: "🇪🇸", w: 6 }, { s: "🇧🇷", w: 6 }, { s: "🇫🇷", w: 6 }, { s: "🇦🇷", w: 6 }, { s: "🇩🇪", w: 6 },
+    { s: "🇵🇹", w: 6 }, { s: "🇳🇱", w: 6 }, { s: "🇧🇪", w: 6 }, { s: "🇯🇵", w: 6 }, { s: "🇲🇽", w: 6 },
   ];
   const FLAGS = ["🇪🇸","🇧🇷","🇫🇷","🇦🇷","🇩🇪","🇵🇹","🇳🇱","🇧🇪","🇯🇵","🇲🇽"];
   const POOL = [];
@@ -3380,7 +3380,7 @@ function SlotGame({ user, onBack }) {
       if (FLAGS.includes(a)) return { mult: 8, label: "Tres banderas iguales!", type: "win" };
     }
     if ([a, b, c].every(x => FLAGS.includes(x))) return { mult: 5, label: "Tres banderas distintas!", type: "win" };
-    if ([a, b, c].filter(x => FLAGS.includes(x)).length === 2) return { mult: 1, label: "Dos banderas!", type: "win" };
+    if ([a, b, c].filter(x => FLAGS.includes(x)).length === 2) return { mult: 2, label: "Dos banderas!", type: "win" };
     return { mult: 0, label: "Sin premio. Suerte la próxima!", type: "lose" };
   };
 
@@ -3574,7 +3574,7 @@ function SlotGame({ user, onBack }) {
           ["🥇🥇🥇", "x10"],
           ["Bandera x3 iguales", "x8"],
           ["Bandera x3 distintas", "x5"],
-          ["2 banderas", "x1"],
+          ["2 banderas", "x2"],
         ].map(([sym, pay]) => (
           <div key={sym} style={{ display: "flex", justifyContent: "space-between", padding: "7px 14px", borderTop: `1px solid ${BORDER}`, fontSize: "12px" }}>
             <span style={{ color: "#e0eaf8", fontFamily: "monospace" }}>{sym}</span>
