@@ -3399,7 +3399,25 @@ function SlotGame({ user, onBack }) {
     setLoadingRank(false);
   };
 
-  useEffect(() => { loadRankings(); }, []);
+  useEffect(() => {
+    loadRankings();
+    (async () => {
+      const { data } = await supabase
+        .from("slot_credits")
+        .select("credits")
+        .eq("user_id", user.id)
+        .single();
+      if (data) setCredits(data.credits);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("slot_credits").upsert(
+      { user_id: user.id, credits },
+      { onConflict: "user_id" }
+    );
+  }, [credits]);
 
   const spin = async () => {
     if (spinning || credits < bet) return;
@@ -3409,7 +3427,6 @@ function SlotGame({ user, onBack }) {
 
     const finals = [weightedRand(), weightedRand(), weightedRand()];
 
-    // Animar cada rodillo con velocidad y parada escalonada
     intervalsRef.current.forEach(clearInterval);
     const newIntervals = finals.map((final, i) => {
       return setInterval(() => {
@@ -3422,7 +3439,6 @@ function SlotGame({ user, onBack }) {
     });
     intervalsRef.current = newIntervals;
 
-    // Parar rodillos uno a uno
     finals.forEach((final, i) => {
       setTimeout(() => {
         clearInterval(newIntervals[i]);
@@ -3432,7 +3448,6 @@ function SlotGame({ user, onBack }) {
           return next;
         });
         if (i === 2) {
-          // Todos parados — evaluar
           setTimeout(() => {
             const res = evalResult(finals);
             if (res.mult > 0) {
@@ -3460,6 +3475,10 @@ function SlotGame({ user, onBack }) {
     setBet(5);
     setDisplay(["⚽", "⚽", "⚽"]);
     setMsg({ text: "Elige apuesta y gira", type: "" });
+    supabase.from("slot_credits").upsert(
+      { user_id: user.id, credits: 100 },
+      { onConflict: "user_id" }
+    );
   };
 
   const msgColor = {
@@ -3479,9 +3498,7 @@ function SlotGame({ user, onBack }) {
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px" }}>TRAGAPERRAS MUNDIAL</p>
       </div>
 
-      {/* Máquina */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "14px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
-        {/* Créditos */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
           <div style={{ textAlign: "left" }}>
             <div style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "2px" }}>CRÉDITOS</div>
@@ -3493,7 +3510,6 @@ function SlotGame({ user, onBack }) {
           </div>
         </div>
 
-        {/* Rodillos */}
         <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginBottom: "16px" }}>
           {display.map((sym, i) => (
             <div key={i} style={{
@@ -3511,7 +3527,6 @@ function SlotGame({ user, onBack }) {
           ))}
         </div>
 
-        {/* Mensaje resultado */}
         <div style={{
           minHeight: "32px", display: "flex", alignItems: "center", justifyContent: "center",
           fontFamily: "monospace", fontSize: "12px", color: msgColor,
@@ -3522,7 +3537,6 @@ function SlotGame({ user, onBack }) {
           {msg.text}
         </div>
 
-        {/* Botones apuesta */}
         <div style={{ marginBottom: "12px" }}>
           <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>APUESTA</p>
           <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
@@ -3537,7 +3551,6 @@ function SlotGame({ user, onBack }) {
           </div>
         </div>
 
-        {/* Botones acción */}
         <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
           <button onClick={spin} disabled={spinning || credits < bet} style={{
             padding: "12px 36px", border: "none", borderRadius: "9px",
@@ -3556,7 +3569,6 @@ function SlotGame({ user, onBack }) {
         </div>
       </div>
 
-      {/* Tabla de premios desplegable */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "16px", overflow: "hidden" }}>
         <button onClick={() => setShowPaytable(v => !v)} style={{
           width: "100%", padding: "12px 14px", border: "none", background: "transparent",
@@ -3583,7 +3595,6 @@ function SlotGame({ user, onBack }) {
         ))}
       </div>
 
-      {/* Ranking */}
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING — MEJOR BOTE</p>
       {loadingRank
         ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p>
