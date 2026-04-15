@@ -3377,9 +3377,9 @@ function SlotGame({ user, onBack }) {
       if (a === "🥅") return { mult: 20, label: "🥅 Tres porterías!", type: "big" };
       if (a === "🌟") return { mult: 15, label: "🌟 Tres estrellas!", type: "big" };
       if (a === "🥇") return { mult: 10, label: "🥇 Tres medallas!", type: "win" };
-      if ([a, b, c].every(x => FLAGS.includes(x))) return { mult: 1, label: "3 banderas distintas!", type: "win" };
-      if (FLAGS.includes(a)) return { mult: 8, label: "🏴 Tres banderas iguales!", type: "win" };
+      if (FLAGS.includes(a)) return { mult: 8, label: "Tres banderas iguales!", type: "win" };
     }
+    if ([a, b, c].every(x => FLAGS.includes(x))) return { mult: 1, label: "Tres banderas distintas!", type: "win" };
     return { mult: 0, label: "Sin premio. Suerte la próxima!", type: "lose" };
   };
 
