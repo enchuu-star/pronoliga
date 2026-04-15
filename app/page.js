@@ -226,26 +226,20 @@ function useCountdown() {
 // ============================================================
 function PullToRefreshWrapper({ onRefresh, children }) {
   const [refreshing, setRefreshing] = useState(false);
-  const [progress, setProgress] = useState(0); // 0 a 1
-  const [released, setReleased] = useState(false);
+  const [progress, setProgress] = useState(0);
   const startY = useRef(null);
   const containerRef = useRef(null);
   const THRESHOLD = 80;
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    setReleased(true);
     await onRefresh();
-    setTimeout(() => {
-      setRefreshing(false);
-      setReleased(false);
-    }, 700);
+    setTimeout(() => { setRefreshing(false); setProgress(0); }, 700);
   }, [onRefresh]);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
     const onTouchStart = (e) => {
       if (el.scrollTop === 0) startY.current = e.touches[0].clientY;
     };
@@ -259,10 +253,9 @@ function PullToRefreshWrapper({ onRefresh, children }) {
     };
     const onTouchEnd = () => {
       if (progress >= 1) handleRefresh();
-      else { setProgress(0); }
+      else setProgress(0);
       startY.current = null;
     };
-
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd);
@@ -273,89 +266,53 @@ function PullToRefreshWrapper({ onRefresh, children }) {
     };
   }, [progress, handleRefresh]);
 
-  // Reset progress cuando termina
-  useEffect(() => {
-    if (!refreshing && released) setProgress(0);
-  }, [refreshing, released]);
-
   const EMOJIS = ["⚽","🏆","🥅","🎯","⭐","🔥","🥇","🏅"];
-  const SLOT_H = 40;
-  const totalSlots = EMOJIS.length;
-  // Cuántos slots se han "girado" según el progreso o spinning
-  const spinAngle = refreshing
-    ? Date.now() // lo usamos sólo para animar vía CSS
-    : progress * totalSlots * SLOT_H;
-
-  const visible = progress > 0.04 || refreshing;
-  const rouletteH = visible ? Math.min(progress * THRESHOLD, THRESHOLD) : 0;
+  const SLOT_H = 44;
+  const totalH = EMOJIS.length * SLOT_H;
+  const scrollY = (progress * totalH * 2) % totalH;
 
   return (
-    <div ref={containerRef} style={{ height: "100%", overflowY: "auto", position: "relative" }}>
-      {/* RULETA */}
+    <div ref={containerRef} style={{ height: "100%", overflowY: "auto" }}>
+      {/* Ruleta */}
       <div style={{
         overflow: "hidden",
-        height: refreshing ? `${THRESHOLD}px` : `${rouletteH}px`,
+        height: refreshing ? `${THRESHOLD}px` : `${progress * THRESHOLD}px`,
         transition: refreshing ? "height 0.2s ease" : "none",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        {visible && (
+        <div style={{
+          width: "52px", height: "52px",
+          border: `2px solid ${progress >= 1 || refreshing ? GREEN : BORDER}`,
+          borderRadius: "12px", overflow: "hidden",
+          background: "rgba(10,22,40,0.95)",
+          position: "relative",
+          transition: "border-color 0.2s",
+        }}>
+          {/* Tira de emojis */}
           <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
+            display: "flex", flexDirection: "column",
+            transform: refreshing ? undefined : `translateY(-${scrollY}px)`,
+            animation: refreshing ? "rouletteScroll 0.2s linear infinite" : "none",
           }}>
-            {/* Ruleta de emojis */}
-            <div style={{
-              width: "48px",
-              height: "48px",
-              border: `2px solid ${progress >= 1 || refreshing ? GREEN : "rgba(79,195,247,0.4)"}`,
-              borderRadius: "10px",
-              overflow: "hidden",
-              position: "relative",
-              background: "rgba(10,22,40,0.95)",
-              boxShadow: progress >= 1 || refreshing
-                ? `0 0 14px rgba(79,195,247,0.5)`
-                : "none",
-              transition: "border-color 0.2s, box-shadow 0.2s",
-            }}>
-              <div style={{
-                display: "flex",
-                flexDirection: "column",
-                transform: refreshing
-                  ? undefined
-                  : `translateY(-${(progress * totalSlots * SLOT_H) % (totalSlots * SLOT_H)}px)`,
-                animation: refreshing
-                  ? "rouletteScroll 0.25s linear infinite"
-                  : "none",
-              }}>
-                {[...EMOJIS, ...EMOJIS, ...EMOJIS].map((e, i) => (
-                  <div key={i} style={{
-                    height: `${SLOT_H}px`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "24px",
-                    lineHeight: 1,
-                  }}>{e}</div>
-                ))}
-              </div>
-              {/* Degradado top/bottom para efecto profundidad */}
-              <div style={{
-                position: "absolute",
-                inset: 0,
-                background: `linear-gradient(to bottom, rgba(10,22,40,0.7) 0%, transparent 35%, transparent 65%, rgba(10,22,40,0.7) 100%)`,
-                pointerEvents: "none",
-              }} />
-            </div>
-
-            {/* Texto de estado */}
-            <div style={{ fontFamily: "monospace", fontSize: "10px", letterSpacing: "2px", color: progress >= 1 || refreshing ? GREEN : "rgba(79,195,247,0.6)" }}>
-              {refreshing ? "CARGANDO..." : progress >= 1 ? "↑ SUELTA" : "↓ DESLIZA"}
-            </div>
+            {[...EMOJIS, ...EMOJIS, ...EMOJIS].map((e, i) => (
+              <div key={i} style={{
+                height: `${SLOT_H}px`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "26px",
+              }}>{e}</div>
+            ))}
           </div>
-        )}
+          {/* Sombra top/bottom */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: `linear-gradient(to bottom,
+              rgba(10,22,40,0.75) 0%,
+              transparent 30%,
+              transparent 70%,
+              rgba(10,22,40,0.75) 100%)`,
+            pointerEvents: "none",
+          }}/>
+        </div>
       </div>
 
       {children}
