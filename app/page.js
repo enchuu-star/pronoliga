@@ -3344,6 +3344,258 @@ function FlagsGame({ user, onBack }) {
   return null;
 }
 
+function SlotGame({ user, onBack }) {
+  const SYMBOLS = [
+    { s: "⚽", w: 3 }, { s: "🏆", w: 4 }, { s: "🥅", w: 5 }, { s: "🌟", w: 6 }, { s: "🥇", w: 7 },
+    { s: "🇪🇸", w: 8 }, { s: "🇧🇷", w: 8 }, { s: "🇫🇷", w: 8 }, { s: "🇦🇷", w: 8 }, { s: "🇩🇪", w: 8 },
+    { s: "🇵🇹", w: 9 }, { s: "🇳🇱", w: 9 }, { s: "🇧🇪", w: 9 }, { s: "🇯🇵", w: 9 }, { s: "🇲🇽", w: 9 },
+  ];
+  const FLAGS = ["🇪🇸","🇧🇷","🇫🇷","🇦🇷","🇩🇪","🇵🇹","🇳🇱","🇧🇪","🇯🇵","🇲🇽"];
+  const POOL = [];
+  SYMBOLS.forEach(({ s, w }) => { for (let i = 0; i < w; i++) POOL.push(s); });
+
+  const [credits, setCredits] = useState(100);
+  const [bet, setBet] = useState(5);
+  const [spinning, setSpinning] = useState(false);
+  const [display, setDisplay] = useState(["⚽", "⚽", "⚽"]);
+  const [msg, setMsg] = useState({ text: "Elige apuesta y gira", type: "" });
+  const [showPaytable, setShowPaytable] = useState(false);
+  const [rankings, setRankings] = useState([]);
+  const [loadingRank, setLoadingRank] = useState(false);
+  const intervalsRef = useRef([]);
+
+  const weightedRand = () => POOL[Math.floor(Math.random() * POOL.length)];
+
+  const evalResult = ([a, b, c]) => {
+    if (a === b && b === c) {
+      if (a === "⚽") return { mult: 50, label: "🎰 JACKPOT — Tres balones!", type: "jackpot" };
+      if (a === "🏆") return { mult: 30, label: "🏆 Tres trofeos!", type: "jackpot" };
+      if (a === "🥅") return { mult: 20, label: "🥅 Tres porterías!", type: "big" };
+      if (a === "🌟") return { mult: 15, label: "🌟 Tres estrellas!", type: "big" };
+      if (a === "🥇") return { mult: 10, label: "🥇 Tres medallas!", type: "win" };
+      if (FLAGS.includes(a)) return { mult: 8, label: "🏴 Tres banderas iguales!", type: "win" };
+    }
+    if ([a, b, c].every(x => FLAGS.includes(x))) return { mult: 5, label: "Tres banderas!", type: "win" };
+    if (a === b || b === c || a === c) return { mult: 2, label: "Dos iguales!", type: "win" };
+    return { mult: 0, label: "Sin premio. Suerte la próxima!", type: "lose" };
+  };
+
+  const loadRankings = async () => {
+    setLoadingRank(true);
+    const { data: scores } = await supabase.from("slot_scores").select("*").order("score", { ascending: false });
+    const { data: profiles } = await supabase.from("profiles").select("*");
+    if (scores && profiles) {
+      const byUser = {};
+      scores.forEach(s => { if (!byUser[s.user_id] || s.score > byUser[s.user_id]) byUser[s.user_id] = s.score; });
+      const r = Object.entries(byUser).map(([uid, sc]) => ({
+        name: profiles.find(p => p.id === uid)?.name || "Usuario", score: sc
+      })).sort((a, b) => b.score - a.score);
+      setRankings(r);
+    }
+    setLoadingRank(false);
+  };
+
+  useEffect(() => { loadRankings(); }, []);
+
+  const spin = async () => {
+    if (spinning || credits < bet) return;
+    setSpinning(true);
+    setCredits(c => c - bet);
+    setMsg({ text: "Girando...", type: "" });
+
+    const finals = [weightedRand(), weightedRand(), weightedRand()];
+
+    // Animar cada rodillo con velocidad y parada escalonada
+    intervalsRef.current.forEach(clearInterval);
+    const newIntervals = finals.map((final, i) => {
+      return setInterval(() => {
+        setDisplay(prev => {
+          const next = [...prev];
+          next[i] = weightedRand();
+          return next;
+        });
+      }, 80);
+    });
+    intervalsRef.current = newIntervals;
+
+    // Parar rodillos uno a uno
+    finals.forEach((final, i) => {
+      setTimeout(() => {
+        clearInterval(newIntervals[i]);
+        setDisplay(prev => {
+          const next = [...prev];
+          next[i] = final;
+          return next;
+        });
+        if (i === 2) {
+          // Todos parados — evaluar
+          setTimeout(() => {
+            const res = evalResult(finals);
+            if (res.mult > 0) {
+              const won = bet * res.mult;
+              setCredits(c => {
+                const total = c + won;
+                supabase.from("slot_scores").insert({ user_id: user.id, score: total }).then(() => loadRankings());
+                return total;
+              });
+              setMsg({ text: `${res.label} (+${bet * res.mult} créditos)`, type: res.type });
+            } else {
+              setMsg({ text: res.label, type: "lose" });
+            }
+            setSpinning(false);
+          }, 200);
+        }
+      }, 600 + i * 400);
+    });
+  };
+
+  const reset = () => {
+    if (spinning) return;
+    intervalsRef.current.forEach(clearInterval);
+    setCredits(100);
+    setBet(5);
+    setDisplay(["⚽", "⚽", "⚽"]);
+    setMsg({ text: "Elige apuesta y gira", type: "" });
+  };
+
+  const msgColor = {
+    jackpot: GREEN,
+    big: "#f59e0b",
+    win: "#4ade80",
+    lose: "#7ab8e0",
+    "": "#d0e4f7",
+  }[msg.type] || "#d0e4f7";
+
+  const medals = ["🥇", "🥈", "🥉"];
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px" }}>TRAGAPERRAS MUNDIAL</p>
+      </div>
+
+      {/* Máquina */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "14px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
+        {/* Créditos */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "2px" }}>CRÉDITOS</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: GREEN }}>{credits}</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "2px" }}>APUESTA</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#f59e0b" }}>{bet}</div>
+          </div>
+        </div>
+
+        {/* Rodillos */}
+        <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginBottom: "16px" }}>
+          {display.map((sym, i) => (
+            <div key={i} style={{
+              width: "88px", height: "88px",
+              background: "rgba(0,0,0,0.3)",
+              border: `1px solid ${spinning ? GREEN : BORDER}`,
+              borderRadius: "10px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "44px",
+              transition: "border-color 0.3s",
+              boxShadow: spinning ? `0 0 8px rgba(79,195,247,0.2)` : "none",
+            }}>
+              {sym}
+            </div>
+          ))}
+        </div>
+
+        {/* Mensaje resultado */}
+        <div style={{
+          minHeight: "32px", display: "flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "monospace", fontSize: "12px", color: msgColor,
+          background: msg.type ? "rgba(0,0,0,0.2)" : "transparent",
+          borderRadius: "8px", padding: "6px 12px", marginBottom: "16px",
+          fontWeight: msg.type === "jackpot" ? 700 : 400,
+        }}>
+          {msg.text}
+        </div>
+
+        {/* Botones apuesta */}
+        <div style={{ marginBottom: "12px" }}>
+          <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>APUESTA</p>
+          <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+            {[1, 5, 10, 25].map(n => (
+              <button key={n} onClick={() => !spinning && setBet(n)} style={{
+                padding: "7px 14px", border: `1px solid ${bet === n ? GREEN : BORDER}`,
+                borderRadius: "7px", background: bet === n ? GREEN_DIM : "transparent",
+                color: bet === n ? GREEN : "#d0e4f7",
+                fontFamily: "'Bebas Neue', cursive", fontSize: "16px", cursor: "pointer",
+              }}>{n}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Botones acción */}
+        <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+          <button onClick={spin} disabled={spinning || credits < bet} style={{
+            padding: "12px 36px", border: "none", borderRadius: "9px",
+            background: spinning || credits < bet ? "rgba(0,0,0,0.2)" : `linear-gradient(135deg,${GREEN},#0077cc)`,
+            color: spinning || credits < bet ? "#7ab8e0" : "#0a1628",
+            fontFamily: "'Bebas Neue', cursive", fontSize: "18px", cursor: spinning || credits < bet ? "default" : "pointer",
+            letterSpacing: "3px",
+          }}>
+            {spinning ? "GIRANDO..." : "🎰 GIRAR"}
+          </button>
+          <button onClick={reset} disabled={spinning} style={{
+            padding: "12px 16px", border: `1px solid ${BORDER}`, borderRadius: "9px",
+            background: "transparent", color: "#d0e4f7",
+            fontFamily: "monospace", fontSize: "12px", cursor: "pointer",
+          }}>Reset</button>
+        </div>
+      </div>
+
+      {/* Tabla de premios desplegable */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "16px", overflow: "hidden" }}>
+        <button onClick={() => setShowPaytable(v => !v)} style={{
+          width: "100%", padding: "12px 14px", border: "none", background: "transparent",
+          color: "#d0e4f7", fontFamily: "monospace", fontSize: "10px", letterSpacing: "2px",
+          cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <span>TABLA DE PREMIOS</span>
+          <span>{showPaytable ? "▲" : "▼"}</span>
+        </button>
+        {showPaytable && [
+          ["⚽⚽⚽", "x50 — JACKPOT"],
+          ["🏆🏆🏆", "x30"],
+          ["🥅🥅🥅", "x20"],
+          ["🌟🌟🌟", "x15"],
+          ["🥇🥇🥇", "x10"],
+          ["Bandera x3 iguales", "x8"],
+          ["3 banderas distintas", "x5"],
+          ["2 iguales", "x2"],
+        ].map(([sym, pay]) => (
+          <div key={sym} style={{ display: "flex", justifyContent: "space-between", padding: "7px 14px", borderTop: `1px solid ${BORDER}`, fontSize: "12px" }}>
+            <span style={{ color: "#e0eaf8", fontFamily: "monospace" }}>{sym}</span>
+            <span style={{ color: GREEN, fontFamily: "'Bebas Neue', cursive", fontSize: "14px" }}>{pay}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Ranking */}
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING — MEJOR BOTE</p>
+      {loadingRank
+        ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p>
+        : rankings.map((r, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? `1px solid rgba(79,195,247,0.3)` : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+            <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
+            <span style={{ flex: 1, fontFamily: "monospace", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8" }}>{r.score}</span>
+            <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace" }}>CRÉDITOS</span>
+          </div>
+        ))
+      }
+    </div>
+  );
+}
+
 // ============================================================
 // PENALTIS EN TIEMPO REAL — Canvas animado
 // ============================================================
@@ -4107,6 +4359,7 @@ function GamesView({ user }) {
   if (game === "trivia") return <TriviaGame user={user} onBack={() => setGame(null)} />;
   if (game === "flappy") return <FlappyGame user={user} onBack={() => setGame(null)} />;
   if (game === "flags") return <FlagsGame user={user} onBack={() => setGame(null)} />;
+  if (game === "slot") return <SlotGame user={user} onBack={() => setGame(null)} />;
   if (game === "penalty") return <PenaltyGame user={user} onBack={() => setGame(null)} />;
 
   return (
@@ -4127,6 +4380,11 @@ function GamesView({ user }) {
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🌍</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>BANDERAS</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>48 países · 1 jugador</div>
+        </button>
+        <button onClick={() => setGame("slot")} style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
+          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🎰</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>TRAGAPERRAS</div>
+          <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>Mundial 2026 · 1 jugador</div>
         </button>
         <button onClick={() => setGame("penalty")} style={{ padding: "20px 12px", border: "1px solid rgba(255,82,82,0.2)", borderRadius: "14px", background: "rgba(255,82,82,0.05)", cursor: "pointer", textAlign: "center" }}>
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🥅</div>
