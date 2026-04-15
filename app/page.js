@@ -2929,7 +2929,7 @@ function FlappyGame({ user, onBack }) {
   const [loadingRank, setLoadingRank] = useState(false);
 
   const W = 360, H = 500;
-  const BALL_X = 80, GRAVITY = 0.35, JUMP = -6, PIPE_W = 52, GAP = 185, PIPE_SPEED = 2.2;
+  const BALL_X = 80, GRAVITY = 0.35, JUMP = -6, PIPE_W = 52, GAP = 165, PIPE_SPEED = 2.2;
   const FLAGS = ["🇧🇷","🇩🇪","🇪🇸","🇫🇷","🇦🇷","🇵🇹","🇳🇱","🇧🇪","🇮🇹","🇲🇽","🇦🇺","🇯🇵","🇰🇷","🇺🇸","🇨🇦","🇳🇴","🇸🇳","🇨🇴","🇺🇾","🇭🇷"];
 
   const initState = () => ({
@@ -2954,7 +2954,7 @@ function FlappyGame({ user, onBack }) {
       s.ballVY += GRAVITY; s.ballY += s.ballVY; s.frame++;
 
       // Generar tubos
-      if (s.frame % 90 === 0) {
+      if (s.frame % 115 === 0) {
         const gapY = 100 + Math.random() * (H - GAP - 180);
         s.pipes.push({ x: W + 10, gapY, flag: FLAGS[Math.floor(Math.random() * FLAGS.length)], scored: false });
       }
