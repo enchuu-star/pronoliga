@@ -2929,7 +2929,7 @@ function FlappyGame({ user, onBack }) {
   const [loadingRank, setLoadingRank] = useState(false);
 
   const W = 360, H = 500;
-  const BALL_X = 80, GRAVITY = 0.35, JUMP = -6, PIPE_W = 52, GAP = 165, PIPE_SPEED = 2.2;
+  const BALL_X = 80, GRAVITY = 0.35, JUMP = -6, PIPE_W = 52, GAP = 140, PIPE_SPEED = 2.2;
   const FLAGS = ["🇧🇷","🇩🇪","🇪🇸","🇫🇷","🇦🇷","🇵🇹","🇳🇱","🇧🇪","🇮🇹","🇲🇽","🇦🇺","🇯🇵","🇰🇷","🇺🇸","🇨🇦","🇳🇴","🇸🇳","🇨🇴","🇺🇾","🇭🇷"];
 
   const initState = () => ({
