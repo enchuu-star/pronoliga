@@ -222,12 +222,16 @@ function useCountdown() {
 }
 
 // ============================================================
-// PULL TO REFRESH — RULETA
+// PULL TO REFRESH
 // ============================================================
-function PullToRefreshRuleta({ onRefresh }) {
+// ============================================================
+// PULL TO REFRESH
+// ============================================================
+function PullToRefreshWrapper({ onRefresh, children }) {
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState(0);
   const startY = useRef(null);
+  const containerRef = useRef(null);
   const THRESHOLD = 80;
 
   const handleRefresh = useCallback(async () => {
@@ -237,15 +241,19 @@ function PullToRefreshRuleta({ onRefresh }) {
   }, [onRefresh]);
 
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
     const onTouchStart = (e) => {
-      startY.current = e.touches[0].clientY;
+      if (el.scrollTop === 0) startY.current = e.touches[0].clientY;
     };
     const onTouchMove = (e) => {
       if (startY.current === null) return;
       const dy = e.touches[0].clientY - startY.current;
-      if (dy > 0) {
+      if (dy > 0 && el.scrollTop === 0) {
+        e.preventDefault();
         setProgress(Math.min(dy / THRESHOLD, 1));
-      } else {
+      } else if (dy <= 0) {
         setProgress(0);
       }
     };
@@ -254,13 +262,14 @@ function PullToRefreshRuleta({ onRefresh }) {
       else setProgress(0);
       startY.current = null;
     };
-    document.addEventListener("touchstart", onTouchStart, { passive: true });
-    document.addEventListener("touchmove", onTouchMove, { passive: true });
-    document.addEventListener("touchend", onTouchEnd);
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
     return () => {
-      document.removeEventListener("touchstart", onTouchStart);
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
     };
   }, [progress, handleRefresh]);
 
@@ -268,34 +277,34 @@ function PullToRefreshRuleta({ onRefresh }) {
   const height = refreshing ? THRESHOLD : Math.round(progress * THRESHOLD);
 
   return (
-    <div style={{
-      position: "fixed",
-      top: "50px",
-      left: 0, right: 0,
-      zIndex: 99,
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: visible ? `${height}px` : 0,
-      overflow: "hidden",
-      transition: refreshing ? "height 0.2s ease" : "none",
-      pointerEvents: "none",
-      background: "rgba(10,22,40,0.95)",
-      borderBottom: visible ? `1px solid ${BORDER}` : "none",
-    }}>
-      {visible && (
-        <span style={{
-          fontFamily: "monospace",
-          fontSize: "10px",
-          letterSpacing: "3px",
-          color: progress >= 1 || refreshing ? GREEN : "rgba(79,195,247,0.5)",
-          textTransform: "uppercase",
-          transition: "color 0.2s",
-          opacity: refreshing ? 1 : Math.min(progress * 2, 1),
-        }}>
-          {refreshing ? "actualizando..." : progress >= 1 ? "↑ suelta" : "↓ actualizar"}
-        </span>
-      )}
+    <div ref={containerRef} style={{ height: "100vh", overflowY: "auto" }}>
+      {/* Banda de texto pull-to-refresh */}
+      <div style={{
+        height: visible ? `${height}px` : 0,
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(10,22,40,0.95)",
+        borderBottom: visible ? `1px solid ${BORDER}` : "none",
+        transition: refreshing ? "height 0.2s ease" : "none",
+      }}>
+        {visible && (
+          <span style={{
+            fontFamily: "monospace",
+            fontSize: "10px",
+            letterSpacing: "3px",
+            textTransform: "uppercase",
+            color: progress >= 1 || refreshing ? GREEN : "rgba(79,195,247,0.5)",
+            opacity: refreshing ? 1 : Math.min(progress * 2, 1),
+            transition: "color 0.2s",
+          }}>
+            {refreshing ? "actualizando..." : progress >= 1 ? "↑ suelta" : "↓ actualizar"}
+          </span>
+        )}
+      </div>
+
+      {children}
     </div>
   );
 }
@@ -4439,26 +4448,28 @@ export default function Home() {
   );
 
   return (
-  <div style={{ minHeight: "100vh", background: DARK, color: "#e0eaf8" }}>
-    <style>{css}</style>
-    {screen === "login" && <LoginPage onLogin={handleLogin} />}
-    {screen === "app" && user && (
-      <>
-        <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
-        <PullToRefreshRuleta onRefresh={loadData} />
-        <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
-          {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
-          {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
-          {view === "results" && <ResultsView matches={matches} />}
-          {view === "community" && <CommunityView matches={matches} user={user} />}
-          {view === "profile" && <ProfileView user={user} matches={matches} />}
-          {view === "ranking" && <RankingView />}
-          {view === "games" && <GamesView user={user} />}
-          {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
-          {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
-        </div>
-      </>
-    )}
-  </div>
-);
+    <div style={{ minHeight: "100vh", background: DARK, color: "#e0eaf8" }}>
+      <style>{css}</style>
+      {screen === "login" && <LoginPage onLogin={handleLogin} />}
+      {screen === "app" && user && (
+        <>
+          <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
+          <PullToRefreshWrapper onRefresh={loadData}>
+            <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
+              {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
+              {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
+              {view === "results" && <ResultsView matches={matches} />}
+              {view === "community" && <CommunityView matches={matches} user={user} />}
+              {view === "profile" && <ProfileView user={user} matches={matches} />}
+              {view === "ranking" && <RankingView />}
+              {view === "games" && <GamesView user={user} />}
+              {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
+              {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
+            </div>
+          </PullToRefreshWrapper>
+          {/* {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />} */}
+        </>
+      )}
+    </div>
+  );
 }
