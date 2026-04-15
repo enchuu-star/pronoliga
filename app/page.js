@@ -224,9 +224,6 @@ function useCountdown() {
 // ============================================================
 // PULL TO REFRESH
 // ============================================================
-// ============================================================
-// PULL TO REFRESH
-// ============================================================
 function PullToRefreshWrapper({ onRefresh, children }) {
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -277,34 +274,40 @@ function PullToRefreshWrapper({ onRefresh, children }) {
   const height = refreshing ? THRESHOLD : Math.round(progress * THRESHOLD);
 
   return (
-    <div ref={containerRef} style={{ height: "100vh", overflowY: "auto" }}>
-      {/* Banda de texto pull-to-refresh */}
-      <div style={{
-        height: visible ? `${height}px` : 0,
-        overflow: "hidden",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "rgba(10,22,40,0.95)",
-        borderBottom: visible ? `1px solid ${BORDER}` : "none",
-        transition: refreshing ? "height 0.2s ease" : "none",
-      }}>
-        {visible && (
+    <div style={{ position: "relative" }}>
+      {/* Indicador FIJO encima del navbar */}
+      {visible && (
+        <div style={{
+          position: "fixed",
+          top: "50px",
+          left: 0, right: 0,
+          zIndex: 98,
+          height: `${height}px`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(10,22,40,0.97)",
+          borderBottom: `1px solid ${BORDER}`,
+          transition: refreshing ? "height 0.2s ease" : "none",
+        }}>
           <span style={{
             fontFamily: "monospace",
             fontSize: "10px",
             letterSpacing: "3px",
             textTransform: "uppercase",
             color: progress >= 1 || refreshing ? GREEN : "rgba(79,195,247,0.5)",
-            opacity: refreshing ? 1 : Math.min(progress * 2, 1),
+            opacity: Math.min(progress * 2, 1),
             transition: "color 0.2s",
           }}>
             {refreshing ? "actualizando..." : progress >= 1 ? "↑ suelta" : "↓ actualizar"}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
-      {children}
+      {/* Scroll container */}
+      <div ref={containerRef} style={{ height: "100vh", overflowY: "auto" }}>
+        {children}
+      </div>
     </div>
   );
 }
