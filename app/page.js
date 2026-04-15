@@ -303,7 +303,7 @@ function LoginPage({ onLogin }) {
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" style={inputSt} />
           <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Contraseña" type="password" style={inputSt} onKeyDown={e => e.key === "Enter" && go()} />
           {error && <p style={{ color: "#cc2222", fontSize: "13px", marginBottom: "12px", fontFamily: "monospace" }}>⚠ {error}</p>}
-          <button onClick={go} disabled={loading} style={{ width: "100%", padding: "14px", border: "none", borderRadius: "8px", cursor: "pointer", background: loading ? "#0a1628" : `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontWeight: 800, fontSize: "13px", letterSpacing: "3px", fontFamily: "monospace", textTransform: "uppercase" }}>{loading ? "..." : mode === "login" ? "⚡ ENTRAR" : "🚀 REGISTRARME"}</button>
+          <button onClick={go} disabled={loading} style={{ width: "100%", padding: "14px", border: "none", borderRadius: "8px", cursor: "pointer", background: loading ? "#0a1628" : `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontWeight: 800, fontSize: "13px", letterSpacing: "3px", fontFamily: "monospace", textTransform: "uppercase" }}>{loading ? "..." : mode === "login" ? "⚡ ENTRAR" : "🚀 REGISTRARME"}</button>
         </div>
       </div>
     </div>
@@ -2829,7 +2829,7 @@ function TriviaGame({ user, onBack }) {
         <div style={{ fontSize: "48px", marginBottom: "12px" }}>🧠</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>TRIVIAL MUNDIAL 2026</div>
         <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>10 preguntas · 15 segundos por pregunta<br/><span style={{ color: GREEN }}>+3</span> rápido · <span style={{ color: "#b8860b" }}>+2</span> normal · <span style={{ color: "#ff8a00" }}>+1</span> lento · <span style={{ color: "#cc2222" }}>+0</span> fallo</p>
-        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
       {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
@@ -2900,7 +2900,7 @@ function TriviaGame({ user, onBack }) {
         <div style={{ fontFamily: "monospace", fontSize: "11px", color: "#c0d8f0", marginTop: "4px" }}>de 30 posibles</div>
         <p style={{ marginTop: "14px", fontSize: "12px", color: "#e0eefa", fontFamily: "monospace" }}>{score >= 25 ? "¡Crack del balón! 🔥" : score >= 15 ? "Buen nivel futbolero ⚽" : "A repasar el mundial 😅"}</p>
       </div>
-      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
+      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
       {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
@@ -2929,7 +2929,7 @@ function FlappyGame({ user, onBack }) {
   const [loadingRank, setLoadingRank] = useState(false);
 
   const W = 360, H = 500;
-  const BALL_X = 80, GRAVITY = 0.35, JUMP = -6, PIPE_W = 52, GAP = 140, PIPE_SPEED = 2.2;
+  const BALL_X = 80, GRAVITY = 0.35, JUMP = -6, PIPE_W = 52, GAP = 150, PIPE_SPEED = 2.2;
   const FLAGS = ["🇧🇷","🇩🇪","🇪🇸","🇫🇷","🇦🇷","🇵🇹","🇳🇱","🇧🇪","🇮🇹","🇲🇽","🇦🇺","🇯🇵","🇰🇷","🇺🇸","🇨🇦","🇳🇴","🇸🇳","🇨🇴","🇺🇾","🇭🇷"];
 
   const initState = () => ({
@@ -3116,7 +3116,7 @@ function FlappyGame({ user, onBack }) {
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>FLAPPY BALÓN</div>
             <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "6px" }}>Esquiva las porterías · Toca para saltar</p>
             <p style={{ fontSize: "10px", color: "#f59e0b", fontFamily: "monospace", marginBottom: "20px" }}>⭐ Recoge la estrella para +5 puntos</p>
-            <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+            <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
           </div>
           <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FLAPPY</p>
           {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
@@ -4045,7 +4045,7 @@ function PenaltyGame({ user, onBack }) {
         <button onClick={() => { if (myChoice) submitChoice(); }}
           disabled={!myChoice}
           style={{ width: "100%", padding: "13px", border: "none", borderRadius: "9px",
-            background: myChoice ? `linear-gradient(135deg,${GREEN},#e07b00)` : "rgba(0,0,0,0.2)",
+            background: myChoice ? `linear-gradient(135deg,${GREEN},#0077cc)` : "rgba(0,0,0,0.2)",
             color: myChoice ? "#0a1628" : "#cce0f5",
             fontFamily: "'Bebas Neue', cursive", fontSize: "16px", fontWeight: 800,
             cursor: myChoice ? "pointer" : "default", letterSpacing: "3px" }}>
@@ -4088,7 +4088,7 @@ function PenaltyGame({ user, onBack }) {
           </div>
         </div>
         <button onClick={() => { setPhase("lobby"); setRoom(null); setMyRole(null); setMyChoice(null); setAnimState(null); setWaitingForOther(false); if (pollRef.current) clearInterval(pollRef.current); }}
-          style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>
+          style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>
           🔄 NUEVA PARTIDA
         </button>
       </div>
@@ -4244,7 +4244,7 @@ function OnboardingTooltips({ user, onFinish, setView }) {
             </button>
             <button onClick={next} style={{
               padding: "10px 22px", border: "none", borderRadius: "8px",
-              background: `linear-gradient(135deg,${GREEN},#e07b00)`,
+              background: `linear-gradient(135deg,${GREEN},#0077cc)`,
               color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800,
               cursor: "pointer", letterSpacing: "2px",
             }}>
