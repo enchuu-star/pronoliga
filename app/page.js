@@ -3350,7 +3350,7 @@ function FlagsGame({ user, onBack }) {
 
 function SlotGame({ user, onBack }) {
   const SYMBOLS = [
-    { s: "⚽", w: 3 }, { s: "🏆", w: 4 }, { s: "🥅", w: 5 }, { s: "🌟", w: 6 }, { s: "🥇", w: 7 },
+    { s: "⚽", w: 6 }, { s: "🏆", w: 8 }, { s: "🥅", w: 10 }, { s: "🌟", w: 12 }, { s: "🥇", w: 14 },
     { s: "🇪🇸", w: 8 }, { s: "🇧🇷", w: 8 }, { s: "🇫🇷", w: 8 }, { s: "🇦🇷", w: 8 }, { s: "🇩🇪", w: 8 },
     { s: "🇵🇹", w: 9 }, { s: "🇳🇱", w: 9 }, { s: "🇧🇪", w: 9 }, { s: "🇯🇵", w: 9 }, { s: "🇲🇽", w: 9 },
   ];
@@ -3377,6 +3377,7 @@ function SlotGame({ user, onBack }) {
       if (a === "🥅") return { mult: 20, label: "🥅 Tres porterías!", type: "big" };
       if (a === "🌟") return { mult: 15, label: "🌟 Tres estrellas!", type: "big" };
       if (a === "🥇") return { mult: 10, label: "🥇 Tres medallas!", type: "win" };
+      if ([a, b, c].every(x => FLAGS.includes(x))) return { mult: 1, label: "3 banderas distintas!", type: "win" };
       if (FLAGS.includes(a)) return { mult: 8, label: "🏴 Tres banderas iguales!", type: "win" };
     }
     return { mult: 0, label: "Sin premio. Suerte la próxima!", type: "lose" };
@@ -3571,6 +3572,7 @@ function SlotGame({ user, onBack }) {
           ["🌟🌟🌟", "x15"],
           ["🥇🥇🥇", "x10"],
           ["Bandera x3 iguales", "x8"],
+          ["Bandera x3 distintas", "x1"],
         ].map(([sym, pay]) => (
           <div key={sym} style={{ display: "flex", justifyContent: "space-between", padding: "7px 14px", borderTop: `1px solid ${BORDER}`, fontSize: "12px" }}>
             <span style={{ color: "#e0eaf8", fontFamily: "monospace" }}>{sym}</span>
