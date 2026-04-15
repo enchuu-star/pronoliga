@@ -228,7 +228,6 @@ function PullToRefreshWrapper({ onRefresh, children }) {
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState(0);
   const startY = useRef(null);
-  const containerRef = useRef(null);
   const THRESHOLD = 80;
 
   const handleRefresh = useCallback(async () => {
@@ -238,20 +237,17 @@ function PullToRefreshWrapper({ onRefresh, children }) {
   }, [onRefresh]);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
     const onTouchStart = (e) => {
-      if (el.scrollTop === 0) startY.current = e.touches[0].clientY;
+      if (window.scrollY === 0) startY.current = e.touches[0].clientY;
     };
     const onTouchMove = (e) => {
       if (startY.current === null) return;
       const dy = e.touches[0].clientY - startY.current;
-      if (dy > 0 && el.scrollTop === 0) {
-        e.preventDefault();
+      if (dy > 0 && window.scrollY === 0) {
         setProgress(Math.min(dy / THRESHOLD, 1));
-      } else if (dy <= 0) {
+      } else {
         setProgress(0);
+        startY.current = null;
       }
     };
     const onTouchEnd = () => {
@@ -260,13 +256,13 @@ function PullToRefreshWrapper({ onRefresh, children }) {
       startY.current = null;
     };
 
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
+    document.addEventListener("touchend", onTouchEnd);
     return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
     };
   }, [progress, handleRefresh]);
 
@@ -274,8 +270,8 @@ function PullToRefreshWrapper({ onRefresh, children }) {
   const height = refreshing ? THRESHOLD : Math.round(progress * THRESHOLD);
 
   return (
-    <div style={{ position: "relative" }}>
-      {/* Indicador fixed */}
+    <>
+      {/* Indicador fixed, debajo del navbar */}
       {visible && (
         <div style={{
           position: "fixed",
@@ -289,6 +285,7 @@ function PullToRefreshWrapper({ onRefresh, children }) {
           background: "rgba(10,22,40,0.97)",
           borderBottom: `1px solid ${BORDER}`,
           transition: refreshing ? "height 0.2s ease" : "none",
+          pointerEvents: "none",
         }}>
           <span style={{
             fontFamily: "monospace",
@@ -296,7 +293,6 @@ function PullToRefreshWrapper({ onRefresh, children }) {
             letterSpacing: "3px",
             textTransform: "uppercase",
             color: progress >= 1 || refreshing ? GREEN : "rgba(79,195,247,0.5)",
-            opacity: Math.min(progress * 2, 1),
             transition: "color 0.2s",
           }}>
             {refreshing ? "actualizando..." : progress >= 1 ? "↑ suelta" : "↓ actualizar"}
@@ -304,20 +300,9 @@ function PullToRefreshWrapper({ onRefresh, children }) {
         </div>
       )}
 
-      {/* Scroll container — ocupa toda la pantalla */}
-      <div
-        ref={containerRef}
-        style={{
-          position: "fixed",
-          top: "50px",
-          left: 0, right: 0,
-          bottom: "60px",
-          overflowY: "auto",
-        }}
-      >
-        {children}
-      </div>
-    </div>
+      {/* Contenido normal — el scroll es del body */}
+      {children}
+    </>
   );
 }
 
@@ -4467,7 +4452,7 @@ export default function Home() {
         <>
           <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
           <PullToRefreshWrapper onRefresh={loadData}>
-            <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
+              <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
               {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
               {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
               {view === "results" && <ResultsView matches={matches} />}
