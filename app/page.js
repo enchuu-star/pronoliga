@@ -275,7 +275,7 @@ function PullToRefreshWrapper({ onRefresh, children }) {
 
   return (
     <div style={{ position: "relative" }}>
-      {/* Indicador FIJO encima del navbar */}
+      {/* Indicador fixed */}
       {visible && (
         <div style={{
           position: "fixed",
@@ -304,8 +304,17 @@ function PullToRefreshWrapper({ onRefresh, children }) {
         </div>
       )}
 
-      {/* Scroll container */}
-      <div ref={containerRef} style={{ height: "100vh", overflowY: "auto" }}>
+      {/* Scroll container — ocupa toda la pantalla */}
+      <div
+        ref={containerRef}
+        style={{
+          position: "fixed",
+          top: "50px",
+          left: 0, right: 0,
+          bottom: "60px",
+          overflowY: "auto",
+        }}
+      >
         {children}
       </div>
     </div>
