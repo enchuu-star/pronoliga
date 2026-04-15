@@ -2929,10 +2929,15 @@ function FlappyGame({ user, onBack }) {
   const [loadingRank, setLoadingRank] = useState(false);
 
   const W = 360, H = 500;
-  const BALL_X = 80, GRAVITY = 0.45, JUMP = -8, PIPE_W = 52, GAP = 150, PIPE_SPEED = 2.8;
+  const BALL_X = 80, GRAVITY = 0.35, JUMP = -8, PIPE_W = 52, GAP = 185, PIPE_SPEED = 2.2;
   const FLAGS = ["🇧🇷","🇩🇪","🇪🇸","🇫🇷","🇦🇷","🇵🇹","🇳🇱","🇧🇪","🇮🇹","🇲🇽","🇦🇺","🇯🇵","🇰🇷","🇺🇸","🇨🇦","🇳🇴","🇸🇳","🇨🇴","🇺🇾","🇭🇷"];
 
-  const initState = () => ({ ballY: H / 2, ballVY: 0, pipes: [], frame: 0, score: 0, alive: true });
+  const initState = () => ({
+    ballY: H / 2, ballVY: 0, pipes: [], powerups: [],
+    frame: 0, score: 0, alive: true,
+    shield: false, slowmo: 0, doubleScore: 0
+  });
+
   const jump = () => { if (stateRef.current?.alive) stateRef.current.ballVY = JUMP; };
   const startGame = () => { stateRef.current = initState(); setScore(0); setPhase("playing"); };
 
@@ -2941,31 +2946,103 @@ function FlappyGame({ user, onBack }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+
     const draw = () => {
       const s = stateRef.current;
       if (!s) return;
+
+      // Física
       s.ballVY += GRAVITY; s.ballY += s.ballVY; s.frame++;
+
+      // Timers power-ups
+      if (s.slowmo > 0) s.slowmo--;
+      if (s.doubleScore > 0) s.doubleScore--;
+
+      // Generar tubos
       if (s.frame % 90 === 0) {
         const gapY = 100 + Math.random() * (H - GAP - 180);
         s.pipes.push({ x: W + 10, gapY, flag: FLAGS[Math.floor(Math.random() * FLAGS.length)], scored: false });
       }
+
+      // Generar power-up cada ~180 frames
+      if (s.frame % 180 === 0) {
+        const types = ["slow", "shield", "double"];
+        s.powerups.push({ x: W + 10, y: 80 + Math.random() * (H - 200), type: types[Math.floor(Math.random() * 3)] });
+      }
+
+      // Velocidad según slowmo
+      const pipeSpeed = s.slowmo > 0 ? PIPE_SPEED * 0.4 : PIPE_SPEED;
+
+      // Mover tubos y puntuar
       s.pipes = s.pipes.filter(p => p.x > -PIPE_W - 10);
-      s.pipes.forEach(p => { p.x -= PIPE_SPEED; if (!p.scored && p.x + PIPE_W < BALL_X) { p.scored = true; s.score++; setScore(s.score); } });
+      s.pipes.forEach(p => {
+        p.x -= pipeSpeed;
+        if (!p.scored && p.x + PIPE_W < BALL_X) {
+          p.scored = true;
+          s.score += s.doubleScore > 0 ? 2 : 1;
+          setScore(s.score);
+        }
+      });
+
+      // Mover power-ups
+      s.powerups = s.powerups.filter(p => p.x > -20);
+      s.powerups.forEach(p => { p.x -= pipeSpeed * 0.8; });
+
+      // Colisión límites
       const br = 16;
       if (s.ballY - br < 0 || s.ballY + br > H) { endGame(); return; }
+
+      // Colisión tubos (con escudo)
       for (const p of s.pipes) {
         if (BALL_X + br > p.x && BALL_X - br < p.x + PIPE_W) {
-          if (s.ballY - br < p.gapY || s.ballY + br > p.gapY + GAP) { endGame(); return; }
+          if (s.ballY - br < p.gapY || s.ballY + br > p.gapY + GAP) {
+            if (s.shield) {
+              s.shield = false;
+              s.pipes = s.pipes.filter(x => x !== p);
+              break;
+            }
+            endGame(); return;
+          }
         }
       }
+
+      // Colisión power-ups
+      s.powerups = s.powerups.filter(p => {
+        const hit = Math.abs(p.x - BALL_X) < 22 && Math.abs(p.y - s.ballY) < 22;
+        if (hit) {
+          if (p.type === "slow")   s.slowmo = 180;
+          if (p.type === "shield") s.shield = true;
+          if (p.type === "double") s.doubleScore = 300;
+        }
+        return !hit;
+      });
+
+      // ── DIBUJO ──────────────────────────────────
+
       ctx.clearRect(0, 0, W, H);
+
+      // Fondo — azulado durante slowmo
       const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-      bgGrad.addColorStop(0, "#0a0a1a"); bgGrad.addColorStop(1, "#0a1a0a");
+      if (s.slowmo > 0) {
+        bgGrad.addColorStop(0, "#0a0a2a"); bgGrad.addColorStop(1, "#0a1a2a");
+      } else {
+        bgGrad.addColorStop(0, "#0a0a1a"); bgGrad.addColorStop(1, "#0a1a0a");
+      }
       ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, W, H);
+
+      // Estrellas
       ctx.fillStyle = "rgba(255,255,255,0.4)";
-      for (let i = 0; i < 30; i++) { const sx = ((i * 137 + s.frame * 0.3) % W); const sy = (i * 53) % H; ctx.beginPath(); ctx.arc(sx, sy, 1, 0, Math.PI * 2); ctx.fill(); }
+      for (let i = 0; i < 30; i++) {
+        const sx = ((i * 137 + s.frame * 0.3) % W);
+        const sy = (i * 53) % H;
+        ctx.beginPath(); ctx.arc(sx, sy, 1, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // Suelo
       ctx.fillStyle = "#1a3a1a"; ctx.fillRect(0, H - 20, W, 20);
       ctx.fillStyle = "#f59e0b"; ctx.fillRect(0, H - 22, W, 3);
+
+      // Tubos
       s.pipes.forEach(p => {
         const grad = ctx.createLinearGradient(p.x, 0, p.x + PIPE_W, 0);
         grad.addColorStop(0, "#1a4a1a"); grad.addColorStop(0.5, "#2a6a2a"); grad.addColorStop(1, "#1a4a1a");
@@ -2977,12 +3054,62 @@ function FlappyGame({ user, onBack }) {
         ctx.fillStyle = "#f59e0b"; ctx.fillRect(p.x - 4, p.gapY + GAP + 6, PIPE_W + 8, 12);
         ctx.font = "20px serif"; ctx.textAlign = "center"; ctx.fillText(p.flag, p.x + PIPE_W / 2, p.gapY + GAP / 2 + 7);
       });
-      ctx.save(); ctx.translate(BALL_X, s.ballY); ctx.rotate(s.frame * 0.08);
-      ctx.font = "32px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⚽", 0, 0); ctx.restore();
-      ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.beginPath(); ctx.roundRect(W/2 - 36, 14, 72, 32, 8); ctx.fill();
-      ctx.fillStyle = "#f59e0b"; ctx.font = "bold 20px 'Courier New'"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(s.score, W / 2, 30);
+
+      // Power-ups flotantes con halo pulsante
+      s.powerups.forEach(p => {
+        const emoji = p.type === "slow" ? "⭐" : p.type === "shield" ? "🛡️" : "2️⃣";
+        const pulse = 0.6 + 0.4 * Math.sin(s.frame * 0.15);
+        ctx.save();
+        ctx.globalAlpha = pulse * 0.35;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+        ctx.fillStyle = p.type === "double" ? "#ff8a00" : "#4fc3f7";
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.font = "20px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(emoji, p.x, p.y);
+        ctx.restore();
+      });
+
+      // Balón (halo azul si escudo activo)
+      ctx.save();
+      ctx.translate(BALL_X, s.ballY);
+      if (s.shield) {
+        ctx.beginPath(); ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.strokeStyle = "#4fc3f7"; ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.6 + 0.4 * Math.sin(s.frame * 0.2);
+        ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      ctx.rotate(s.frame * 0.08);
+      ctx.font = "32px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("⚽", 0, 0);
+      ctx.restore();
+
+      // Marcador — naranja si doble puntos activo
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.beginPath(); ctx.roundRect(W / 2 - 36, 14, 72, 32, 8); ctx.fill();
+      ctx.fillStyle = s.doubleScore > 0 ? "#ff8a00" : "#f59e0b";
+      ctx.font = "bold 20px 'Courier New'"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(s.score, W / 2, 30);
+
+      // Indicadores power-ups activos (esquina superior izquierda)
+      ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.font = "bold 11px monospace";
+      let indicY = 22;
+      if (s.slowmo > 0) {
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fillText(`⭐ ${Math.ceil(s.slowmo / 60)}s`, 8, indicY); indicY += 16;
+      }
+      if (s.shield) {
+        ctx.fillStyle = "#4fc3f7";
+        ctx.fillText("🛡️ ON", 8, indicY); indicY += 16;
+      }
+      if (s.doubleScore > 0) {
+        ctx.fillStyle = "#ff8a00";
+        ctx.fillText(`2x ${Math.ceil(s.doubleScore / 60)}s`, 8, indicY);
+      }
+
       rafRef.current = requestAnimationFrame(draw);
     };
+
     rafRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(rafRef.current);
   }, [phase]);
@@ -3019,12 +3146,16 @@ function FlappyGame({ user, onBack }) {
         <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px" }}>FLAPPY BALÓN</p>
       </div>
+
       {phase === "menu" && (
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
           <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.15)", borderRadius: "14px", padding: "24px", marginBottom: "20px" }}>
             <div style={{ fontSize: "52px", marginBottom: "10px" }}>⚽</div>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>FLAPPY BALÓN</div>
-            <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>Esquiva las porterías · Toca para saltar</p>
+            <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "8px" }}>Esquiva las porterías · Toca para saltar</p>
+            <p style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>
+              ⭐ Slow-mo · 🛡️ Escudo · 2️⃣ Doble puntos
+            </p>
             <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#e07b00)`, color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
           </div>
           <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FLAPPY</p>
@@ -3037,18 +3168,16 @@ function FlappyGame({ user, onBack }) {
           ))}
         </div>
       )}
+
       {(phase === "playing" || phase === "dead") && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        {/* BOTÓN SALIR */}
-    <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-      <button onClick={() => { cancelAnimationFrame(rafRef.current); setPhase("menu"); }}
-        style={{ padding: "6px 12px", border: `1px solid ${BORDER}`, borderRadius: "7px",
-          background: "transparent", color: "#c0d8f0",
-          cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>
-        ← Salir
-      </button>
-      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: GREEN }}>{score}</span>
-    </div>
+          <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <button onClick={() => { cancelAnimationFrame(rafRef.current); setPhase("menu"); }}
+              style={{ padding: "6px 12px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>
+              ← Salir
+            </button>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: GREEN }}>{score}</span>
+          </div>
           <div style={{ position: "relative", borderRadius: "14px", overflow: "hidden", border: `1px solid ${BORDER}`, cursor: "pointer", userSelect: "none" }}
             onClick={handleTap} onTouchStart={e => { e.preventDefault(); handleTap(); }}>
             <canvas ref={canvasRef} width={W} height={H} style={{ display: "block", maxWidth: "100%" }} />
@@ -3061,7 +3190,11 @@ function FlappyGame({ user, onBack }) {
               </div>
             )}
           </div>
-          {phase === "playing" && <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "10px" }}>Toca la pantalla o haz clic para saltar</p>}
+          {phase === "playing" && (
+            <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "10px" }}>
+              Toca la pantalla o haz clic para saltar
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -3074,7 +3207,7 @@ function FlappyGame({ user, onBack }) {
 const FLAG_COUNTRIES = [
   { name: "México", flag: "🇲🇽" }, { name: "Corea del Sur", flag: "🇰🇷" }, { name: "Sudáfrica", flag: "🇿🇦" },
   { name: "Canadá", flag: "🇨🇦" }, { name: "Suiza", flag: "🇨🇭" }, { name: "Qatar", flag: "🇶🇦" },
-  { name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Escocia", flag: "🏴󠁧󠁢󠁳󠁣󠁴U+E007F" }, { name: "Haití", flag: "🇭🇹" },
+  { name: "Brasil", flag: "🇧🇷" }, { name: "Marruecos", flag: "🇲🇦" }, { name: "Haití", flag: "🇭🇹" },
   { name: "Estados Unidos", flag: "🇺🇸" }, { name: "Paraguay", flag: "🇵🇾" }, { name: "Australia", flag: "🇦🇺" },
   { name: "Alemania", flag: "🇩🇪" }, { name: "Ecuador", flag: "🇪🇨" }, { name: "Costa de Marfil", flag: "🇨🇮" }, { name: "Curazao", flag: "🇨🇼" },
   { name: "Países Bajos", flag: "🇳🇱" }, { name: "Japón", flag: "🇯🇵" }, { name: "Túnez", flag: "🇹🇳" },
@@ -3082,7 +3215,7 @@ const FLAG_COUNTRIES = [
   { name: "España", flag: "🇪🇸" }, { name: "Cabo Verde", flag: "🇨🇻" }, { name: "Arabia Saudí", flag: "🇸🇦" }, { name: "Uruguay", flag: "🇺🇾" },
   { name: "Francia", flag: "🇫🇷" }, { name: "Senegal", flag: "🇸🇳" }, { name: "Noruega", flag: "🇳🇴" },
   { name: "Argentina", flag: "🇦🇷" }, { name: "Panamá", flag: "🇵🇦" }, { name: "Argelia", flag: "🇩🇿" },
-  { name: "Inglaterra", flag: "🏴󠁧󠁢󠁥󠁮󠁧U+E007F" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "Jordania", flag: "🇯🇴" },
+  { name: "Inglaterra", flag: "🇬🇧" }, { name: "Colombia", flag: "🇨🇴" }, { name: "Uzbekistán", flag: "🇺🇿" }, { name: "Jordania", flag: "🇯🇴" },
   { name: "Portugal", flag: "🇵🇹" }, { name: "Croacia", flag: "🇭🇷" }, { name: "Ghana", flag: "🇬🇭" }, { name: "Austria", flag: "🇦🇹" },
 ];
 
@@ -3101,7 +3234,7 @@ function FlagsGame({ user, onBack }) {
 
   const buildQuestions = () => {
     const pool = shuffle([...FLAG_COUNTRIES]);
-    return pool.slice(0, 15).map(correct => {
+    return pool.slice(0, 10).map(correct => {
       const wrong = shuffle(FLAG_COUNTRIES.filter(c => c.name !== correct.name)).slice(0, 3);
       return { correct, opts: shuffle([correct, ...wrong]) };
     });
@@ -3163,7 +3296,7 @@ function FlagsGame({ user, onBack }) {
       <div style={{ background: CARD, border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
         <div style={{ fontSize: "48px", marginBottom: "12px" }}>🌍</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>ADIVINA LA BANDERA</div>
-        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>15 banderas del Mundial 2026<br/><span style={{ color: GREEN }}>+1</span> acierto · <span style={{ color: "#b8860b" }}>+2</span> con racha de 3 seguidas 🔥</p>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "monospace", lineHeight: 1.8, marginBottom: "20px" }}>10 banderas del Mundial 2026<br/><span style={{ color: GREEN }}>+1</span> acierto · <span style={{ color: "#b8860b" }}>+2</span> con racha de 3 seguidas 🔥</p>
         <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
@@ -3181,21 +3314,21 @@ function FlagsGame({ user, onBack }) {
   if (phase === "playing" && q) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
     {/* BOTÓN SALIR */}
-    <button onClick={() => { clearInterval(timerRef.current); setPhase("menu"); }}
+    <button onClick={() => setPhase("menu")}
       style={{ marginBottom: "12px", padding: "6px 12px", border: `1px solid ${BORDER}`,
         borderRadius: "7px", background: "transparent", color: "#c0d8f0",
         cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>
       ← Salir
     </button>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-        <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#d0e4f7" }}>{current + 1}/15</span>
+        <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#d0e4f7" }}>{current + 1}/10</span>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           {streak >= 2 && <span style={{ fontSize: "10px", fontFamily: "monospace", color: "#b8860b" }}>🔥 ×{streak}</span>}
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#b8860b" }}>{score} PTS</span>
         </div>
       </div>
       <div style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "3px", marginBottom: "24px", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${(current / 15) * 100}%`, background: "#b8860b", borderRadius: "3px" }} />
+        <div style={{ height: "100%", width: `${(current / 10) * 100}%`, background: "#b8860b", borderRadius: "3px" }} />
       </div>
       <div style={{ textAlign: "center", marginBottom: "28px" }}>
         <div style={{ fontSize: "96px", lineHeight: 1, marginBottom: "12px" }}>{q.correct.flag}</div>
@@ -3231,10 +3364,10 @@ function FlagsGame({ user, onBack }) {
     <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
       <button onClick={() => setPhase("menu")} style={{ marginBottom: "20px", padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "monospace", fontSize: "11px" }}>← Volver</button>
       <div style={{ background: CARD, border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
-        <div style={{ fontSize: "44px", marginBottom: "10px" }}>{score >= 20 ? "🏆" : score >= 12 ? "🌍" : "😅"}</div>
+        <div style={{ fontSize: "44px", marginBottom: "10px" }}>{score >= 14 ? "🏆" : score >= 8 ? "🌍" : "😅"}</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#d0e4f7", letterSpacing: "3px" }}>TU PUNTUACIÓN</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: "#b8860b", lineHeight: 1 }}>{score}</div>
-        <p style={{ marginTop: "10px", fontSize: "12px", color: "#e0eefa", fontFamily: "monospace" }}>{score >= 20 ? "¡Experto en geografía! 🌍" : score >= 12 ? "Buen conocimiento ⚽" : "A practicar geografía 😅"}</p>
+        <p style={{ marginTop: "10px", fontSize: "12px", color: "#e0eefa", fontFamily: "monospace" }}>{score >= 14 ? "¡Experto en geografía! 🌍" : score >= 8 ? "Buen conocimiento ⚽" : "A practicar geografía 😅"}</p>
       </div>
       <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#0a1628", fontFamily: "monospace", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
