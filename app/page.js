@@ -4272,6 +4272,15 @@ export default function Home() {
   const [loadingSession, setLoadingSession] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // PWA — registrar service worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js")
+        .then(reg => console.log("SW registrado:", reg.scope))
+        .catch(err => console.log("SW error:", err));
+    }
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
@@ -4292,7 +4301,6 @@ export default function Home() {
     let finalMatches;
 
     if (dbMatches && dbMatches.length > 0) {
-      // ✅ Siempre sincronizar fechas/horas desde MATCH_SCHEDULE
       const updates = [];
       for (const m of dbMatches) {
         const localMatch = ALL_MATCHES.find(x => x.id === m.id);
@@ -4305,12 +4313,9 @@ export default function Home() {
         }
       }
       if (updates.length > 0) await Promise.all(updates);
-
-      // Recargar tras actualizar
       const { data: refreshed } = await supabase.from("matches").select("*").order("match_date");
       finalMatches = refreshed || dbMatches;
     } else {
-      // Primera vez: insertar todos los partidos
       const chunks = [];
       for (let i = 0; i < ALL_MATCHES.length; i += 10) chunks.push(ALL_MATCHES.slice(i, i + 10));
       let all = [];
@@ -4332,7 +4337,6 @@ export default function Home() {
   const handleLogin = async (u) => {
     setUser(u);
     setScreen("app");
-    // Comprobar si ya ha hecho el onboarding
     const { data: profile } = await supabase.from("profiles").select("onboarded").eq("id", u.id).single();
     // if (!profile?.onboarded) setShowOnboarding(true);
   };
@@ -4347,7 +4351,10 @@ export default function Home() {
 
   if (loadingSession) return (
     <div style={{ minHeight: "100vh", background: DARK, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ textAlign: "center" }}><div style={{ fontSize: "44px", marginBottom: "10px" }}>⚽</div><span style={{ color: GREEN, fontFamily: "monospace", letterSpacing: "4px", fontSize: "11px" }}>CARGANDO...</span></div>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: "44px", marginBottom: "10px" }}>⚽</div>
+        <span style={{ color: GREEN, fontFamily: "monospace", letterSpacing: "4px", fontSize: "11px" }}>CARGANDO...</span>
+      </div>
     </div>
   );
 
@@ -4369,7 +4376,7 @@ export default function Home() {
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
-          {/* {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />}*/}
+          {/* {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />} */}
         </>
       )}
     </div>
