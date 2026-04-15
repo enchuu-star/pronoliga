@@ -224,12 +224,15 @@ function useCountdown() {
 // ============================================================
 // PULL TO REFRESH — RULETA
 // ============================================================
-function PullToRefreshWrapper({ onRefresh, children }) {
+function PullToRefreshRuleta({ onRefresh }) {
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState(0);
   const startY = useRef(null);
-  const containerRef = useRef(null);
   const THRESHOLD = 80;
+  const EMOJIS = ["⚽","🏆","🥅","🎯","⭐","🔥","🥇","🏅"];
+  const SLOT_H = 44;
+  const totalH = EMOJIS.length * SLOT_H;
+  const scrollY = (progress * totalH * 2) % totalH;
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -238,16 +241,13 @@ function PullToRefreshWrapper({ onRefresh, children }) {
   }, [onRefresh]);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
     const onTouchStart = (e) => {
-      if (el.scrollTop === 0) startY.current = e.touches[0].clientY;
+      if (window.scrollY === 0) startY.current = e.touches[0].clientY;
     };
     const onTouchMove = (e) => {
       if (startY.current === null) return;
       const dy = e.touches[0].clientY - startY.current;
-      if (dy > 0 && el.scrollTop === 0) {
-        e.preventDefault();
+      if (dy > 0 && window.scrollY === 0) {
         setProgress(Math.min(dy / THRESHOLD, 1));
       }
     };
@@ -256,79 +256,69 @@ function PullToRefreshWrapper({ onRefresh, children }) {
       else setProgress(0);
       startY.current = null;
     };
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
+    document.addEventListener("touchend", onTouchEnd);
     return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onTouchEnd);
     };
   }, [progress, handleRefresh]);
 
-  const EMOJIS = ["⚽","🏆","🥅","🎯","⭐","🔥","🥇","🏅"];
-  const SLOT_H = 44;
-  const totalH = EMOJIS.length * SLOT_H;
-  const scrollY = (progress * totalH * 2) % totalH;
+  const visible = progress > 0.04 || refreshing;
+  const height = refreshing ? THRESHOLD : progress * THRESHOLD;
 
   return (
-    <div ref={containerRef} style={{ height: "100%", overflowY: "auto" }}>
-
-      {/* RULETA */}
-      <div style={{
-        overflow: "visible",
-        height: refreshing ? `${THRESHOLD}px` : `${progress * THRESHOLD}px`,
-        minHeight: 0,
-        transition: refreshing ? "height 0.2s ease" : "none",
-        display: "flex", alignItems: "flex-start", justifyContent: "center",
-        paddingTop: "8px",
-      }}>
-        {(progress > 0.04 || refreshing) && (
+    <div style={{
+      position: "fixed",
+      top: "50px", // altura del navbar
+      left: 0, right: 0,
+      zIndex: 99,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "flex-start",
+      paddingTop: "8px",
+      height: visible ? `${height}px` : 0,
+      overflow: "visible",
+      transition: refreshing ? "height 0.2s ease" : "none",
+      pointerEvents: "none",
+    }}>
+      {visible && (
+        <div style={{
+          width: "52px", height: "52px",
+          border: `2px solid ${progress >= 1 || refreshing ? GREEN : BORDER}`,
+          borderRadius: "12px",
+          overflow: "hidden",
+          background: "rgba(10,22,40,0.97)",
+          position: "relative",
+          transition: "border-color 0.2s",
+          boxShadow: progress >= 1 || refreshing ? `0 0 14px rgba(79,195,247,0.4)` : "none",
+        }}>
           <div style={{
-            width: "52px",
-            height: "52px",
-            border: `2px solid ${progress >= 1 || refreshing ? GREEN : BORDER}`,
-            borderRadius: "12px",
-            overflow: "hidden",
-            background: "rgba(10,22,40,0.95)",
-            position: "relative",
-            transition: "border-color 0.2s",
-            flexShrink: 0,
+            display: "flex", flexDirection: "column",
+            transform: refreshing ? undefined : `translateY(-${scrollY}px)`,
+            animation: refreshing ? "rouletteScroll 0.2s linear infinite" : "none",
           }}>
-            {/* Tira de emojis */}
-            <div style={{
-              display: "flex", flexDirection: "column",
-              transform: refreshing ? undefined : `translateY(-${scrollY}px)`,
-              animation: refreshing ? "rouletteScroll 0.2s linear infinite" : "none",
-            }}>
-              {[...EMOJIS, ...EMOJIS, ...EMOJIS].map((e, i) => (
-                <div key={i} style={{
-                  height: `${SLOT_H}px`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "26px",
-                }}>{e}</div>
-              ))}
-            </div>
-            {/* Sombra top/bottom */}
-            <div style={{
-              position: "absolute", inset: 0,
-              background: `linear-gradient(to bottom,
-                rgba(10,22,40,0.75) 0%,
-                transparent 30%,
-                transparent 70%,
-                rgba(10,22,40,0.75) 100%)`,
-              pointerEvents: "none",
-            }}/>
+            {[...EMOJIS, ...EMOJIS, ...EMOJIS].map((e, i) => (
+              <div key={i} style={{
+                height: `${SLOT_H}px`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "26px",
+              }}>{e}</div>
+            ))}
           </div>
-        )}
-      </div>
-
-      {children}
-
+          <div style={{
+            position: "absolute", inset: 0,
+            background: `linear-gradient(to bottom, rgba(10,22,40,0.75) 0%, transparent 30%, transparent 70%, rgba(10,22,40,0.75) 100%)`,
+            pointerEvents: "none",
+          }}/>
+        </div>
+      )}
       <style>{`
         @keyframes rouletteScroll {
           from { transform: translateY(0); }
-          to   { transform: translateY(-${SLOT_H}px); }
+          to { transform: translateY(-${SLOT_H}px); }
         }
       `}</style>
     </div>
@@ -4474,28 +4464,26 @@ export default function Home() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: DARK, color: "#e0eaf8" }}>
-      <style>{css}</style>
-      {screen === "login" && <LoginPage onLogin={handleLogin} />}
-      {screen === "app" && user && (
-        <>
-          <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
-          <PullToRefreshWrapper onRefresh={loadData}>
-            <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
-              {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
-              {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
-              {view === "results" && <ResultsView matches={matches} />}
-              {view === "community" && <CommunityView matches={matches} user={user} />}
-              {view === "profile" && <ProfileView user={user} matches={matches} />}
-              {view === "ranking" && <RankingView />}
-              {view === "games" && <GamesView user={user} />}
-              {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
-              {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
-            </div>
-          </PullToRefreshWrapper>
-          {/* {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />} */}
-        </>
-      )}
-    </div>
-  );
+  <div style={{ minHeight: "100vh", background: DARK, color: "#e0eaf8" }}>
+    <style>{css}</style>
+    {screen === "login" && <LoginPage onLogin={handleLogin} />}
+    {screen === "app" && user && (
+      <>
+        <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
+        <PullToRefreshRuleta onRefresh={loadData} />
+        <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
+          {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
+          {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
+          {view === "results" && <ResultsView matches={matches} />}
+          {view === "community" && <CommunityView matches={matches} user={user} />}
+          {view === "profile" && <ProfileView user={user} matches={matches} />}
+          {view === "ranking" && <RankingView />}
+          {view === "games" && <GamesView user={user} />}
+          {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
+          {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
+        </div>
+      </>
+    )}
+  </div>
+);
 }
