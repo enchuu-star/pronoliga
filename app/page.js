@@ -109,31 +109,6 @@ const GROUPS = {
 
 const TOTAL_MATCHES = 72;
 
-function generateGroupMatches() {
-  const matches = [];
-  let globalId = 1;
-  Object.entries(GROUPS).forEach(([group, teams]) => {
-    let localIdx = 0;
-    for (let i = 0; i < teams.length; i++) {
-      for (let j = i + 1; j < teams.length; j++) {
-        const sk = `${group}_${localIdx}`;
-        const sc = MATCH_SCHEDULE[sk] || { date: "2026-06-11", time: "20:00" };
-        matches.push({
-          id: `wc26_g${String(globalId++).padStart(3, "0")}`,
-          grp: group, home: teams[i].name, away: teams[j].name,
-          competition: `Grupo ${group} · Mundial 2026`,
-          match_date: sc.date, match_time: sc.time,
-          status: "open", result_home: null, result_away: null,
-        });
-        localIdx++;
-      }
-    }
-  });
-  return matches;
-}
-
-
-
 function getTeam(name) {
   return Object.values(GROUPS).flat().find(t => t.name === name) || { name, flag: "🏳️" };
 }
@@ -4552,7 +4527,7 @@ export default function Home() {
   useEffect(() => { if (user) loadData(); }, [user]);
 
   const loadData = async () => {
-    const { data: dbMatches } = await supabase.from("matches").select("*").order("match_date");
+    const { data: dbMatches } = await supabase.from("matches").select("*").order("match_date").order("match_time").order("id");
     let finalMatches;
 
     if (dbMatches && dbMatches.length > 0) {
@@ -4568,7 +4543,7 @@ export default function Home() {
         }
       }
       if (updates.length > 0) await Promise.all(updates);
-      const { data: refreshed } = await supabase.from("matches").select("*").order("match_date");
+      const { data: refreshed } = await supabase.from("matches").select("*").order("match_date").order("match_time").order("id");
       finalMatches = refreshed || dbMatches;
     } else {
       const chunks = [];
