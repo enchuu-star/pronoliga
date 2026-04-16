@@ -8,105 +8,87 @@ const supabase = createClient(
 );
 
 // ============================================================
-// ⚙️ PARTIDOS — EDITA AQUÍ FECHAS Y HORAS
+// ⚙️ PARTIDOS — orden cronológico real, local y visitante correctos
 // ============================================================
-const MATCH_SCHEDULE = {
-  // GRUPO A — México, Sudáfrica, Corea del Sur, Rep. Checa
-  "A_0": { date: "2026-06-11", time: "21:00" },  // México vs Sudáfrica
-  "A_1": { date: "2026-06-12", time: "04:00" },  // Corea del Sur vs Rep. Checa
-  "A_2": { date: "2026-06-18", time: "18:00" },  // Rep. Checa vs Sudáfrica
-  "A_3": { date: "2026-06-19", time: "03:00" },  // México vs Corea del Sur
-  "A_4": { date: "2026-06-25", time: "03:00" },  // Sudáfrica vs Corea del Sur
-  "A_5": { date: "2026-06-25", time: "03:00" },  // Rep. Checa vs México
+const ALL_MATCHES = [
+  // ── JORNADA 1 ──
+  { id: "wc26_g001", grp: "A", home: "México",          away: "Sudáfrica",        competition: "Grupo A · Mundial 2026", match_date: "2026-06-11", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g002", grp: "A", home: "Corea del Sur",   away: "Rep. Checa",       competition: "Grupo A · Mundial 2026", match_date: "2026-06-12", match_time: "04:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g003", grp: "B", home: "Canadá",          away: "Bosnia y Herz.",   competition: "Grupo B · Mundial 2026", match_date: "2026-06-12", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g004", grp: "D", home: "Estados Unidos",  away: "Paraguay",         competition: "Grupo D · Mundial 2026", match_date: "2026-06-13", match_time: "03:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g005", grp: "B", home: "Qatar",           away: "Suiza",            competition: "Grupo B · Mundial 2026", match_date: "2026-06-13", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g006", grp: "C", home: "Brasil",          away: "Marruecos",        competition: "Grupo C · Mundial 2026", match_date: "2026-06-14", match_time: "00:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g007", grp: "C", home: "Haití",           away: "Escocia",          competition: "Grupo C · Mundial 2026", match_date: "2026-06-14", match_time: "03:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g008", grp: "D", home: "Australia",       away: "Turquía",          competition: "Grupo D · Mundial 2026", match_date: "2026-06-14", match_time: "06:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g009", grp: "E", home: "Alemania",        away: "Curazao",          competition: "Grupo E · Mundial 2026", match_date: "2026-06-14", match_time: "19:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g010", grp: "F", home: "Países Bajos",    away: "Japón",            competition: "Grupo F · Mundial 2026", match_date: "2026-06-14", match_time: "22:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g011", grp: "E", home: "Costa de Marfil", away: "Ecuador",          competition: "Grupo E · Mundial 2026", match_date: "2026-06-15", match_time: "01:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g012", grp: "F", home: "Suecia",          away: "Túnez",            competition: "Grupo F · Mundial 2026", match_date: "2026-06-15", match_time: "04:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g013", grp: "H", home: "España",          away: "Cabo Verde",       competition: "Grupo H · Mundial 2026", match_date: "2026-06-15", match_time: "18:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g014", grp: "G", home: "Bélgica",         away: "Egipto",           competition: "Grupo G · Mundial 2026", match_date: "2026-06-15", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g015", grp: "H", home: "Arabia Saudí",    away: "Uruguay",          competition: "Grupo H · Mundial 2026", match_date: "2026-06-16", match_time: "00:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g016", grp: "G", home: "Irán",            away: "Nueva Zelanda",    competition: "Grupo G · Mundial 2026", match_date: "2026-06-16", match_time: "03:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g017", grp: "I", home: "Francia",         away: "Senegal",          competition: "Grupo I · Mundial 2026", match_date: "2026-06-16", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g018", grp: "I", home: "Iraq",            away: "Noruega",          competition: "Grupo I · Mundial 2026", match_date: "2026-06-17", match_time: "00:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g019", grp: "J", home: "Argentina",       away: "Argelia",          competition: "Grupo J · Mundial 2026", match_date: "2026-06-17", match_time: "03:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g020", grp: "J", home: "Austria",         away: "Jordania",         competition: "Grupo J · Mundial 2026", match_date: "2026-06-17", match_time: "06:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g021", grp: "K", home: "Portugal",        away: "RD Congo",         competition: "Grupo K · Mundial 2026", match_date: "2026-06-17", match_time: "19:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g022", grp: "L", home: "Inglaterra",      away: "Croacia",          competition: "Grupo L · Mundial 2026", match_date: "2026-06-17", match_time: "22:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g023", grp: "L", home: "Ghana",           away: "Panamá",           competition: "Grupo L · Mundial 2026", match_date: "2026-06-18", match_time: "01:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g024", grp: "K", home: "Uzbekistán",      away: "Colombia",         competition: "Grupo K · Mundial 2026", match_date: "2026-06-18", match_time: "04:00", status: "open", result_home: null, result_away: null },
 
-  // GRUPO B — Canadá, Bosnia y Herz., Suiza, Qatar
-  "B_0": { date: "2026-06-12", time: "21:00" },  // Canadá vs Bosnia y Herz.
-  "B_1": { date: "2026-06-13", time: "21:00" },  // Qatar vs Suiza
-  "B_2": { date: "2026-06-18", time: "21:00" },  // Suiza vs Bosnia y Herz.
-  "B_3": { date: "2026-06-19", time: "00:00" },  // Canadá vs Qatar
-  "B_4": { date: "2026-06-24", time: "21:00" },  // Suiza vs Canadá
-  "B_5": { date: "2026-06-24", time: "21:00" },  // Bosnia y Herz. vs Qatar
+  // ── JORNADA 2 ──
+  { id: "wc26_g025", grp: "A", home: "Rep. Checa",      away: "Sudáfrica",        competition: "Grupo A · Mundial 2026", match_date: "2026-06-18", match_time: "18:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g026", grp: "B", home: "Suiza",           away: "Bosnia y Herz.",   competition: "Grupo B · Mundial 2026", match_date: "2026-06-18", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g027", grp: "B", home: "Canadá",          away: "Qatar",            competition: "Grupo B · Mundial 2026", match_date: "2026-06-19", match_time: "00:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g028", grp: "A", home: "México",          away: "Corea del Sur",    competition: "Grupo A · Mundial 2026", match_date: "2026-06-19", match_time: "03:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g029", grp: "D", home: "Estados Unidos",  away: "Australia",        competition: "Grupo D · Mundial 2026", match_date: "2026-06-19", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g030", grp: "C", home: "Escocia",         away: "Marruecos",        competition: "Grupo C · Mundial 2026", match_date: "2026-06-20", match_time: "00:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g031", grp: "C", home: "Brasil",          away: "Haití",            competition: "Grupo C · Mundial 2026", match_date: "2026-06-20", match_time: "02:30", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g032", grp: "D", home: "Turquía",         away: "Paraguay",         competition: "Grupo D · Mundial 2026", match_date: "2026-06-20", match_time: "05:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g033", grp: "F", home: "Países Bajos",    away: "Suecia",           competition: "Grupo F · Mundial 2026", match_date: "2026-06-20", match_time: "19:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g034", grp: "E", home: "Alemania",        away: "Costa de Marfil",  competition: "Grupo E · Mundial 2026", match_date: "2026-06-20", match_time: "22:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g035", grp: "E", home: "Ecuador",         away: "Curazao",          competition: "Grupo E · Mundial 2026", match_date: "2026-06-21", match_time: "02:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g036", grp: "F", home: "Túnez",           away: "Japón",            competition: "Grupo F · Mundial 2026", match_date: "2026-06-21", match_time: "06:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g037", grp: "H", home: "España",          away: "Arabia Saudí",     competition: "Grupo H · Mundial 2026", match_date: "2026-06-21", match_time: "18:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g038", grp: "G", home: "Bélgica",         away: "Irán",             competition: "Grupo G · Mundial 2026", match_date: "2026-06-21", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g039", grp: "H", home: "Uruguay",         away: "Cabo Verde",       competition: "Grupo H · Mundial 2026", match_date: "2026-06-22", match_time: "00:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g040", grp: "G", home: "Nueva Zelanda",   away: "Egipto",           competition: "Grupo G · Mundial 2026", match_date: "2026-06-22", match_time: "03:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g041", grp: "J", home: "Argentina",       away: "Austria",          competition: "Grupo J · Mundial 2026", match_date: "2026-06-22", match_time: "19:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g042", grp: "I", home: "Francia",         away: "Noruega",          competition: "Grupo I · Mundial 2026", match_date: "2026-06-22", match_time: "23:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g043", grp: "I", home: "Iraq",            away: "Senegal",          competition: "Grupo I · Mundial 2026", match_date: "2026-06-23", match_time: "02:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g044", grp: "J", home: "Jordania",        away: "Argelia",          competition: "Grupo J · Mundial 2026", match_date: "2026-06-23", match_time: "05:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g045", grp: "K", home: "Portugal",        away: "Uzbekistán",       competition: "Grupo K · Mundial 2026", match_date: "2026-06-23", match_time: "19:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g046", grp: "L", home: "Inglaterra",      away: "Ghana",            competition: "Grupo L · Mundial 2026", match_date: "2026-06-23", match_time: "22:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g047", grp: "L", home: "Panamá",          away: "Croacia",          competition: "Grupo L · Mundial 2026", match_date: "2026-06-24", match_time: "01:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g048", grp: "K", home: "Colombia",        away: "RD Congo",         competition: "Grupo K · Mundial 2026", match_date: "2026-06-24", match_time: "04:00", status: "open", result_home: null, result_away: null },
 
-  // GRUPO C — Brasil, Marruecos, Escocia, Haití
-  "C_0": { date: "2026-06-13", time: "23:00" },  // Brasil vs Marruecos
-  "C_1": { date: "2026-06-14", time: "02:00" },  // Haití vs Escocia  ← madrugada del 14
-  "C_2": { date: "2026-06-20", time: "00:00" },  // Escocia vs Marruecos
-  "C_3": { date: "2026-06-20", time: "02:30" },  // Brasil vs Haití
-  "C_4": { date: "2026-06-25", time: "00:00" },  // Escocia vs Brasil
-  "C_5": { date: "2026-06-25", time: "00:00" },  // Marruecos vs Haití
-
-  // GRUPO D — Estados Unidos, Paraguay, Australia, Turquía
-  "D_0": { date: "2026-06-13", time: "02:00" },  // Estados Unidos vs Paraguay
-  "D_1": { date: "2026-06-13", time: "04:00" },  // Australia vs Turquía
-  "D_2": { date: "2026-06-19", time: "21:00" },  // Estados Unidos vs Australia
-  "D_3": { date: "2026-06-20", time: "02:00" },  // Turquía vs Paraguay
-  "D_4": { date: "2026-06-25", time: "02:00" },  // Estados Unidos vs Turquía
-  "D_5": { date: "2026-06-25", time: "02:00" },  // Paraguay vs Australia
-
-  // GRUPO E — Alemania, Curazao, Costa de Marfil, Ecuador
-  "E_0": { date: "2026-06-14", time: "19:00" },  // Alemania vs Curazao
-  "E_1": { date: "2026-06-15", time: "01:00" },  // Costa de Marfil vs Ecuador
-  "E_2": { date: "2026-06-20", time: "22:00" },  // Alemania vs Costa de Marfil
-  "E_3": { date: "2026-06-21", time: "04:00" },  // Curazao vs Ecuador
-  "E_4": { date: "2026-06-26", time: "00:00" },  // Ecuador vs Alemania
-  "E_5": { date: "2026-06-26", time: "00:00" },  // Curazao vs Costa de Marfil
-
-  // GRUPO F — Países Bajos, Japón, Túnez, Suecia
-  "F_0": { date: "2026-06-14", time: "22:00" },  // Países Bajos vs Japón
-  "F_1": { date: "2026-06-15", time: "04:00" },  // Suecia vs Túnez
-  "F_2": { date: "2026-06-21", time: "19:00" },  // Países Bajos vs Suecia
-  "F_3": { date: "2026-06-22", time: "04:00" },  // Japón vs Túnez
-  "F_4": { date: "2026-06-26", time: "02:00" },  // Túnez vs Países Bajos
-  "F_5": { date: "2026-06-26", time: "02:00" },  // Japón vs Suecia
-
-  // GRUPO G — Bélgica, Egipto, Irán, Nueva Zelanda
-  "G_0": { date: "2026-06-15", time: "21:00" },  // Bélgica vs Egipto
-  "G_1": { date: "2026-06-16", time: "01:00" },  // Irán vs Nueva Zelanda
-  "G_2": { date: "2026-06-21", time: "22:00" },  // Bélgica vs Irán
-  "G_3": { date: "2026-06-22", time: "01:00" },  // Nueva Zelanda vs Egipto
-  "G_4": { date: "2026-06-27", time: "02:00" },  // Nueva Zelanda vs Bélgica
-  "G_5": { date: "2026-06-27", time: "02:00" },  // Egipto vs Irán
-
-  // GRUPO H — España, Cabo Verde, Arabia Saudí, Uruguay
-  "H_0": { date: "2026-06-15", time: "18:00" },  // España vs Cabo Verde
-  "H_1": { date: "2026-06-16", time: "00:00" },  // Arabia Saudí vs Uruguay
-  "H_2": { date: "2026-06-21", time: "18:00" },  // España vs Arabia Saudí
-  "H_3": { date: "2026-06-22", time: "02:00" },  // Uruguay vs Cabo Verde
-  "H_4": { date: "2026-06-27", time: "02:00" },  // Uruguay vs España
-  "H_5": { date: "2026-06-27", time: "02:00" },  // Cabo Verde vs Arabia Saudí
-
-  // GRUPO I — Francia, Senegal, Noruega, Iraq
-  "I_0": { date: "2026-06-16", time: "21:00" },  // Francia vs Senegal
-  "I_1": { date: "2026-06-17", time: "00:00" },  // Iraq vs Noruega
-  "I_2": { date: "2026-06-22", time: "21:00" },  // Francia vs Noruega
-  "I_3": { date: "2026-06-23", time: "00:00" },  // Senegal vs Iraq
-  "I_4": { date: "2026-06-28", time: "21:00" },  // Noruega vs Francia
-  "I_5": { date: "2026-06-28", time: "21:00" },  // Senegal vs Iraq
-
-  // GRUPO J — Argentina, Argelia, Austria, Jordania
-  "J_0": { date: "2026-06-16", time: "18:00" },  // Argentina vs Argelia
-  "J_1": { date: "2026-06-17", time: "02:00" },  // Austria vs Jordania
-  "J_2": { date: "2026-06-22", time: "19:00" },  // Argentina vs Austria
-  "J_3": { date: "2026-06-23", time: "02:00" },  // Argelia vs Jordania
-  "J_4": { date: "2026-06-28", time: "00:00" },  // Argentina vs Jordania
-  "J_5": { date: "2026-06-28", time: "00:00" },  // Austria vs Argelia
-
-  // GRUPO K — Portugal, Colombia, Uzbekistán, RD Congo
-  "K_0": { date: "2026-06-17", time: "06:00" },  // Uzbekistán vs Colombia
-  "K_1": { date: "2026-06-18", time: "00:00" },  // Portugal vs RD Congo
-  "K_2": { date: "2026-06-23", time: "04:00" },  // Colombia vs RD Congo
-  "K_3": { date: "2026-06-23", time: "07:00" },  // Portugal vs Uzbekistán
-  "K_4": { date: "2026-06-28", time: "03:00" },  // Colombia vs Uzbekistán
-  "K_5": { date: "2026-06-28", time: "03:00" },  // Portugal vs Colombia
-
-  // GRUPO L — Inglaterra, Croacia, Panamá, Ghana
-  "L_0": { date: "2026-06-18", time: "03:00" },  // Inglaterra vs Panamá
-  "L_1": { date: "2026-06-18", time: "03:00" },  // Croacia vs Ghana
-  "L_2": { date: "2026-06-24", time: "00:00" },  // Inglaterra vs Ghana
-  "L_3": { date: "2026-06-24", time: "03:00" },  // Croacia vs Panamá
-  "L_4": { date: "2026-06-29", time: "00:00" },  // Panamá vs Ghana
-  "L_5": { date: "2026-06-29", time: "00:00" },  // Inglaterra vs Croacia
-};
+  // ── JORNADA 3 ──
+  { id: "wc26_g049", grp: "B", home: "Bosnia y Herz.",  away: "Qatar",            competition: "Grupo B · Mundial 2026", match_date: "2026-06-24", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g050", grp: "B", home: "Suiza",           away: "Canadá",           competition: "Grupo B · Mundial 2026", match_date: "2026-06-24", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g051", grp: "C", home: "Marruecos",       away: "Haití",            competition: "Grupo C · Mundial 2026", match_date: "2026-06-25", match_time: "00:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g052", grp: "C", home: "Escocia",         away: "Brasil",           competition: "Grupo C · Mundial 2026", match_date: "2026-06-25", match_time: "00:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g053", grp: "A", home: "Rep. Checa",      away: "México",           competition: "Grupo A · Mundial 2026", match_date: "2026-06-25", match_time: "03:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g054", grp: "A", home: "Sudáfrica",       away: "Corea del Sur",    competition: "Grupo A · Mundial 2026", match_date: "2026-06-25", match_time: "03:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g055", grp: "E", home: "Curazao",         away: "Costa de Marfil",  competition: "Grupo E · Mundial 2026", match_date: "2026-06-25", match_time: "22:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g056", grp: "E", home: "Ecuador",         away: "Alemania",         competition: "Grupo E · Mundial 2026", match_date: "2026-06-25", match_time: "22:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g057", grp: "F", home: "Japón",           away: "Suecia",           competition: "Grupo F · Mundial 2026", match_date: "2026-06-26", match_time: "01:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g058", grp: "F", home: "Túnez",           away: "Países Bajos",     competition: "Grupo F · Mundial 2026", match_date: "2026-06-26", match_time: "01:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g059", grp: "D", home: "Paraguay",        away: "Australia",        competition: "Grupo D · Mundial 2026", match_date: "2026-06-26", match_time: "04:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g060", grp: "D", home: "Turquía",         away: "Estados Unidos",   competition: "Grupo D · Mundial 2026", match_date: "2026-06-26", match_time: "04:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g061", grp: "I", home: "Noruega",         away: "Francia",          competition: "Grupo I · Mundial 2026", match_date: "2026-06-26", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g062", grp: "I", home: "Senegal",         away: "Iraq",             competition: "Grupo I · Mundial 2026", match_date: "2026-06-26", match_time: "21:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g063", grp: "H", home: "Cabo Verde",      away: "Arabia Saudí",     competition: "Grupo H · Mundial 2026", match_date: "2026-06-27", match_time: "02:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g064", grp: "H", home: "Uruguay",         away: "España",           competition: "Grupo H · Mundial 2026", match_date: "2026-06-27", match_time: "02:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g065", grp: "G", home: "Egipto",          away: "Irán",             competition: "Grupo G · Mundial 2026", match_date: "2026-06-27", match_time: "05:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g066", grp: "G", home: "Nueva Zelanda",   away: "Bélgica",          competition: "Grupo G · Mundial 2026", match_date: "2026-06-27", match_time: "05:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g067", grp: "L", home: "Croacia",         away: "Ghana",            competition: "Grupo L · Mundial 2026", match_date: "2026-06-27", match_time: "23:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g068", grp: "L", home: "Panamá",          away: "Inglaterra",       competition: "Grupo L · Mundial 2026", match_date: "2026-06-27", match_time: "23:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g069", grp: "K", home: "Portugal",        away: "Colombia",         competition: "Grupo K · Mundial 2026", match_date: "2026-06-28", match_time: "01:30", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g070", grp: "K", home: "Uzbekistán",      away: "RD Congo",         competition: "Grupo K · Mundial 2026", match_date: "2026-06-28", match_time: "01:30", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g071", grp: "J", home: "Austria",         away: "Argelia",          competition: "Grupo J · Mundial 2026", match_date: "2026-06-28", match_time: "04:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g072", grp: "J", home: "Jordania",        away: "Argentina",        competition: "Grupo J · Mundial 2026", match_date: "2026-06-28", match_time: "04:00", status: "open", result_home: null, result_away: null },
+];
 // ============================================================
 // ⚙️ GRUPOS — datos oficiales tras playoffs marzo 2026
 // ============================================================
@@ -150,7 +132,7 @@ function generateGroupMatches() {
   return matches;
 }
 
-const ALL_MATCHES = generateGroupMatches();
+
 
 function getTeam(name) {
   return Object.values(GROUPS).flat().find(t => t.name === name) || { name, flag: "🏳️" };
