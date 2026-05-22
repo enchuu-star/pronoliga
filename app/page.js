@@ -120,6 +120,24 @@ function calcPoints(pred, rh, ra) {
   return ps === rs ? 1 : 0;
 }
 
+function randomScore(winner) {
+  // winner: "H" (local), "A" (visitante), "D" (empate)
+  const r = (max) => Math.floor(Math.random() * (max + 1)); // 0..max
+
+  if (winner === "D") {
+    const g = r(3); // 0..3 iguales
+    return { home: g, away: g };
+  }
+
+  // Para victoria: el ganador mete entre 1 y 3, el perdedor entre 0 y (ganador-1)
+  const win = 1 + r(2);        // 1..3
+  const lose = Math.floor(Math.random() * win); // 0..win-1
+
+  return winner === "H"
+    ? { home: win, away: lose }
+    : { home: lose, away: win };
+}
+
 function calcPersonalStandings(group, matches, predMap) {
   const teams = GROUPS[group].map(t => ({ ...t, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0, pts: 0 }));
   const map = {};
@@ -929,8 +947,29 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
     if (newPh !== "" && newPa !== "") timerRef.current = setTimeout(() => save(newPh, newPa), 800);
   };
 
+  // ⚡ Rellenar resultado aleatorio según ganador elegido
+  const handleRandom = (winner) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const { home, away } = randomScore(winner);
+    setPh(String(home));
+    setPa(String(away));
+    save(home, away);
+  };
+
   const statusColor = status === "saved" ? GREEN : status === "saving" ? "#a8d4f0" : status === "error" ? "#cc2222" : "#7ab8e0";
   const statusText = status === "saved" ? "✓" : status === "saving" ? "···" : status === "error" ? "✗" : "";
+
+  const randomBtnSt = {
+    padding: "5px 8px",
+    border: `1px solid ${BORDER}`,
+    borderRadius: "6px",
+    background: "rgba(255,255,255,0.05)",
+    color: "#a8d4f0",
+    cursor: "pointer",
+    fontSize: "10px",
+    fontFamily: "monospace",
+    whiteSpace: "nowrap",
+  };
 
   return (
     <>
@@ -961,39 +1000,56 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
           </div>
         </div>
         {user.role !== "admin" && (
-          <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-            {isOpen ? (
-              <>
-                <span style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace" }}>pronóst.:</span>
-                <input value={ph} onChange={e => handleChange("h", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
-                <span style={{ color: "#b8d4ee", fontSize: "16px" }}>-</span>
-                <input value={pa} onChange={e => handleChange("a", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
-                <span style={{ fontSize: "13px", fontFamily: "monospace", color: statusColor, minWidth: "20px" }}>{statusText}</span>
-              </>
-            ) : userPred ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "monospace" }}>{userPred.predicted_home}-{userPred.predicted_away}</span>
-                {predPoints !== null && (
-                  <span style={{
-                    padding: "3px 10px", borderRadius: "12px", fontSize: "12px",
-                    fontFamily: "monospace", fontWeight: 700,
-                    background: predPoints === 3 ? GREEN_DIM : predPoints === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)",
-                    color: predPoints === 3 ? GREEN : predPoints === 1 ? "#b8860b" : "#cc2222",
-                  }}>
-                    {predPoints === 3 ? "🎯 +3" : predPoints === 1 ? "✓ +1" : "✗ +0"}
-                  </span>
-                )}
+          <>
+            <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+              {isOpen ? (
+                <>
+                  <span style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace" }}>pronóst.:</span>
+                  <input value={ph} onChange={e => handleChange("h", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
+                  <span style={{ color: "#b8d4ee", fontSize: "16px" }}>-</span>
+                  <input value={pa} onChange={e => handleChange("a", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
+                  <span style={{ fontSize: "13px", fontFamily: "monospace", color: statusColor, minWidth: "20px" }}>{statusText}</span>
+                </>
+              ) : userPred ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "monospace" }}>{userPred.predicted_home}-{userPred.predicted_away}</span>
+                  {predPoints !== null && (
+                    <span style={{
+                      padding: "3px 10px", borderRadius: "12px", fontSize: "12px",
+                      fontFamily: "monospace", fontWeight: 700,
+                      background: predPoints === 3 ? GREEN_DIM : predPoints === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)",
+                      color: predPoints === 3 ? GREEN : predPoints === 1 ? "#b8860b" : "#cc2222",
+                    }}>
+                      {predPoints === 3 ? "🎯 +3" : predPoints === 1 ? "✓ +1" : "✗ +0"}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace" }}>cerrado · sin pronóstico</span>
+              )}
+            </div>
+
+            {/* 🎲 Botones de relleno aleatorio por ganador */}
+            {isOpen && (
+              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace" }}>🎲 azar:</span>
+                <button onClick={() => handleRandom("H")} style={randomBtnSt} title={`Gana ${match.home}`}>
+                  🏠 {match.home}
+                </button>
+                <button onClick={() => handleRandom("D")} style={randomBtnSt} title="Empate">
+                  🤝 Empate
+                </button>
+                <button onClick={() => handleRandom("A")} style={randomBtnSt} title={`Gana ${match.away}`}>
+                  {match.away} ✈️
+                </button>
               </div>
-            ) : (
-              <span style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace" }}>cerrado · sin pronóstico</span>
             )}
-          </div>
+          </>
         )}
       </div>
     </>
   );
 }
-
 // ============================================================
 // VISTA GRUPOS
 // ============================================================
