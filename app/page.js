@@ -1423,8 +1423,8 @@ function CommunityView({ matches, user }) {
         </div>
       )}
       {viewMode === "day"
-        ? matchesByDay(currentDay).length === 0 ? <p style={{ color: "#c0d8f0", fontFamily: "monospace" }}>No hay partidos cerrados este día</p> : matchesByDay(currentDay).map(m => renderMatchPreds(m))
-        : closedMatches.length === 0 ? <p style={{ color: "#c0d8f0", fontFamily: "monospace" }}>Aún no hay partidos cerrados</p> : days.map(day => { const dm = matchesByDay(day); if (!dm.length) return null; return <div key={day} style={{ marginBottom: "20px" }}><p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>📅 {formatDate(day)}</p>{dm.map(m => renderMatchPreds(m))}</div>; })
+        ? matchesByDay(currentDay).length === 0 ? <p style={{ color: "#c0d8f0", fontFamily: "monospace" }}>Se mostrarán los pronosticos de todos los participantes cuando empiece el mundial</p> : matchesByDay(currentDay).map(m => renderMatchPreds(m))
+        : closedMatches.length === 0 ? <p style={{ color: "#c0d8f0", fontFamily: "monospace" }}>Se mostrarán los pronosticos de todos los participantes cuando empiece el mundial</p> : days.map(day => { const dm = matchesByDay(day); if (!dm.length) return null; return <div key={day} style={{ marginBottom: "20px" }}><p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "3px", marginBottom: "10px" }}>📅 {formatDate(day)}</p>{dm.map(m => renderMatchPreds(m))}</div>; })
       }
     </div>
   );
