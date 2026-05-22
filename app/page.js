@@ -188,6 +188,72 @@ function calcRealStandings(group, matches) {
   return teams.sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
 }
 
+// ============================================================
+// CLASIFICADOS — 1º, 2º de cada grupo + 8 mejores terceros
+// ============================================================
+function calcThirdPlaceTable(standingsByGroup) {
+  // standingsByGroup: { A: [...ordenado], B: [...], ... }
+  const thirds = Object.entries(standingsByGroup)
+    .map(([grp, st]) => {
+      const t = st[2];
+      if (!t) return null;
+      return { ...t, grp };
+    })
+    .filter(Boolean)
+    .filter(t => t.pj > 0); // solo grupos con partidos jugados/pronosticados
+
+  thirds.sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
+  return thirds.map((t, i) => ({ ...t, qualifies: i < 8, rank: i + 1 }));
+}
+
+// Devuelve la lista completa de clasificados de un conjunto de standings:
+// { firsts: [...], seconds: [...], thirds: [...12 con qualifies] }
+function calcAllQualifiers(standingsByGroup) {
+  const firsts = [], seconds = [];
+  Object.entries(standingsByGroup).forEach(([grp, st]) => {
+    if (st[0] && st[0].pj > 0) firsts.push({ ...st[0], grp });
+    if (st[1] && st[1].pj > 0) seconds.push({ ...st[1], grp });
+  });
+  const thirds = calcThirdPlaceTable(standingsByGroup);
+  return { firsts, seconds, thirds };
+}
+
+// +2 por cada equipo que el usuario sitúa como clasificado (1º, 2º o
+// tercero entre los 8 mejores) y que realmente se clasifica.
+// Solo puntúa cuando TODOS los partidos de la fase de grupos están definidos.
+function calcQualifierPoints(matches, predMap) {
+  // Partidos de fase de grupos (los que tienen grupo asignado)
+  const groupMatches = matches.filter(m => m.grp);
+
+  // Si no están todos jugados, todavía no se puntúa
+  const allPlayed =
+    groupMatches.length > 0 &&
+    groupMatches.every(m => m.result_home !== null && m.result_away !== null);
+  if (!allPlayed) return 0;
+
+  // Standings reales (ya definitivos)
+  const realByGroup = {};
+  Object.keys(GROUPS).forEach(g => { realByGroup[g] = calcRealStandings(g, matches); });
+  const real = calcAllQualifiers(realByGroup);
+  const realQualified = new Set();
+  real.firsts.forEach(t => realQualified.add(t.name));
+  real.seconds.forEach(t => realQualified.add(t.name));
+  real.thirds.filter(t => t.qualifies).forEach(t => realQualified.add(t.name));
+
+  // Standings del usuario
+  const userByGroup = {};
+  Object.keys(GROUPS).forEach(g => { userByGroup[g] = calcPersonalStandings(g, matches, predMap); });
+  const user = calcAllQualifiers(userByGroup);
+  const userQualified = [];
+  user.firsts.forEach(t => userQualified.push(t.name));
+  user.seconds.forEach(t => userQualified.push(t.name));
+  user.thirds.filter(t => t.qualifies).forEach(t => userQualified.push(t.name));
+
+  let pts = 0;
+  userQualified.forEach(name => { if (realQualified.has(name)) pts += 2; });
+  return pts;
+}
+
 function formatDate(d) {
   if (!d) return "";
   const [, m, day] = d.split("-");
@@ -410,6 +476,72 @@ function StandingTable({ standings }) {
         </div>
       ))}
       <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", margin: "5px 0 0" }}>🟢 Los 2 primeros pasan a octavos</p>
+    </div>
+  );
+}
+// ============================================================
+// TABLA DE CLASIFICADOS (1º, 2º y mejores terceros)
+// ============================================================
+function QualifiersTable({ standingsByGroup }) {
+  const { firsts, seconds, thirds } = calcAllQualifiers(standingsByGroup);
+  const anyData = firsts.length > 0 || seconds.length > 0 || thirds.length > 0;
+
+  if (!anyData) {
+    return (
+      <p style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace" }}>
+        Introduce pronósticos en los grupos para ver los clasificados
+      </p>
+    );
+  }
+
+  const teamRow = (t, badge, badgeColor) => (
+    <div key={`${t.grp}-${t.name}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", marginBottom: "3px", background: GREEN_DIM, border: "1px solid rgba(79,195,247,0.18)", borderLeft: `3px solid ${GREEN}` }}>
+      <span style={{ fontSize: "9px", color: badgeColor, fontFamily: "monospace", minWidth: "32px" }}>{badge}</span>
+      <span style={{ fontSize: "16px" }}>{t.flag}</span>
+      <span style={{ flex: 1, fontSize: "11px", color: "#e0eaf8", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        {t.name} <span style={{ color: "#7ab8e0" }}>({t.grp})</span>
+      </span>
+      <span style={{ fontSize: "14px", fontWeight: 700, color: GREEN, fontFamily: "'Bebas Neue', monospace" }}>{t.pts}</span>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Primeros */}
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>
+        🥇 PRIMEROS DE GRUPO
+      </p>
+      {firsts.sort((a, b) => a.grp.localeCompare(b.grp)).map(t => teamRow(t, `1º · ${t.grp}`, GREEN))}
+
+      {/* Segundos */}
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", margin: "16px 0 8px" }}>
+        🥈 SEGUNDOS DE GRUPO
+      </p>
+      {seconds.sort((a, b) => a.grp.localeCompare(b.grp)).map(t => teamRow(t, `2º · ${t.grp}`, "#7ab8e0"))}
+
+      {/* Mejores terceros */}
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", margin: "16px 0 8px" }}>
+        🥉 MEJORES TERCEROS (TABLA GENERAL)
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px", gap: "1px", padding: "3px 8px 4px" }}>
+        {["#", "EQUIPO (GR)", "PJ", "DG", "GF", "PTS"].map(c => (
+          <span key={c} style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px", textAlign: c.startsWith("EQUIPO") ? "left" : "center" }}>{c}</span>
+        ))}
+      </div>
+      {thirds.map(t => (
+        <div key={t.name} style={{ display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px", gap: "1px", padding: "8px", borderRadius: "7px", marginBottom: "3px", background: t.qualifies ? GREEN_DIM : CARD, border: t.qualifies ? "1px solid rgba(79,195,247,0.18)" : `1px solid ${BORDER}`, borderLeft: t.qualifies ? `3px solid ${GREEN}` : "3px solid transparent" }}>
+          <span style={{ fontSize: "11px", color: t.qualifies ? GREEN : "#7ab8e0", fontFamily: "'Bebas Neue', monospace", textAlign: "center" }}>{t.rank}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+            <span style={{ fontSize: "15px" }}>{t.flag}</span>
+            <span style={{ fontSize: "11px", color: t.qualifies ? "#e0eaf8" : "#a8d4f0", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name} <span style={{ color: "#7ab8e0" }}>({t.grp})</span></span>
+          </span>
+          {[t.pj, t.dg, t.gf].map((v, vi) => <span key={vi} style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "monospace", textAlign: "center" }}>{v}</span>)}
+          <span style={{ fontSize: "14px", fontWeight: 700, color: GREEN, fontFamily: "'Bebas Neue', monospace", textAlign: "center" }}>{t.pts}</span>
+        </div>
+      ))}
+      <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", margin: "8px 0 0" }}>
+        🟢 Pasan a dieciseisavos: 2 primeros de cada grupo + 8 mejores terceros · +2 pts por clasificado acertado
+      </p>
     </div>
   );
 }
@@ -1097,6 +1229,7 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
       <div style={{ display: "flex", marginBottom: "16px", background: "rgba(0,0,0,0.3)", borderRadius: "10px", padding: "3px" }}>
         {[
           { id: "groups", label: "⚽ Grupos" },
+          { id: "qualified", label: "✅ Clasificados" },
           { id: "special", label: "🏅 Especiales" },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
@@ -1113,6 +1246,25 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
       {tab === "special" && (
         <SpecialPredictions userId={user.id} locked={allClosed} />
       )}
+
+      {/* TAB CLASIFICADOS */}
+        {tab === "qualified" && (() => {
+          const standingsByGroup = {};
+          Object.keys(GROUPS).forEach(gr => {
+            standingsByGroup[gr] = calcPersonalStandings(gr, matches, predMap);
+          });
+          return (
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px" }}>
+              <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "6px" }}>
+                TUS CLASIFICADOS
+              </p>
+              <p style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "monospace", marginBottom: "14px", lineHeight: 1.5 }}>
+                Según tus pronósticos de la fase de grupos, estos son los equipos que clasificarías a dieciseisavos.
+              </p>
+              <QualifiersTable standingsByGroup={standingsByGroup} />
+            </div>
+          );
+        })()}
 
       {/* TAB GRUPOS */}
       {tab === "groups" && (
@@ -1606,7 +1758,7 @@ function ProfileView({ user, matches }) {
 // ============================================================
 // RANKING
 // ============================================================
-function RankingView() {
+function RankingView({ matches }) {
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -1620,8 +1772,10 @@ function RankingView() {
     const { data: specialPreds } = await supabase.from("special_predictions").select("*");
     const r = (profiles || []).map(p => {
       const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
-      const myPicks = (qpicks || []).filter(x => x.user_id === p.id);
-      const qualPts = myPicks.reduce((s, pick) => s + (pick.points || 0), 0);
+      // Clasificados (1º, 2º y mejores terceros) automáticos desde sus pronósticos
+      const predMap = {};
+      (preds || []).filter(x => x.user_id === p.id).forEach(x => { predMap[x.match_id] = x; });
+      const qualPts = calcQualifierPoints(matches, predMap);
       const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);
       const specialPts = mySpecial
         ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0)
@@ -4672,7 +4826,7 @@ export default function Home() {
             {view === "results" && <ResultsView matches={matches} />}
             {view === "community" && <CommunityView matches={matches} user={user} />}
             {view === "profile" && <ProfileView user={user} matches={matches} />}
-            {view === "ranking" && <RankingView />}
+            {view === "ranking" && <RankingView matches={matches} />}
             {view === "games" && <GamesView user={user} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
