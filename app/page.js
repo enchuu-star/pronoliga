@@ -114,10 +114,22 @@ function getTeam(name) {
 }
 
 function calcPoints(pred, rh, ra) {
-  if (pred.predicted_home === rh && pred.predicted_away === ra) return 3;
+  // 5 puntos → marcador exacto
+  if (pred.predicted_home === rh && pred.predicted_away === ra) return 5;
+
   const ps = pred.predicted_home > pred.predicted_away ? "H" : pred.predicted_home < pred.predicted_away ? "A" : "D";
   const rs = rh > ra ? "H" : rh < ra ? "A" : "D";
-  return ps === rs ? 1 : 0;
+
+  // Si falla el signo (1X2) → 0 puntos
+  if (ps !== rs) return 0;
+
+  // 3 puntos → acierta ganador + diferencia de goles
+  const predDiff = pred.predicted_home - pred.predicted_away;
+  const realDiff = rh - ra;
+  if (predDiff === realDiff) return 3;
+
+  // 1 punto → solo acierta el resultado (1X2)
+  return 1;
 }
 
 function randomScore(winner) {
@@ -1017,10 +1029,10 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
                     <span style={{
                       padding: "3px 10px", borderRadius: "12px", fontSize: "12px",
                       fontFamily: "monospace", fontWeight: 700,
-                      background: predPoints === 3 ? GREEN_DIM : predPoints === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)",
-                      color: predPoints === 3 ? GREEN : predPoints === 1 ? "#b8860b" : "#cc2222",
+                      background: predPoints === 5 ? GREEN_DIM : predPoints === 3 ? "rgba(79,195,247,0.08)" : predPoints === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)",
+                      color: predPoints === 5 ? GREEN : predPoints === 3 ? "#4fc3f7" : predPoints === 1 ? "#b8860b" : "#cc2222",
                     }}>
-                      {predPoints === 3 ? "🎯 +3" : predPoints === 1 ? "✓ +1" : "✗ +0"}
+                      {predPoints === 5 ? "🎯 +5" : predPoints === 3 ? "📏 +3" : predPoints === 1 ? "✓ +1" : "✗ +0"}
                     </span>
                   )}
                 </div>
@@ -1396,7 +1408,7 @@ function CommunityView({ matches, user }) {
             <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
               <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "monospace", flex: 1 }}>{getName(pred.user_id)}</span>
               <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>{pred.predicted_home}-{pred.predicted_away}</span>
-              {pred.points !== null && pred.points !== undefined && <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "monospace", fontWeight: 700, background: pred.points === 3 ? GREEN_DIM : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 3 ? GREEN : pred.points === 1 ? "#b8860b" : "#cc2222" }}>{pred.points === 3 ? "🎯 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}</span>}
+              {pred.points !== null && pred.points !== undefined && <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "monospace", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#b8860b" : "#cc2222" }}>{pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}</span>}
             </div>
           ))}
 
@@ -1455,7 +1467,8 @@ function ProfileView({ user, matches }) {
 
   const evaluated = myPreds.filter(p => p.points !== null);
   const total = evaluated.reduce((s, p) => s + p.points, 0);
-  const exactos = evaluated.filter(p => p.points === 3).length;
+  const exactos = evaluated.filter(p => p.points === 5).length;
+  const difGoles = evaluated.filter(p => p.points === 3).length;
   const parciales = evaluated.filter(p => p.points === 1).length;
   const fallos = evaluated.filter(p => p.points === 0).length;
   const pctExactos = evaluated.length ? Math.round((exactos / evaluated.length) * 100) : 0;
@@ -1511,11 +1524,12 @@ function ProfileView({ user, matches }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
             {statCard("PUNTOS", total)}
             {statCard("EXACTOS 🎯", exactos, `${pctExactos}% de éxito`)}
-            {statCard("PARCIALES", parciales, null, "#b8860b")}
+            {statCard("DIFERENCIA 📏", difGoles, null, "#4fc3f7")}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+            {statCard("SIGNO ✓", parciales, null, "#b8860b")}
             {statCard("FALLOS", fallos, null, "#cc2222")}
-            {bestGroup ? statCard("MEJOR GRUPO", `Grupo ${bestGroup[0]}`, `${bestGroup[1].pts} pts`) : statCard("MEJOR GRUPO", "-")}
+            {bestGroup ? statCard("MEJOR GRUPO", `Grupo ${bestGroup[0]}`, `${bestGroup[1].pts}`) : statCard("MEJOR GRUPO", "-")}
           </div>
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "16px" }}>
             <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "12px" }}>DESGLOSE POR GRUPO</p>
@@ -1526,7 +1540,7 @@ function ProfileView({ user, matches }) {
                 <div key={grp} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
                   <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: GREEN, minWidth: "20px" }}>{grp}</span>
                   <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: "3px", height: "5px", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${Math.min(100, (g.pts / (g.count * 3)) * 100)}%`, background: GREEN, borderRadius: "3px" }} />
+                    <div style={{ height: "100%", width: `${Math.min(100, (g.pts / (g.count * 5)) * 100)}%`, background: GREEN, borderRadius: "3px" }} />
                   </div>
                   <span style={{ fontFamily: "monospace", fontSize: "11px", color: "#c0d8f0", minWidth: "40px", textAlign: "right" }}>{g.pts} pts</span>
                 </div>
@@ -1571,10 +1585,10 @@ function ProfileView({ user, matches }) {
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <div style={{ textAlign: "left" }}>
                           <span style={{ fontFamily: "monospace", fontSize: "13px", color: "#e0eefa" }}>{mine?.predicted_home}-{mine?.predicted_away}</span>
-                          {mine?.points !== null && <span style={{ marginLeft: "6px", fontSize: "11px", color: mine?.points === 3 ? GREEN : mine?.points === 1 ? "#b8860b" : "#cc2222" }}>{mine?.points === 3 ? "🎯+3" : mine?.points === 1 ? "✓+1" : "✗+0"}</span>}
+                          {mine?.points !== null && <span style={{ marginLeft: "6px", fontSize: "11px", color: mine?.points === 5 ? GREEN : mine?.points === 3 ? "#4fc3f7" : mine?.points === 1 ? "#b8860b" : "#cc2222" }}>{mine?.points === 5 ? "🎯+5" : mine?.points === 3 ? "📏+3" : mine?.points === 1 ? "✓+1" : "✗+0"}</span>}
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          {theirs?.points !== null && <span style={{ marginRight: "6px", fontSize: "11px", color: theirs?.points === 3 ? GREEN : theirs?.points === 1 ? "#b8860b" : "#cc2222" }}>{theirs?.points === 3 ? "🎯+3" : theirs?.points === 1 ? "✓+1" : "✗+0"}</span>}
+                          {theirs?.points !== null && <span style={{ marginRight: "6px", fontSize: "11px", color: theirs?.points === 5 ? GREEN : theirs?.points === 3 ? "#4fc3f7" : theirs?.points === 1 ? "#b8860b" : "#cc2222" }}>{theirs?.points === 5 ? "🎯+5" : theirs?.points === 3 ? "📏+3" : theirs?.points === 1 ? "✓+1" : "✗+0"}</span>}
                           <span style={{ fontFamily: "monospace", fontSize: "13px", color: "#e0eefa" }}>{theirs?.predicted_home}-{theirs?.predicted_away}</span>
                         </div>
                       </div>
@@ -1615,7 +1629,7 @@ function RankingView() {
       return {
         ...p,
         total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts,
-        exactos: myPreds.filter(x => x.points === 3).length,
+        exactos: myPreds.filter(x => x.points === 5).length,
         count: myPreds.length,
         qualPts, specialPts,
       };
@@ -1699,7 +1713,7 @@ function RankingView() {
 
       <div style={{ marginTop: "16px", padding: "12px 14px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
         <p style={{ color: "#c0d8f0", fontFamily: "monospace", fontSize: "10px", lineHeight: 2 }}>
-          <span style={{ color: GREEN }}>+3</span> exacto · <span style={{ color: "#b8860b" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
+          <span style={{ color: GREEN }}>+5</span> exacto · <span style={{ color: "#4fc3f7" }}>+3</span> ganador + diferencia · <span style={{ color: "#b8860b" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
         </p>
       </div>
     </div>
@@ -2268,7 +2282,8 @@ function ExportView({ matches, onBack }) {
         return {
           ...p,
           total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts,
-          exactos: myPreds.filter(x => x.points === 3).length,
+          exactos: myPreds.filter(x => x.points === 5).length,
+          difGoles: myPreds.filter(x => x.points === 3).length,
           parciales: myPreds.filter(x => x.points === 1).length,
           fallos: myPreds.filter(x => x.points === 0).length,
           count: myPreds.length,
@@ -2526,8 +2541,8 @@ function ExportView({ matches, onBack }) {
                       {pred ? (
                         <span style={{
                           fontSize: "10px", fontFamily: "monospace", fontWeight: 700,
-                          color: pts === 3 ? "#007a3a" : pts === 1 ? "#b8860b" : "#cc2222",
-                          background: pts === 3 ? "rgba(0,122,58,0.1)" : pts === 1 ? "rgba(184,134,11,0.1)" : "rgba(204,34,34,0.08)",
+                          color: pts === 5 ? "#007a3a" : pts === 3 ? "#0077cc" : pts === 1 ? "#b8860b" : "#cc2222",
+                          background: pts === 5 ? "rgba(0,122,58,0.1)" : pts === 3 ? "rgba(0,119,204,0.1)" : pts === 1 ? "rgba(184,134,11,0.1)" : "rgba(204,34,34,0.08)",
                           padding: "1px 4px", borderRadius: "4px",
                         }}>
                           {pred.predicted_home}-{pred.predicted_away}
