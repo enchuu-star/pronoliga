@@ -371,7 +371,7 @@ function CountdownBanner() {
   if (started) return <div style={{ background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.25)", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", textAlign: "center" }}><span style={{ color: GREEN, fontFamily: "monospace", fontSize: "13px", letterSpacing: "2px" }}>⚽ ¡EL MUNDIAL HA COMENZADO!</span></div>;
   return (
     <div style={{ padding: "16px" }}>
-      <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "9px", letterSpacing: "3px", textAlign: "center", marginBottom: "12px" }}>⏱ FALTAN · 11 JUN 2026 · 20:00H</p>
+      <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "9px", letterSpacing: "3px", textAlign: "center", marginBottom: "12px" }}>⏱ FALTAN · 11 JUN 2026 · 21:00H</p>
       <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
         {[{ v: d, l: "DÍAS" }, { v: h, l: "HORAS" }, { v: m, l: "MIN" }, { v: s, l: "SEG" }].map(({ v, l }) => (
           <div key={l} style={{ textAlign: "center", flex: 1, maxWidth: "70px" }}>
