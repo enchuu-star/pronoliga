@@ -2312,8 +2312,8 @@ function SpecialPredictionsTable({ currentUserId }) {
             <div key={i} style={{
               display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px",
               padding: "10px", borderRadius: "8px",
-              background: u.isMe ? GREEN_DIM : "rgba(255,255,255,0.5)",
-              border: u.isMe ? `1px solid rgba(26,58,107,0.3)` : `1px solid ${BORDER}`,
+              background: u.isMe ? GREEN_DIM : CARD,
+              border: u.isMe ? `1px solid rgba(79,195,247,0.3)` : `1px solid ${BORDER}`,
               borderLeft: u.isMe ? `3px solid ${GREEN}` : "3px solid transparent",
             }}>
               <span style={{
