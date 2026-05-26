@@ -2584,8 +2584,8 @@ function ExportView({ matches, onBack }) {
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: "24px", paddingBottom: "18px", borderBottom: "2px solid rgba(26,58,107,0.12)" }}>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "40px", color: GREEN, letterSpacing: "4px", lineHeight: 1 }}>PORRA VALLAU</div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#e0eefa", letterSpacing: "6px", marginTop: "2px" }}>MUNDIAL 2026</div>
-            <div style={{ fontSize: "10px", color: "#c0d8f0", marginTop: "6px", letterSpacing: "2px" }}>🏆 RANKING GENERAL · {today.toUpperCase()}</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "##3a5a7a", letterSpacing: "6px", marginTop: "2px" }}>MUNDIAL 2026</div>
+            <div style={{ fontSize: "10px", color: "#5a6a7a", marginTop: "6px", letterSpacing: "2px" }}>🏆 RANKING GENERAL · {today.toUpperCase()}</div>
           </div>
 
           {/* Podio top 3 */}
@@ -2602,8 +2602,8 @@ function ExportView({ matches, onBack }) {
                     boxShadow: i === 0 ? "0 4px 16px rgba(26,58,107,0.2)" : "0 2px 8px rgba(26,58,107,0.08)",
                   }}>
                     <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${fs}px`, color: i === 0 ? "white" : GREEN, lineHeight: 1 }}>{ranking[i].total}</div>
-                    <div style={{ fontSize: "10px", color: i === 0 ? "rgba(255,255,255,0.85)" : "#e0eefa", fontWeight: 700, marginTop: "3px" }}>{ranking[i].name?.split(" ")[0]}</div>
-                    <div style={{ fontSize: "8px", color: i === 0 ? "rgba(255,255,255,0.6)" : "#c0d8f0", marginTop: "1px" }}>PTS</div>
+                    <div style={{ fontSize: "10px", color: i === 0 ? "rgba(255,255,255,0.95)" : "#2a3a4a", fontWeight: 700, marginTop: "3px" }}>{ranking[i].name?.split(" ")[0]}</div>
+                    <div style={{ fontSize: "8px", color: i === 0 ? "rgba(255,255,255,0.7)" : "#6a7a8a", marginTop: "1px" }}>PTS</div>
                   </div>
                 </div>
               ))}
@@ -2612,35 +2612,36 @@ function ExportView({ matches, onBack }) {
 
           {/* Tabla completa */}
           <div style={{ background: "white", borderRadius: "12px", overflow: "hidden", boxShadow: "0 2px 12px rgba(26,58,107,0.08)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 48px 48px 48px 56px", padding: "8px 14px", background: GREEN, gap: "4px", alignItems: "center" }}>
-              {["#", "JUGADOR", "🎯", "✓", "✗", "PTS"].map(h => (
+            <div style={{ display: "grid", gridTemplateColumns: "28px 1fr 40px 40px 40px 48px", padding: "8px 12px", background: GREEN, gap: "4px", alignItems: "center" }}>
+              {["#", "JUGADOR", "🎯", "📏", "✓", "✗", "PTS"].map(h => (
                 <span key={h} style={{ fontSize: "9px", color: "rgba(255,255,255,0.95)", fontFamily: "monospace", letterSpacing: "1px", textAlign: h === "JUGADOR" ? "left" : "center" }}>{h}</span>
               ))}
             </div>
             {ranking.map((u, i) => (
               <div key={u.id} style={{
-                display: "grid", gridTemplateColumns: "32px 1fr 48px 48px 48px 56px",
-                padding: "10px 14px", gap: "4px", alignItems: "center",
+                display: "grid", gridTemplateColumns: "28px 1fr 40px 40px 40px 48px",
+                padding: "10px 12px", gap: "4px", alignItems: "center",
                 background: i % 2 === 0 ? "white" : "rgba(26,58,107,0.03)",
                 borderBottom: "1px solid rgba(26,58,107,0.06)",
               }}>
                 <span style={{ fontSize: "14px", textAlign: "center", color: "#1a2a3a" }}>{medals[i] || `#${i + 1}`}</span>
-                <div>
-                  <div style={{ fontSize: "12px", color: "#1a2a3a", fontWeight: i < 3 ? 700 : 400 }}>{u.name}</div>
-                  <div style={{ fontSize: "8px", color: "#6a7a8a" }}>{u.count} eval.</div>
+                <div style={{ overflow: "hidden" }}>
+                  <div style={{ fontSize: "12px", color: "#1a2a3a", fontWeight: i < 3 ? 700 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name}</div>
+                  <div style={{ fontSize: "8px", color: "#6a7a8a", whiteSpace: "nowrap" }}>{u.count} eval.</div>
                 </div>
                 <span style={{ fontSize: "11px", color: "#007a3a", textAlign: "center", fontWeight: 700 }}>{u.exactos}</span>
+                <span style={{ fontSize: "11px", color: "#0077cc", textAlign: "center" }}>{u.difGoles}</span>
                 <span style={{ fontSize: "11px", color: "#b8860b", textAlign: "center" }}>{u.parciales}</span>
                 <span style={{ fontSize: "11px", color: "#cc2222", textAlign: "center" }}>{u.fallos}</span>
-                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: i === 0 ? GREEN : "#1a2a3a", textAlign: "center" }}>{u.total}</span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: i === 0 ? GREEN : "#1a2a3a", textAlign: "center", overflow: "visible" }}>{u.total}</span>
               </div>
             ))}
           </div>
 
           {/* Footer */}
           <div style={{ textAlign: "center", marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(26,58,107,0.1)" }}>
-            <span style={{ fontSize: "9px", color: "#c0d8f0", letterSpacing: "2px" }}>
-              🎯 EXACTO +3 · ✓ SIGNO +1 · ✗ FALLO +0
+            <span style={{ fontSize: "9px", color: "#5a6a7a", letterSpacing: "2px" }}>
+              🎯 EXACTO +5 · 📏 DIF +3 · ✓ SIGNO +1 · ✗ FALLO +0
             </span>
           </div>
         </div>
