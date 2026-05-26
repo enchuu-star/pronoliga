@@ -2739,6 +2739,72 @@ function ExportView({ matches, onBack }) {
 }
 
 // ============================================================
+// ENCUESTA (TEMPORAL — quitar mañana)
+// ============================================================
+const ENCUESTA_PREGUNTA = "¿GANARÁ HOY IBI-K LA PACHANGA?";
+
+function EncuestaPopup({ user, onVoted }) {
+  const [voting, setVoting] = useState(false);
+
+  const votar = async (voto) => {
+    if (voting) return;
+    setVoting(true);
+    const { error } = await supabase
+      .from("encuesta_votos")
+      .upsert({ user_id: user.id, voto }, { onConflict: "user_id" });
+    setVoting(false);
+    if (!error) onVoted();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(10,22,40,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.25s ease" }}>
+      <div style={{ width: "100%", maxWidth: "400px", background: "#0f1f33", border: `1px solid ${GREEN}`, borderRadius: "16px", padding: "24px", boxShadow: "0 0 30px rgba(79,195,247,0.2)" }}>
+        <div style={{ fontSize: "32px", textAlign: "center", marginBottom: "12px" }}>📣</div>
+        <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "3px", textAlign: "center", marginBottom: "10px" }}>ENCUESTA RÁPIDA</p>
+        <p style={{ fontSize: "15px", color: "#e0eaf8", fontFamily: "monospace", textAlign: "center", lineHeight: 1.5, marginBottom: "22px" }}>{ENCUESTA_PREGUNTA}</p>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button onClick={() => votar("si")} disabled={voting} style={{ flex: 1, padding: "14px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Bebas Neue', cursive", fontSize: "20px", letterSpacing: "3px", cursor: "pointer" }}>✓ SÍ</button>
+          <button onClick={() => votar("no")} disabled={voting} style={{ flex: 1, padding: "14px", border: `1px solid ${BORDER}`, borderRadius: "10px", background: CARD, color: "#e0eaf8", fontFamily: "'Bebas Neue', cursive", fontSize: "20px", letterSpacing: "3px", cursor: "pointer" }}>✗ NO</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EncuestaResultados() {
+  const [datos, setDatos] = useState(null);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("encuesta_votos").select("voto");
+      const total = data?.length || 0;
+      const si = data?.filter(v => v.voto === "si").length || 0;
+      setDatos({ total, si, no: total - si, pctSi: total ? Math.round((si / total) * 100) : 0, pctNo: total ? Math.round(((total - si) / total) * 100) : 0 });
+    })();
+  }, []);
+
+  if (!datos || datos.total === 0) return null;
+
+  return (
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "3px", marginBottom: "4px" }}>📣 ENCUESTA</p>
+      <p style={{ fontSize: "12px", color: "#e0eaf8", fontFamily: "monospace", marginBottom: "14px", lineHeight: 1.4 }}>{ENCUESTA_PREGUNTA}</p>
+      {[{ l: "SÍ", pct: datos.pctSi, n: datos.si, c: GREEN }, { l: "NO", pct: datos.pctNo, n: datos.no, c: "#7ab8e0" }].map(r => (
+        <div key={r.l} style={{ marginBottom: "10px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+            <span style={{ fontFamily: "monospace", fontSize: "11px", color: "#e0eaf8" }}>{r.l}</span>
+            <span style={{ fontFamily: "monospace", fontSize: "11px", color: r.c }}>{r.pct}% · {r.n} voto{r.n !== 1 ? "s" : ""}</span>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: "4px", height: "8px", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: r.pct + "%", background: r.c, borderRadius: "4px", transition: "width 0.5s ease" }} />
+          </div>
+        </div>
+      ))}
+      <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "8px" }}>{datos.total} votos en total</p>
+    </div>
+  );
+}
+
+// ============================================================
 // PANTALLA DE INICIO
 // ============================================================
 function HomeView({ user, matches, predictions, setView }) {
@@ -2779,7 +2845,8 @@ function HomeView({ user, matches, predictions, setView }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       {/* Cuenta atrás */}
       <CountdownBanner />
-
+      {/* ENCUESTA — quitar mañana */}
+      <EncuestaResultados />
       {/* Grid de accesos */}
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>ACCESO RÁPIDO</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
@@ -4727,6 +4794,7 @@ export default function Home() {
   const [allClosed, setAllClosed] = useState(false);
   const [loadingSession, setLoadingSession] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [yaVoto, setYaVoto] = useState(true); // ENCUESTA — quitar mañana
 
   // PWA — registrar service worker
   useEffect(() => {
@@ -4736,6 +4804,15 @@ export default function Home() {
         .catch(err => console.log("SW error:", err));
     }
   }, []);
+
+  // ENCUESTA — quitar mañana
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("encuesta_votos").select("user_id").eq("user_id", user.id).single();
+      setYaVoto(!!data);
+    })();
+  }, [user]);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -4821,6 +4898,8 @@ export default function Home() {
       {screen === "app" && user && (
         <>
           <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
+          {/* ENCUESTA — quitar mañana */}
+          {!yaVoto && <EncuestaPopup user={user} onVoted={() => setYaVoto(true)} />}
           <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
             {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
             {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
