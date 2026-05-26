@@ -2612,9 +2612,9 @@ function ExportView({ matches, onBack }) {
 
           {/* Tabla completa */}
           <div style={{ background: "white", borderRadius: "12px", overflow: "hidden", boxShadow: "0 2px 12px rgba(26,58,107,0.08)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 48px 48px 48px 56px", padding: "8px 14px", background: GREEN, gap: "4px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 48px 48px 48px 56px", padding: "8px 14px", background: GREEN, gap: "4px", alignItems: "center" }}>
               {["#", "JUGADOR", "🎯", "✓", "✗", "PTS"].map(h => (
-                <span key={h} style={{ fontSize: "9px", color: "rgba(255,255,255,0.85)", fontFamily: "monospace", letterSpacing: "1px", textAlign: h === "JUGADOR" ? "left" : "center" }}>{h}</span>
+                <span key={h} style={{ fontSize: "9px", color: "rgba(255,255,255,0.95)", fontFamily: "monospace", letterSpacing: "1px", textAlign: h === "JUGADOR" ? "left" : "center" }}>{h}</span>
               ))}
             </div>
             {ranking.map((u, i) => (
@@ -2624,15 +2624,15 @@ function ExportView({ matches, onBack }) {
                 background: i % 2 === 0 ? "white" : "rgba(26,58,107,0.03)",
                 borderBottom: "1px solid rgba(26,58,107,0.06)",
               }}>
-                <span style={{ fontSize: "14px", textAlign: "center" }}>{medals[i] || `#${i + 1}`}</span>
+                <span style={{ fontSize: "14px", textAlign: "center", color: "#1a2a3a" }}>{medals[i] || `#${i + 1}`}</span>
                 <div>
-                  <div style={{ fontSize: "12px", color: "#e0eaf8", fontWeight: i < 3 ? 700 : 400 }}>{u.name}</div>
-                  <div style={{ fontSize: "8px", color: "#c0d8f0" }}>{u.count} eval.</div>
+                  <div style={{ fontSize: "12px", color: "#1a2a3a", fontWeight: i < 3 ? 700 : 400 }}>{u.name}</div>
+                  <div style={{ fontSize: "8px", color: "#6a7a8a" }}>{u.count} eval.</div>
                 </div>
                 <span style={{ fontSize: "11px", color: "#007a3a", textAlign: "center", fontWeight: 700 }}>{u.exactos}</span>
                 <span style={{ fontSize: "11px", color: "#b8860b", textAlign: "center" }}>{u.parciales}</span>
                 <span style={{ fontSize: "11px", color: "#cc2222", textAlign: "center" }}>{u.fallos}</span>
-                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: i === 0 ? GREEN : "#e0eaf8", textAlign: "center" }}>{u.total}</span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: i === 0 ? GREEN : "#1a2a3a", textAlign: "center" }}>{u.total}</span>
               </div>
             ))}
           </div>
