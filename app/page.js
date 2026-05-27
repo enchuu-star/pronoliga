@@ -2025,25 +2025,6 @@ function AdminView({ matches, onDataChange }) {
         }
       </div>
 
-      {m.manual_override && (
-        <button
-          onClick={async () => {
-            await supabase.from("matches").update({ manual_override: false }).eq("id", m.id);
-            onDataChange();
-          }}
-          style={{ padding: "4px 10px", border: "1px solid rgba(0,176,255,0.3)", borderRadius: "5px", background: "rgba(0,176,255,0.06)", color: "#005599", cursor: "pointer", fontSize: "9px", fontFamily: "monospace" }}
-          title="Volver a permitir actualización automática">
-          🔓 auto
-        </button>
-      )}
-      {m.result_source && (
-        <span style={{ fontSize: "8px", fontFamily: "monospace", padding: "2px 6px", borderRadius: "6px",
-          background: m.result_source === "manual" ? "rgba(245,158,11,0.1)" : "rgba(0,176,255,0.08)",
-          color: m.result_source === "manual" ? GREEN : "#4fc3f7" }}>
-          {m.result_source === "manual" ? "✏️ manual" : "🤖 auto"}
-        </span>
-      )}
-
       {/* SINCRONIZAR PARTIDOS */}
       <div style={{ background: CARD, border: "1px solid rgba(0,176,255,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
         <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace", marginBottom: "10px" }}>
@@ -2085,6 +2066,24 @@ function AdminView({ matches, onDataChange }) {
               <span style={{ fontSize: "9px", fontFamily: "monospace", padding: "2px 7px", borderRadius: "8px", background: m.status === "open" ? "rgba(0,200,100,0.08)" : "rgba(255,100,50,0.08)", color: m.status === "open" ? "#007a3a" : "#cc4422" }}>{m.status === "open" ? "ABIERTO" : "CERRADO"}</span>
               {m.result_home !== null && <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{m.result_home}-{m.result_away}</span>}
               <button onClick={() => toggleStatus(m)} style={{ padding: "4px 10px", border: `1px solid ${BORDER}`, borderRadius: "5px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontSize: "9px", fontFamily: "monospace" }}>{m.status === "open" ? "Cerrar" : "Reabrir"}</button>
+              {m.manual_override && (
+                <button
+                  onClick={async () => {
+                    await supabase.from("matches").update({ manual_override: false }).eq("id", m.id);
+                    onDataChange();
+                  }}
+                  style={{ padding: "4px 10px", border: "1px solid rgba(0,176,255,0.3)", borderRadius: "5px", background: "rgba(0,176,255,0.06)", color: "#005599", cursor: "pointer", fontSize: "9px", fontFamily: "monospace" }}
+                  title="Volver a permitir actualización automática">
+                  🔓 auto
+                </button>
+              )}
+              {m.result_source && (
+                <span style={{ fontSize: "8px", fontFamily: "monospace", padding: "2px 6px", borderRadius: "6px",
+                  background: m.result_source === "manual" ? "rgba(245,158,11,0.1)" : "rgba(0,176,255,0.08)",
+                  color: m.result_source === "manual" ? GREEN : "#4fc3f7" }}>
+                  {m.result_source === "manual" ? "✏️ manual" : "🤖 auto"}
+                </span>
+              )}
               {sel === m.id
                 ? <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
                   <input value={hr} onChange={e => setHr(e.target.value)} type="number" min="0" style={{ ...smallSt, width: "44px" }} placeholder="0" />
