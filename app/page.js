@@ -1980,7 +1980,14 @@ function AdminView({ matches, onDataChange }) {
   const handleResult = async () => {
     if (hr === "" || ar === "") return;
     const rh = parseInt(hr), ra = parseInt(ar);
-    await supabase.from("matches").update({ result_home: rh, result_away: ra, status: "closed" }).eq("id", sel);
+    await supabase.from("matches").update({
+      result_home: rh,
+      result_away: ra,
+      status: "closed",
+      result_source: "manual",      // ← marca origen
+      manual_override: true,         // ← la Edge Function ya no lo pisará
+      result_updated_at: new Date().toISOString(),
+    }).eq("id", sel);
     const { data: preds } = await supabase.from("predictions").select("*").eq("match_id", sel);
     for (const pred of (preds || [])) await supabase.from("predictions").update({ points: calcPoints(pred, rh, ra) }).eq("id", pred.id);
     setSaved(true); setSel(null); setHr(""); setAr(""); onDataChange();
@@ -2018,6 +2025,25 @@ function AdminView({ matches, onDataChange }) {
         }
       </div>
 
+      {m.manual_override && (
+        <button
+          onClick={async () => {
+            await supabase.from("matches").update({ manual_override: false }).eq("id", m.id);
+            onDataChange();
+          }}
+          style={{ padding: "4px 10px", border: "1px solid rgba(0,176,255,0.3)", borderRadius: "5px", background: "rgba(0,176,255,0.06)", color: "#005599", cursor: "pointer", fontSize: "9px", fontFamily: "monospace" }}
+          title="Volver a permitir actualización automática">
+          🔓 auto
+        </button>
+      )}
+      {m.result_source && (
+        <span style={{ fontSize: "8px", fontFamily: "monospace", padding: "2px 6px", borderRadius: "6px",
+          background: m.result_source === "manual" ? "rgba(245,158,11,0.1)" : "rgba(0,176,255,0.08)",
+          color: m.result_source === "manual" ? GREEN : "#4fc3f7" }}>
+          {m.result_source === "manual" ? "✏️ manual" : "🤖 auto"}
+        </span>
+      )}
+
       {/* SINCRONIZAR PARTIDOS */}
       <div style={{ background: CARD, border: "1px solid rgba(0,176,255,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
         <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace", marginBottom: "10px" }}>
@@ -2040,6 +2066,7 @@ function AdminView({ matches, onDataChange }) {
 
       {/* ADJUDICAR PRONÓSTICOS ESPECIALES */}
       <SpecialAwardsAdmin />
+      <SyncResultsAdmin onDataChange={onDataChange} />
         
       {saved && <div style={{ padding: "10px 14px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.3)", borderRadius: "8px", color: GREEN, fontFamily: "monospace", fontSize: "12px", marginBottom: "14px" }}>✓ Resultado guardado y puntos calculados</div>}
 
@@ -2072,6 +2099,65 @@ function AdminView({ matches, onDataChange }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function SyncResultsAdmin({ onDataChange }) {
+  const [syncing, setSyncing] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  // ⚠️ Pon aquí la URL de tu Edge Function y tu anon key (la anon SÍ
+  // puede ir en el cliente; la service_role NUNCA).
+  const FN_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sync-results`;
+  const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  const syncNow = async () => {
+    setSyncing(true); setMsg("");
+    try {
+      const res = await fetch(FN_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${ANON_KEY}`,
+        },
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setMsg(`✓ ${data.updated} actualizados · ${data.skipped} respetados (manuales)`);
+        onDataChange();
+      } else {
+        setMsg(`✗ Error: ${data.error || "desconocido"}`);
+      }
+    } catch (e) {
+      setMsg(`✗ Error de red: ${String(e)}`);
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setMsg(""), 6000);
+    }
+  };
+
+  return (
+    <div style={{ background: CARD, border: "1px solid rgba(0,200,100,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+      <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "monospace", marginBottom: "10px" }}>
+        🔄 Los resultados se actualizan solos cada pocos minutos. Pulsa aquí para forzar una actualización ahora. Los resultados que hayas editado a mano se respetan y NO se sobrescriben.
+      </p>
+      {msg && (
+        <p style={{ fontSize: "11px", color: msg.startsWith("✓") ? "#007a3a" : "#cc2222", fontFamily: "monospace", marginBottom: "10px" }}>
+          {msg}
+        </p>
+      )}
+      <button onClick={syncNow} disabled={syncing}
+        style={{
+          width: "100%", padding: "12px", borderRadius: "7px",
+          background: "rgba(0,200,100,0.12)", color: "#007a3a",
+          fontFamily: "monospace", fontSize: "12px", fontWeight: 700,
+          cursor: syncing ? "default" : "pointer", letterSpacing: "2px",
+          border: "1px solid rgba(0,200,100,0.3)",
+          animation: syncing ? "pulse 1s infinite" : "none",
+        }}>
+        {syncing ? "⏳ SINCRONIZANDO..." : "🔄 ACTUALIZAR RESULTADOS AHORA"}
+      </button>
     </div>
   );
 }
