@@ -61,7 +61,7 @@ const ALL_MATCHES = [
   { id: "wc26_g045", grp: "K", home: "Portugal",        away: "Uzbekistán",       competition: "Grupo K · Mundial 2026", match_date: "2026-06-23", match_time: "19:00", status: "open", result_home: null, result_away: null },
   { id: "wc26_g046", grp: "L", home: "Inglaterra",      away: "Ghana",            competition: "Grupo L · Mundial 2026", match_date: "2026-06-23", match_time: "22:00", status: "open", result_home: null, result_away: null },
   { id: "wc26_g047", grp: "L", home: "Panamá",          away: "Croacia",          competition: "Grupo L · Mundial 2026", match_date: "2026-06-24", match_time: "01:00", status: "open", result_home: null, result_away: null },
-  { id: "wc26_g048", grp: "K", home: "",        away: "RD Congo",         competition: "Grupo K · Mundial 2026", match_date: "2026-06-24", match_time: "04:00", status: "open", result_home: null, result_away: null },
+  { id: "wc26_g048", grp: "K", home: "Colombia",        away: "RD Congo",         competition: "Grupo K · Mundial 2026", match_date: "2026-06-24", match_time: "04:00", status: "open", result_home: null, result_away: null },
 
   // ── JORNADA 3 ──
   { id: "wc26_g049", grp: "B", home: "Bosnia y Herz.",  away: "Qatar",            competition: "Grupo B · Mundial 2026", match_date: "2026-06-24", match_time: "21:00", status: "open", result_home: null, result_away: null },
