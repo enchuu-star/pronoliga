@@ -218,6 +218,128 @@ function calcAllQualifiers(standingsByGroup) {
   return { firsts, seconds, thirds };
 }
 
+// ============================================================
+// CUADRO DE DIECISEISAVOS (Round of 32) — Mundial 2026
+// ============================================================
+// Los 8 partidos que reciben un tercero, con los grupos elegibles
+// para esa casilla (combinaciones oficiales FIFA).
+const R32_THIRD_SLOTS = [
+  { match: "M74", winner: "E", eligible: ["A", "B", "C", "D", "F"] },
+  { match: "M79", winner: "A", eligible: ["C", "E", "F", "H", "I"] },
+  { match: "M77", winner: "I", eligible: ["C", "D", "F", "G", "H"] },
+  { match: "M80", winner: "L", eligible: ["E", "H", "I", "J", "K"] },
+  { match: "M81", winner: "D", eligible: ["B", "E", "F", "I", "J"] },
+  { match: "M82", winner: "G", eligible: ["A", "E", "H", "I", "J"] },
+  { match: "M85", winner: "B", eligible: ["E", "F", "G", "I", "J"] },
+  { match: "M87", winner: "K", eligible: ["D", "E", "I", "J", "L"] },
+];
+
+// Los 8 partidos restantes: emparejamientos fijos por posición de grupo.
+// (g = ganador / r = segundo)
+const R32_FIXED = [
+  { match: "M73", home: ["g", "C"], away: null }, // se rellena abajo: 1C? No.
+];
+
+// Definición completa de los 16 partidos del R32 según FIFA:
+//   1X = ganador grupo X · 2X = segundo grupo X · 3X = tercero asignado
+const R32_LAYOUT = [
+  { match: "M73", home: "2A", away: "2B" },
+  { match: "M74", home: "1E", away: "3?" }, // tercero
+  { match: "M75", home: "1F", away: "2C" },
+  { match: "M76", home: "1C", away: "2F" },
+  { match: "M77", home: "1I", away: "3?" }, // tercero
+  { match: "M78", home: "2E", away: "2I" },
+  { match: "M79", home: "1A", away: "3?" }, // tercero
+  { match: "M80", home: "1L", away: "3?" }, // tercero
+  { match: "M81", home: "1D", away: "3?" }, // tercero
+  { match: "M82", home: "1G", away: "3?" }, // tercero
+  { match: "M83", home: "2K", away: "2L" },
+  { match: "M84", home: "1H", away: "2J" },
+  { match: "M85", home: "1B", away: "3?" }, // tercero
+  { match: "M86", home: "1J", away: "2H" },
+  { match: "M87", home: "1K", away: "3?" }, // tercero
+  { match: "M88", home: "2D", away: "2G" },
+];
+
+// Asigna los 8 mejores terceros a las 8 casillas, respetando que
+// ningún tercero juegue contra el ganador de su propio grupo.
+// Algoritmo greedy determinista (reproduce la tabla FIFA): se procesan
+// las casillas en orden y se asigna el tercero elegible disponible
+// cuyo grupo tenga MENOS casillas alternativas (más restringido primero).
+function assignThirds(qualifiedThirdGroups) {
+  // qualifiedThirdGroups: array de letras de grupo de los 8 terceros (ordenado)
+  const slots = R32_THIRD_SLOTS.map(s => ({ ...s }));
+  const available = [...qualifiedThirdGroups];
+  const assignment = {}; // match -> grupo
+
+  // Para cada grupo disponible, contar en cuántos slots es elegible
+  const slotsLeft = () => slots.filter(s => !assignment[s.match]);
+
+  while (slotsLeft().length > 0) {
+    const open = slotsLeft();
+    // Elegir el SLOT con menos candidatos disponibles (más restringido)
+    open.forEach(s => {
+      s._cands = available.filter(g => s.eligible.includes(g) && g !== s.winner);
+    });
+    open.sort((a, b) => a._cands.length - b._cands.length);
+    const slot = open[0];
+    if (!slot._cands || slot._cands.length === 0) {
+      // Sin candidato válido: dejar vacío (caso degenerado)
+      assignment[slot.match] = null;
+      continue;
+    }
+    // De los candidatos, elegir el grupo que aparezca en menos slots restantes
+    const candFreq = slot._cands.map(g => ({
+      g,
+      freq: open.filter(s2 => s2 !== slot && s2._cands?.includes(g)).length,
+    }));
+    candFreq.sort((a, b) => a.freq - b.freq || a.g.localeCompare(b.g));
+    const chosen = candFreq[0].g;
+    assignment[slot.match] = chosen;
+    available.splice(available.indexOf(chosen), 1);
+  }
+  return assignment; // { M74: "A", M79: "C", ... }
+}
+
+// Construye los 16 partidos con equipos reales a partir de los standings.
+// standingsByGroup: { A: [...ordenado], ... }
+// Devuelve [{ match, home: {name,flag,label}, away: {...} }, ...]
+function buildRoundOf32(standingsByGroup) {
+  const thirds = calcThirdPlaceTable(standingsByGroup);
+  const qualifiedThirds = thirds.filter(t => t.qualifies);
+  const thirdGroups = qualifiedThirds.map(t => t.grp).sort();
+  const thirdByGroup = {};
+  qualifiedThirds.forEach(t => { thirdByGroup[t.grp] = t; });
+
+  const assignment = assignThirds(thirdGroups);
+
+  // Helper: obtener equipo según etiqueta (1X / 2X) o tercero por grupo
+  const teamFromLabel = (label, thirdGroup) => {
+    if (label === "3?") {
+      if (!thirdGroup) return { name: "Mejor 3º", flag: "❓", label: "3º", placeholder: true };
+      const t = thirdByGroup[thirdGroup];
+      return { name: t.name, flag: t.flag, label: `3º ${thirdGroup}` };
+    }
+    const pos = label[0]; // 1 ó 2
+    const grp = label[1];
+    const st = standingsByGroup[grp];
+    const idx = pos === "1" ? 0 : 1;
+    const team = st && st[idx] && st[idx].pj > 0 ? st[idx] : null;
+    if (!team) return { name: `${pos === "1" ? "1º" : "2º"} ${grp}`, flag: "❓", label, placeholder: true };
+    return { name: team.name, flag: team.flag, label: `${pos === "1" ? "1º" : "2º"} ${grp}` };
+  };
+
+  // Mapear qué grupo de tercero va en cada match
+  const thirdForMatch = {};
+  R32_THIRD_SLOTS.forEach(s => { thirdForMatch[s.match] = assignment[s.match]; });
+
+  return R32_LAYOUT.map(m => ({
+    match: m.match,
+    home: teamFromLabel(m.home, m.home === "3?" ? thirdForMatch[m.match] : null),
+    away: teamFromLabel(m.away, m.away === "3?" ? thirdForMatch[m.match] : null),
+  }));
+}
+
 // +2 por cada equipo que el usuario sitúa como clasificado (1º, 2º o
 // tercero entre los 8 mejores) y que realmente se clasifica.
 // Solo puntúa cuando TODOS los partidos de la fase de grupos están definidos.
@@ -493,6 +615,90 @@ function QualifiersTable({ standingsByGroup }) {
       </p>
     );
   }
+
+// ============================================================
+// CUADRO VISUAL DE DIECISEISAVOS
+// ============================================================
+function BracketR32({ standingsByGroup }) {
+  // Solo construir si TODOS los grupos tienen sus 3 partidos pronosticados
+  const allGroupsComplete = Object.keys(GROUPS).every(g => {
+    const st = standingsByGroup[g];
+    return st && st.every(t => t.pj === 3);
+  });
+
+  if (!allGroupsComplete) {
+    return (
+      <div style={{ marginTop: "24px", padding: "16px", background: CARD, border: `1px dashed ${BORDER}`, borderRadius: "10px", textAlign: "center" }}>
+        <p style={{ fontSize: "11px", color: "#d0e4f7", fontFamily: "monospace", lineHeight: 1.6 }}>
+          🔒 Completa los <b>3 partidos de los 12 grupos</b> para ver tu cuadro de dieciseisavos
+        </p>
+      </div>
+    );
+  }
+
+  const r32 = buildRoundOf32(standingsByGroup);
+
+  const teamPill = (t, isHome) => (
+    <div style={{
+      display: "flex", alignItems: "center", gap: "6px",
+      padding: "5px 8px", borderRadius: "6px",
+      background: t.placeholder ? "rgba(255,255,255,0.03)" : GREEN_DIM,
+      border: `1px solid ${t.placeholder ? BORDER : "rgba(79,195,247,0.2)"}`,
+      opacity: t.placeholder ? 0.55 : 1,
+    }}>
+      <span style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "monospace", minWidth: "26px" }}>{t.label}</span>
+      <span style={{ fontSize: "14px" }}>{t.flag}</span>
+      <span style={{ fontSize: "10px", color: t.placeholder ? "#7ab8e0" : "#e0eaf8", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ marginTop: "24px" }}>
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "12px" }}>
+        🏟️ TU CUADRO DE DIECISEISAVOS
+      </p>
+
+      {/* LISTA DE ENFRENTAMIENTOS */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "20px" }}>
+        {r32.map(m => (
+          <div key={m.match} style={{ display: "flex", alignItems: "center", gap: "6px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px", padding: "8px" }}>
+            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Bebas Neue', monospace", minWidth: "30px" }}>{m.match}</span>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+              {teamPill(m.home, true)}
+              {teamPill(m.away, false)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* CUADRO VISUAL CON SCROLL HORIZONTAL */}
+      <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>
+        VISTA CUADRO (desliza →)
+      </p>
+      <div style={{ overflowX: "auto", paddingBottom: "10px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: "320px" }}>
+          {r32.map(m => (
+            <div key={m.match} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ flex: 1, padding: "6px 8px", borderRadius: "6px", background: m.home.placeholder ? CARD : GREEN_DIM, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${GREEN}`, display: "flex", alignItems: "center", gap: "5px", opacity: m.home.placeholder ? 0.5 : 1 }}>
+                <span style={{ fontSize: "13px" }}>{m.home.flag}</span>
+                <span style={{ fontSize: "9px", color: "#e0eaf8", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.home.name}</span>
+              </div>
+              <span style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "monospace" }}>vs</span>
+              <div style={{ flex: 1, padding: "6px 8px", borderRadius: "6px", background: m.away.placeholder ? CARD : GREEN_DIM, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${GREEN}`, display: "flex", alignItems: "center", gap: "5px", opacity: m.away.placeholder ? 0.5 : 1 }}>
+                <span style={{ fontSize: "13px" }}>{m.away.flag}</span>
+                <span style={{ fontSize: "9px", color: "#e0eaf8", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.away.name}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", margin: "10px 0 0", lineHeight: 1.5 }}>
+        ℹ️ Los terceros se asignan con la lógica oficial FIFA (ningún equipo se cruza con el ganador de su propio grupo).
+      </p>
+    </div>
+  );
+}
 
   const teamRow = (t, badge, badgeColor) => (
     <div key={`${t.grp}-${t.name}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", marginBottom: "3px", background: GREEN_DIM, border: "1px solid rgba(79,195,247,0.18)", borderLeft: `3px solid ${GREEN}` }}>
@@ -1262,6 +1468,7 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
                 Según tus pronósticos de la fase de grupos, estos son los equipos que clasificarías a dieciseisavos.
               </p>
               <QualifiersTable standingsByGroup={standingsByGroup} />
+              <BracketR32 standingsByGroup={standingsByGroup} />
             </div>
           );
         })()}
