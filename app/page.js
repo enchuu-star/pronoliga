@@ -2132,6 +2132,68 @@ function ParticipantProgress() {
 }
 
 // ============================================================
+// ÚLTIMA CONEXIÓN DE USUARIOS
+// ============================================================
+function UserActivityLog() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const formatLastSeen = (dateString) => {
+    if (!dateString) return "Nunca";
+    const d = new Date(dateString);
+    // Extraemos si fue hoy para que se lea mejor
+    const isToday = new Date().toDateString() === d.toDateString();
+    
+    const time = d.toLocaleString("es-ES", { hour: "2-digit", minute: "2-digit" }) + "h";
+    if (isToday) return `Hoy, ${time}`;
+    
+    return d.toLocaleString("es-ES", { day: "2-digit", month: "short" }) + `, ${time}`;
+  };
+
+  useEffect(() => {
+    (async () => {
+      const { data: profiles } = await supabase.from("profiles").select("name, last_seen").eq("role", "user");
+      
+      // Ordenamos para que los que se conectaron más recientemente salgan arriba
+      const sorted = (profiles || []).sort((a, b) => {
+        if (!a.last_seen) return 1;
+        if (!b.last_seen) return -1;
+        return new Date(b.last_seen) - new Date(a.last_seen);
+      });
+      
+      setUsers(sorted);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      {users.map((u, i) => (
+        <div key={i} style={{ 
+          display: "flex", justifyContent: "space-between", alignItems: "center", 
+          padding: "10px 12px", background: "rgba(255,255,255,0.02)", 
+          borderRadius: "8px", border: `1px solid ${BORDER}` 
+        }}>
+          <span style={{ fontFamily: "monospace", fontSize: "12px", color: "#e0eaf8", fontWeight: 700 }}>
+            {u.name}
+          </span>
+          <span style={{ 
+            fontFamily: "monospace", fontSize: "10px", 
+            color: u.last_seen ? GREEN : "#7ab8e0",
+            background: u.last_seen ? GREEN_DIM : "transparent",
+            padding: "3px 8px", borderRadius: "10px"
+          }}>
+            {formatLastSeen(u.last_seen)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
 // ADMIN
 // ============================================================
 function AdminView({ matches, onDataChange }) {
@@ -2214,6 +2276,12 @@ function AdminView({ matches, onDataChange }) {
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>PROGRESO DE PARTICIPANTES</p>
         <ParticipantProgress />
+      </div>
+
+      {/* Ultima conexion */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>REGISTRO DE ACTIVIDAD</p>
+        <UserActivityLog />
       </div>
 
       {/* BOTÓN CERRAR TODO */}
