@@ -5015,6 +5015,19 @@ export default function Home() {
 
   useEffect(() => { if (user) loadData(); }, [user]);
 
+  useEffect(() => {
+      if (user) {
+        // Actualiza la fecha de última actividad en la base de datos
+        supabase
+          .from("profiles")
+          .update({ last_seen: new Date().toISOString() })
+          .eq("id", user.id)
+          .then(({ error }) => {
+            if (error) console.error("Error actualizando última actividad:", error);
+          });
+      }
+    }, [user, view]); // Se ejecutará al entrar y cada vez que cambien de pestaña
+  
   const loadData = async () => {
     const { data: dbMatches } = await supabase.from("matches").select("*").order("match_date").order("match_time").order("id");
     let finalMatches;
