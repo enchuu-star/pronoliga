@@ -3050,28 +3050,11 @@ function HomeView({ user, matches, predictions, setView }) {
     </button>
   );
 
-  // Top 3 ranking rápido
-  const [topRanking, setTopRanking] = useState([]);
-  useEffect(() => {
-    (async () => {
-      const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
-      const { data: preds } = await supabase.from("predictions").select("*");
-      const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
-      const r = (profiles || []).map(p => {
-        const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
-        const qualPts = (qpicks || []).filter(x => x.user_id === p.id).reduce((s, pick) => s + (pick.points || 0), 0);
-        return { name: p.name, total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts };
-      }).sort((a, b) => b.total - a.total).slice(0, 3);
-      setTopRanking(r);
-    })();
-  }, []);
-
-  const medals = ["🥇", "🥈", "🥉"];
-
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       {/* Cuenta atrás */}
       <CountdownBanner />
+      
       {/* Grid de accesos */}
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>ACCESO RÁPIDO</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
@@ -3085,27 +3068,14 @@ function HomeView({ user, matches, predictions, setView }) {
         {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
       </div>
 
-      {/* Mini ranking top 3 */}
-      {topRanking.length > 0 && (
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-            <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px" }}>TOP RANKING</p>
-            <button onClick={() => setView("ranking")} style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", background: "none", border: "none", cursor: "pointer" }}>ver todo →</button>
-          </div>
-          {topRanking.map((u, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
-              <span style={{ fontSize: "18px", minWidth: "24px" }}>{medals[i]}</span>
-              <span style={{ flex: 1, fontFamily: "monospace", fontSize: "13px", color: "#e0eaf8" }}>{u.name}</span>
-              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "24px", color: i === 0 ? GREEN : "#e0eaf8" }}>{u.total}</span>
-              <span style={{ fontSize: "9px", color: "#cce0f5", fontFamily: "monospace" }}>PTS</span>
-            </div>
-          ))}
-        </>
-      )}
+      {/* Progreso de participantes (sustituye al Top Ranking) */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "12px" }}>PROGRESO DE PARTICIPANTES</p>
+        <ParticipantProgress />
+      </div>
     </div>
   );
 }
-
 
 const TRIVIA_QUESTIONS = [
   // — HISTORIA DE LOS MUNDIALES —
