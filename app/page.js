@@ -616,6 +616,58 @@ function QualifiersTable({ standingsByGroup }) {
     );
   }
 
+  const teamRow = (t, badge, badgeColor) => (
+    <div key={`${t.grp}-${t.name}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", marginBottom: "3px", background: GREEN_DIM, border: "1px solid rgba(79,195,247,0.18)", borderLeft: `3px solid ${GREEN}` }}>
+      <span style={{ fontSize: "9px", color: badgeColor, fontFamily: "monospace", minWidth: "32px" }}>{badge}</span>
+      <span style={{ fontSize: "16px" }}>{t.flag}</span>
+      <span style={{ flex: 1, fontSize: "11px", color: "#e0eaf8", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        {t.name} <span style={{ color: "#7ab8e0" }}>({t.grp})</span>
+      </span>
+      <span style={{ fontSize: "14px", fontWeight: 700, color: GREEN, fontFamily: "'Bebas Neue', monospace" }}>{t.pts}</span>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Primeros */}
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>
+        🥇 PRIMEROS DE GRUPO
+      </p>
+      {firsts.sort((a, b) => a.grp.localeCompare(b.grp)).map(t => teamRow(t, `1º · ${t.grp}`, GREEN))}
+
+      {/* Segundos */}
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", margin: "16px 0 8px" }}>
+        🥈 SEGUNDOS DE GRUPO
+      </p>
+      {seconds.sort((a, b) => a.grp.localeCompare(b.grp)).map(t => teamRow(t, `2º · ${t.grp}`, "#7ab8e0"))}
+
+      {/* Mejores terceros */}
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", margin: "16px 0 8px" }}>
+        🥉 MEJORES TERCEROS (TABLA GENERAL)
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px", gap: "1px", padding: "3px 8px 4px" }}>
+        {["#", "EQUIPO (GR)", "PJ", "DG", "GF", "PTS"].map(c => (
+          <span key={c} style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px", textAlign: c.startsWith("EQUIPO") ? "left" : "center" }}>{c}</span>
+        ))}
+      </div>
+      {thirds.map(t => (
+        <div key={t.name} style={{ display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px", gap: "1px", padding: "8px", borderRadius: "7px", marginBottom: "3px", background: t.qualifies ? GREEN_DIM : CARD, border: t.qualifies ? "1px solid rgba(79,195,247,0.18)" : `1px solid ${BORDER}`, borderLeft: t.qualifies ? `3px solid ${GREEN}` : "3px solid transparent" }}>
+          <span style={{ fontSize: "11px", color: t.qualifies ? GREEN : "#7ab8e0", fontFamily: "'Bebas Neue', monospace", textAlign: "center" }}>{t.rank}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+            <span style={{ fontSize: "15px" }}>{t.flag}</span>
+            <span style={{ fontSize: "11px", color: t.qualifies ? "#e0eaf8" : "#a8d4f0", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name} <span style={{ color: "#7ab8e0" }}>({t.grp})</span></span>
+          </span>
+          {[t.pj, t.dg, t.gf].map((v, vi) => <span key={vi} style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "monospace", textAlign: "center" }}>{v}</span>)}
+          <span style={{ fontSize: "14px", fontWeight: 700, color: GREEN, fontFamily: "'Bebas Neue', monospace", textAlign: "center" }}>{t.pts}</span>
+        </div>
+      ))}
+      <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", margin: "8px 0 0" }}>
+        🟢 Pasan a dieciseisavos: 2 primeros de cada grupo + 8 mejores terceros · +2 pts por clasificado acertado
+      </p>
+    </div>
+  );
+}
+
 // ============================================================
 // CUADRO VISUAL DE DIECISEISAVOS
 // ============================================================
@@ -695,58 +747,6 @@ function BracketR32({ standingsByGroup }) {
 
       <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", margin: "10px 0 0", lineHeight: 1.5 }}>
         ℹ️ Los terceros se asignan con la lógica oficial FIFA (ningún equipo se cruza con el ganador de su propio grupo).
-      </p>
-    </div>
-  );
-}
-
-  const teamRow = (t, badge, badgeColor) => (
-    <div key={`${t.grp}-${t.name}`} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", marginBottom: "3px", background: GREEN_DIM, border: "1px solid rgba(79,195,247,0.18)", borderLeft: `3px solid ${GREEN}` }}>
-      <span style={{ fontSize: "9px", color: badgeColor, fontFamily: "monospace", minWidth: "32px" }}>{badge}</span>
-      <span style={{ fontSize: "16px" }}>{t.flag}</span>
-      <span style={{ flex: 1, fontSize: "11px", color: "#e0eaf8", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-        {t.name} <span style={{ color: "#7ab8e0" }}>({t.grp})</span>
-      </span>
-      <span style={{ fontSize: "14px", fontWeight: 700, color: GREEN, fontFamily: "'Bebas Neue', monospace" }}>{t.pts}</span>
-    </div>
-  );
-
-  return (
-    <div>
-      {/* Primeros */}
-      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", marginBottom: "8px" }}>
-        🥇 PRIMEROS DE GRUPO
-      </p>
-      {firsts.sort((a, b) => a.grp.localeCompare(b.grp)).map(t => teamRow(t, `1º · ${t.grp}`, GREEN))}
-
-      {/* Segundos */}
-      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", margin: "16px 0 8px" }}>
-        🥈 SEGUNDOS DE GRUPO
-      </p>
-      {seconds.sort((a, b) => a.grp.localeCompare(b.grp)).map(t => teamRow(t, `2º · ${t.grp}`, "#7ab8e0"))}
-
-      {/* Mejores terceros */}
-      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "2px", margin: "16px 0 8px" }}>
-        🥉 MEJORES TERCEROS (TABLA GENERAL)
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px", gap: "1px", padding: "3px 8px 4px" }}>
-        {["#", "EQUIPO (GR)", "PJ", "DG", "GF", "PTS"].map(c => (
-          <span key={c} style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "1px", textAlign: c.startsWith("EQUIPO") ? "left" : "center" }}>{c}</span>
-        ))}
-      </div>
-      {thirds.map(t => (
-        <div key={t.name} style={{ display: "grid", gridTemplateColumns: "24px 1fr 28px 28px 28px 36px", gap: "1px", padding: "8px", borderRadius: "7px", marginBottom: "3px", background: t.qualifies ? GREEN_DIM : CARD, border: t.qualifies ? "1px solid rgba(79,195,247,0.18)" : `1px solid ${BORDER}`, borderLeft: t.qualifies ? `3px solid ${GREEN}` : "3px solid transparent" }}>
-          <span style={{ fontSize: "11px", color: t.qualifies ? GREEN : "#7ab8e0", fontFamily: "'Bebas Neue', monospace", textAlign: "center" }}>{t.rank}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
-            <span style={{ fontSize: "15px" }}>{t.flag}</span>
-            <span style={{ fontSize: "11px", color: t.qualifies ? "#e0eaf8" : "#a8d4f0", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name} <span style={{ color: "#7ab8e0" }}>({t.grp})</span></span>
-          </span>
-          {[t.pj, t.dg, t.gf].map((v, vi) => <span key={vi} style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "monospace", textAlign: "center" }}>{v}</span>)}
-          <span style={{ fontSize: "14px", fontWeight: 700, color: GREEN, fontFamily: "'Bebas Neue', monospace", textAlign: "center" }}>{t.pts}</span>
-        </div>
-      ))}
-      <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", margin: "8px 0 0" }}>
-        🟢 Pasan a dieciseisavos: 2 primeros de cada grupo + 8 mejores terceros · +2 pts por clasificado acertado
       </p>
     </div>
   );
