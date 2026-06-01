@@ -558,7 +558,7 @@ function NavBar({ user, view, setView, onLogout }) {
             marginRight: "10px", flexShrink: 0,
           }}>
             <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: view === "profile" ? "#0a1628" : GREEN }}>
-              {user.name?.charAt(0).toUpperCase()}
+              {user.emoji || user.name?.charAt(0).toUpperCase()}
             </span>
           </button>
           <button onClick={onLogout} style={{ padding: "5px 10px", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "6px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontSize: "11px", fontFamily: "monospace" }}>salir</button>
@@ -1811,6 +1811,19 @@ function ProfileView({ user, matches }) {
   const [compareWith, setCompareWith] = useState(null);
   const [tab, setTab] = useState("stats");
   const [loading, setLoading] = useState(true);
+  const [emoji, setEmoji] = useState(user.emoji || "⚽");
+  const [editingEmoji, setEditingEmoji] = useState(false);
+  const [emojiInput, setEmojiInput] = useState(user.emoji || "⚽");
+  const [savingEmoji, setSavingEmoji] = useState(false);
+  
+  const saveEmoji = async () => {
+    setSavingEmoji(true);
+    const newEmoji = emojiInput.trim().slice(0, 2) || "⚽"; // max 1 emoji
+    await supabase.from("profiles").update({ emoji: newEmoji }).eq("id", user.id);
+    setEmoji(newEmoji);
+    setEditingEmoji(false);
+    setSavingEmoji(false);
+  };
 
   useEffect(() => {
     (async () => {
@@ -1863,14 +1876,87 @@ function ProfileView({ user, matches }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-        <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: GREEN_DIM, border: `1px solid rgba(245,158,11,0.3)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: GREEN }}>{user.name?.charAt(0).toUpperCase()}</span>
-        </div>
-        <div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#e0eaf8", letterSpacing: "1px" }}>{user.name}</div>
-          <div style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "monospace" }}>{myPreds.length} pronósticos enviados · {evaluated.length} evaluados</div>
-        </div>
+  <div style={{ position: "relative" }}>
+    <div style={{
+      width: "56px", height: "56px", borderRadius: "50%",
+      background: GREEN_DIM, border: `1px solid rgba(245,158,11,0.3)`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: "28px", cursor: "pointer",
+    }} onClick={() => { setEditingEmoji(true); setEmojiInput(emoji); }}>
+      {emoji}
+    </div>
+    <div style={{
+      position: "absolute", bottom: 0, right: 0,
+      width: "18px", height: "18px", borderRadius: "50%",
+      background: GREEN, border: "2px solid #0a1628",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: "9px", cursor: "pointer",
+    }} onClick={() => { setEditingEmoji(true); setEmojiInput(emoji); }}>
+      ✏️
+    </div>
+  </div>
+  <div>
+    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#e0eaf8", letterSpacing: "1px" }}>{user.name}</div>
+    <div style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "monospace" }}>{myPreds.length} pronósticos enviados · {evaluated.length} evaluados</div>
+  </div>
+</div>
+
+{/* Modal editar emoji */}
+{editingEmoji && (
+  <div style={{
+    position: "fixed", inset: 0, zIndex: 300,
+    background: "rgba(0,0,0,0.7)", display: "flex",
+    alignItems: "center", justifyContent: "center", padding: "20px",
+  }} onClick={() => setEditingEmoji(false)}>
+    <div style={{
+      background: "#0f1c2e", border: `1px solid ${GREEN}`,
+      borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "320px",
+    }} onClick={e => e.stopPropagation()}>
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "monospace", letterSpacing: "3px", marginBottom: "14px" }}>
+        TU EMOJI
+      </p>
+      <div style={{ textAlign: "center", fontSize: "64px", marginBottom: "16px", lineHeight: 1 }}>
+        {emojiInput || "⚽"}
       </div>
+      <input
+        value={emojiInput}
+        onChange={e => setEmojiInput(e.target.value)}
+        placeholder="Escribe un emoji..."
+        maxLength={4}
+        style={{
+          ...inputSt,
+          fontSize: "28px", textAlign: "center",
+          letterSpacing: "6px", marginBottom: "16px",
+        }}
+        autoFocus
+      />
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", justifyContent: "center" }}>
+        {["⚽","🏆","🥅","🔥","💀","🎯","😎","🦁","🐉","🤙","💪","🧠","👑","🌟","🚀","❤️","🍺","🎉","🤞","⚡"].map(e => (
+          <button key={e} onClick={() => setEmojiInput(e)} style={{
+            fontSize: "22px", padding: "6px 8px",
+            border: `1px solid ${emojiInput === e ? GREEN : BORDER}`,
+            borderRadius: "8px",
+            background: emojiInput === e ? GREEN_DIM : "transparent",
+            cursor: "pointer",
+          }}>{e}</button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: "8px" }}>
+        <button onClick={() => setEditingEmoji(false)} style={{
+          flex: 1, padding: "11px", border: `1px solid ${BORDER}`,
+          borderRadius: "8px", background: "transparent",
+          color: "#d0e4f7", fontFamily: "monospace", fontSize: "12px", cursor: "pointer",
+        }}>Cancelar</button>
+        <button onClick={saveEmoji} disabled={savingEmoji} style={{
+          flex: 2, padding: "11px", border: "none",
+          borderRadius: "8px", background: GREEN,
+          color: "#0a1628", fontFamily: "monospace",
+          fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px",
+        }}>{savingEmoji ? "..." : "GUARDAR"}</button>
+      </div>
+    </div>
+  </div>
+)}
 
       <div style={{ display: "flex", marginBottom: "20px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
         {[{ id: "stats", label: "Estadísticas" }, { id: "compare", label: "Comparar" }].map(t => (
@@ -2058,7 +2144,10 @@ function RankingView({ matches }) {
         }}>
           <span style={{ fontSize: "20px", minWidth: "28px" }}>{medals[i] || `#${i + 1}`}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "18px" }}>{u.emoji || "⚽"}</span>
+              <span style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</span>
+            </div>
             <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "2px" }}>
               {u.exactos} exactos · {u.count} eval.
               {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
@@ -5073,7 +5162,7 @@ export default function Home() {
       if (session) {
         const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
         const isOnboarded = profile?.onboarded === true;
-        setUser({ ...session.user, name: profile?.name || session.user.email, role: profile?.role || "user" });
+        setUser({ ...session.user, name: profile?.name || session.user.email, role: profile?.role || "user", emoji: profile?.emoji || "⚽" });
         setScreen("app");
         // if (!isOnboarded) setShowOnboarding(true);
       }
@@ -5135,9 +5224,9 @@ export default function Home() {
   };
 
   const handleLogin = async (u) => {
-    setUser(u);
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", u.id).single();
+    setUser({ ...u, emoji: profile?.emoji || "⚽" });
     setScreen("app");
-    const { data: profile } = await supabase.from("profiles").select("onboarded").eq("id", u.id).single();
     // if (!profile?.onboarded) setShowOnboarding(true);
   };
 
