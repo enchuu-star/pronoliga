@@ -5146,6 +5146,7 @@ export default function Home() {
   const [allClosed, setAllClosed] = useState(false);
   const [loadingSession, setLoadingSession] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showEmojiTip, setShowEmojiTip] = useState(false);
   const [yaVoto, setYaVoto] = useState(true); // ENCUESTA — quitar mañana
 
   // PWA — registrar service worker
@@ -5227,7 +5228,7 @@ export default function Home() {
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", u.id).single();
     setUser({ ...u, emoji: profile?.emoji || "⚽" });
     setScreen("app");
-    // if (!profile?.onboarded) setShowOnboarding(true);
+    if (profile?.emoji === null || profile?.emoji === undefined) setShowEmojiTip(true);
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); setUser(null); setScreen("login"); };
@@ -5266,7 +5267,38 @@ export default function Home() {
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
-          {/* {showOnboarding && <OnboardingTooltips user={user} onFinish={finishOnboarding} setView={setView} />} */}
+          {showEmojiTip && (
+  <div style={{
+    position: "fixed", top: "58px", left: "50%",
+    transform: "translateX(-50%)",
+    width: "calc(100% - 28px)", maxWidth: "500px",
+    zIndex: 150, animation: "fadeIn 0.3s ease",
+  }}>
+    <div style={{
+      background: "#0f1c2e",
+      border: `1px solid ${GREEN}`,
+      borderRadius: "12px", padding: "14px 16px",
+      display: "flex", alignItems: "center", gap: "12px",
+      boxShadow: "0 4px 20px rgba(79,195,247,0.15)",
+    }}>
+      <span style={{ fontSize: "28px" }}>👆</span>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: GREEN, letterSpacing: "2px", marginBottom: "3px" }}>
+          PERSONALIZA TU PERFIL
+        </p>
+        <p style={{ fontFamily: "monospace", fontSize: "11px", color: "#c0d8f0", lineHeight: 1.5 }}>
+          Ve a tu perfil y elige un emoji que te represente en el ranking
+        </p>
+      </div>
+      <button onClick={() => setShowEmojiTip(false)} style={{
+        padding: "6px 10px", border: `1px solid ${BORDER}`,
+        borderRadius: "8px", background: "transparent",
+        color: "#d0e4f7", fontFamily: "monospace",
+        fontSize: "11px", cursor: "pointer", flexShrink: 0,
+      }}>✕</button>
+    </div>
+  </div>
+)}
         </>
       )}
     </div>
