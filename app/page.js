@@ -532,7 +532,7 @@ function CountdownBanner() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "16px" }}>
         <span style={{ animation: "pulse 2s ease-in-out infinite" }}>⏱️</span>
         <span style={{ color: "#cce0f5", fontFamily: "monospace", fontSize: "10px", letterSpacing: "3px" }}>
-          CUENTA ATRÁS · 11 JUN 2026 · 21:00H
+          11 JUN 2026 · 21:00H
         </span>
       </div>
 
