@@ -449,6 +449,41 @@ function Stars() {
 }
 
 // ============================================================
+// SKELETONS DE CARGA
+// ============================================================
+function SkeletonRows({ count = 5, height = 56 }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="skeleton" style={{ height: `${height}px`, borderRadius: "10px" }} />
+      ))}
+    </div>
+  );
+}
+
+// Skeleton específico para filas de ranking (avatar + texto + puntos)
+function SkeletonRanking({ count = 6 }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{
+          display: "flex", alignItems: "center", gap: "12px",
+          background: CARD, border: `1px solid ${BORDER}`,
+          borderRadius: "10px", padding: "14px 16px",
+        }}>
+          <div className="skeleton" style={{ width: "24px", height: "24px", borderRadius: "50%" }} />
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div className="skeleton" style={{ width: "55%", height: "12px" }} />
+            <div className="skeleton" style={{ width: "35%", height: "9px" }} />
+          </div>
+          <div className="skeleton" style={{ width: "40px", height: "26px", borderRadius: "6px" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
 // LOGIN
 // ============================================================
 function LoginPage({ onLogin }) {
@@ -1883,7 +1918,11 @@ function CommunityView({ matches, user }) {
     );
   };
 
-  if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>Cargando...</p>;
+  if (loading) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <SkeletonRows count={4} height={90} />
+    </div>
+  );
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
     <SpecialPredictionsTableCollapsible currentUserId={user.id} />
@@ -1999,7 +2038,21 @@ function ProfileView({ user, matches }) {
     })();
   }, [user.id]);
 
-  if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>Cargando...</p>;
+  if (loading) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+        <div className="skeleton" style={{ width: "56px", height: "56px", borderRadius: "50%" }} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div className="skeleton" style={{ width: "50%", height: "16px" }} />
+          <div className="skeleton" style={{ width: "70%", height: "10px" }} />
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+        {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton" style={{ height: "78px", borderRadius: "10px" }} />)}
+      </div>
+      <SkeletonRows count={2} height={120} />
+    </div>
+  );
 
   const evaluated = myPreds.filter(p => p.points !== null);
   const total = evaluated.reduce((s, p) => s + p.points, 0);
@@ -2389,7 +2442,12 @@ function RankingView({ matches, user }) {
     ? `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`
     : "";
 
-  if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>Cargando...</p>;
+  if (loading) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div className="skeleton" style={{ width: "40%", height: "10px", marginBottom: "20px" }} />
+      <SkeletonRanking count={6} />
+    </div>
+  );
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -2562,7 +2620,7 @@ function ParticipantProgress() {
     })();
   }, []);
 
-  if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cargando...</p>;
+  if (loading) return <SkeletonRows count={5} height={40} />;
 
   return (
     <div>
@@ -2626,7 +2684,7 @@ function UserActivityLog() {
     })();
   }, []);
 
-  if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cargando...</p>;
+  if (loading) return <SkeletonRows count={5} height={40} />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -3844,7 +3902,7 @@ function TriviaGame({ user, onBack }) {
         <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
-      {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
