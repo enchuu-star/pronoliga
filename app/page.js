@@ -567,7 +567,20 @@ function CountdownBanner() {
               </div>
               <span style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "monospace", letterSpacing: "1px", marginTop: "6px", display: "block" }}>{l}</span>
             </div>
-
+            {/* Separadores: SEG parpadea siempre; los de arriba parpadean al cambiar su unidad */}
+            {i < blocks.length - 1 && (
+              <div style={{
+                display: "flex", flexDirection: "column", gap: "5px", paddingTop: "16px",
+                animation:
+                  i === 2 ? "blink 1s steps(1) infinite"
+                  : i === 1 && s === "00" ? "blink 1s steps(1) infinite"
+                  : i === 0 && m === "00" && s === "00" ? "blink 1s steps(1) infinite"
+                  : "none",
+              }}>
+                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
+                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
+              </div>
+            )}
             {/* Dos puntos separadores parpadeantes */}
             {i < blocks.length - 1 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "5px", paddingTop: "16px", animation: "blink 1s steps(1) infinite" }}>
