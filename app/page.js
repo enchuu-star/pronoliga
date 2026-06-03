@@ -2256,20 +2256,6 @@ function UserActivityLog() {
       setLoading(false);
     })();
   }, []);
-  // Mostrar el aviso de emoji UNA vez por dispositivo (relanzamiento v2, más visible)
-  useEffect(() => {
-    if (!user) return;
-    try {
-      if (!localStorage.getItem("emojiTipV2_seen")) setShowEmojiTip(true);
-    } catch {
-      setShowEmojiTip(true);
-    }
-  }, [user]);
-
-  const dismissEmojiTip = () => {
-    setShowEmojiTip(false);
-    try { localStorage.setItem("emojiTipV2_seen", "1"); } catch {}
-  };
 
   if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p>;
 
@@ -5201,6 +5187,21 @@ export default function Home() {
           });
       }
     }, [user, view]); // Se ejecutará al entrar y cada vez que cambien de pestaña
+
+  // Mostrar el aviso de emoji UNA vez por dispositivo (relanzamiento v2, más visible)
+  useEffect(() => {
+    if (!user) return;
+    try {
+      if (!localStorage.getItem("emojiTipV2_seen")) setShowEmojiTip(true);
+    } catch {
+      setShowEmojiTip(true);
+    }
+  }, [user]);
+
+  const dismissEmojiTip = () => {
+    setShowEmojiTip(false);
+    try { localStorage.setItem("emojiTipV2_seen", "1"); } catch {}
+  };
   
   const loadData = async () => {
     const { data: dbMatches } = await supabase.from("matches").select("*").order("match_date").order("match_time").order("id");
