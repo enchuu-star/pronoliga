@@ -417,6 +417,9 @@ const css = `
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
   @keyframes popIn{0%{opacity:0;transform:scale(0.85)}60%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
   @keyframes glowPulse{0%,100%{box-shadow:0 0 18px rgba(79,195,247,0.25)}50%{box-shadow:0 0 42px rgba(79,195,247,0.7)}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 `;
 const inputSt = {
   width: "100%", padding: "12px 14px", marginBottom: "12px",
@@ -492,17 +495,86 @@ function LoginPage({ onLogin }) {
 // ============================================================
 function CountdownBanner() {
   const { d, h, m, s, started } = useCountdown();
-  if (started) return <div style={{ background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.25)", borderRadius: "10px", padding: "12px 16px", marginBottom: "20px", textAlign: "center" }}><span style={{ color: GREEN, fontFamily: "monospace", fontSize: "13px", letterSpacing: "2px" }}>⚽ ¡EL MUNDIAL HA COMENZADO!</span></div>;
+
+  if (started) {
+    return (
+      <div style={{
+        background: `linear-gradient(135deg, rgba(79,195,247,0.18), rgba(0,119,204,0.12))`,
+        border: `1px solid ${GREEN}`, borderRadius: "14px",
+        padding: "16px", marginBottom: "20px", textAlign: "center",
+        animation: "glowPulse 2.5s ease-in-out infinite",
+      }}>
+        <span style={{ fontSize: "26px", display: "block", marginBottom: "4px", animation: "floaty 2s ease-in-out infinite" }}>⚽🔥</span>
+        <span style={{ color: GREEN, fontFamily: "'Bebas Neue', cursive", fontSize: "22px", letterSpacing: "3px" }}>
+          ¡EL MUNDIAL HA COMENZADO!
+        </span>
+      </div>
+    );
+  }
+
+  const blocks = [{ v: d, l: "DÍAS" }, { v: h, l: "HORAS" }, { v: m, l: "MIN" }, { v: s, l: "SEG" }];
+
   return (
-    <div style={{ padding: "16px" }}>
-      <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "9px", letterSpacing: "3px", textAlign: "center", marginBottom: "12px" }}>⏱ FALTAN · 11 JUN 2026 · 21:00H</p>
-      <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
-        {[{ v: d, l: "DÍAS" }, { v: h, l: "HORAS" }, { v: m, l: "MIN" }, { v: s, l: "SEG" }].map(({ v, l }) => (
-          <div key={l} style={{ textAlign: "center", flex: 1, maxWidth: "70px" }}>
-            <div style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "8px", padding: "8px 4px" }}>
-              <span style={{ fontFamily: "'Bebas Neue', monospace", fontSize: "clamp(22px,6vw,32px)", color: GREEN, lineHeight: 1, display: "block" }}>{v}</span>
+    <div style={{
+      position: "relative",
+      background: `radial-gradient(120% 120% at 50% 0%, rgba(79,195,247,0.12), rgba(10,22,40,0) 70%), rgba(255,255,255,0.03)`,
+      border: `1px solid ${BORDER}`, borderRadius: "16px",
+      padding: "18px 14px 16px", marginBottom: "20px", overflow: "hidden",
+    }}>
+      {/* Brillo superior decorativo */}
+      <div style={{
+        position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
+        width: "60%", height: "2px",
+        background: `linear-gradient(90deg, transparent, ${GREEN}, transparent)`,
+        opacity: 0.7,
+      }} />
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "16px" }}>
+        <span style={{ animation: "pulse 2s ease-in-out infinite" }}>⏱️</span>
+        <span style={{ color: "#cce0f5", fontFamily: "monospace", fontSize: "10px", letterSpacing: "3px" }}>
+          CUENTA ATRÁS · 11 JUN 2026 · 21:00H
+        </span>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: "4px" }}>
+        {blocks.map(({ v, l }, i) => (
+          <div key={l} style={{ display: "flex", alignItems: "flex-start", gap: "4px" }}>
+            <div style={{ textAlign: "center", flex: 1, maxWidth: "74px" }}>
+              <div style={{
+                position: "relative",
+                background: `linear-gradient(160deg, rgba(79,195,247,0.16), rgba(0,0,0,0.4))`,
+                border: `1px solid rgba(79,195,247,0.3)`,
+                borderRadius: "12px", padding: "12px 6px 10px",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px rgba(0,0,0,0.35)",
+                overflow: "hidden",
+              }}>
+                {/* Línea divisoria estilo flip-clock */}
+                <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: "1px", background: "rgba(0,0,0,0.35)" }} />
+                <span style={{
+                  position: "relative",
+                  fontFamily: "'Bebas Neue', monospace",
+                  fontSize: "clamp(28px,9vw,40px)", lineHeight: 1, display: "block",
+                  color: GREEN,
+                  textShadow: `0 0 14px rgba(79,195,247,0.55)`,
+                  ...(l === "SEG" ? {
+                    background: `linear-gradient(90deg, ${GREEN} 0%, #e8f4fd 50%, ${GREEN} 100%)`,
+                    backgroundSize: "200% 100%",
+                    WebkitBackgroundClip: "text", backgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    animation: "shimmer 2.5s linear infinite",
+                  } : {}),
+                }}>{v}</span>
+              </div>
+              <span style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "monospace", letterSpacing: "1px", marginTop: "6px", display: "block" }}>{l}</span>
             </div>
-            <span style={{ fontSize: "8px", color: "#d0e4f7", fontFamily: "monospace", marginTop: "4px", display: "block" }}>{l}</span>
+
+            {/* Dos puntos separadores parpadeantes */}
+            {i < blocks.length - 1 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px", paddingTop: "16px", animation: "blink 1s steps(1) infinite" }}>
+                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
+                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
+              </div>
+            )}
           </div>
         ))}
       </div>
