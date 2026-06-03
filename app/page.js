@@ -1885,6 +1885,64 @@ function CommunityView({ matches, user }) {
 }
 
 // ============================================================
+// GRÁFICAS SVG (sin librerías)
+// ============================================================
+function DonutChart({ data, size = 150, thickness = 24 }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  const r = (size - thickness) / 2;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+        {total === 0 ? (
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={thickness} />
+        ) : data.map((d, i) => {
+          if (d.value === 0) return null;
+          const len = (d.value / total) * circ;
+          const seg = (
+            <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none"
+              stroke={d.color} strokeWidth={thickness} strokeLinecap="butt"
+              strokeDasharray={`${len} ${circ - len}`} strokeDashoffset={-offset} />
+          );
+          offset += len;
+          return seg;
+        })}
+      </g>
+    </svg>
+  );
+}
+
+function MiniAreaChart({ points, width = 320, height = 130, color = GREEN }) {
+  if (!points || points.length < 2) {
+    return <p style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", textAlign: "center", padding: "20px 0" }}>Necesitas al menos 2 partidos evaluados para ver tu evolución</p>;
+  }
+  const pad = 6;
+  const maxY = Math.max(...points.map(p => p.y), 1);
+  const stepX = (width - pad * 2) / (points.length - 1);
+  const coords = points.map((p, i) => ({
+    x: pad + i * stepX,
+    y: height - pad - (p.y / maxY) * (height - pad * 2),
+  }));
+  const line = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(" ");
+  const area = `${line} L ${coords[coords.length - 1].x.toFixed(1)} ${height - pad} L ${coords[0].x.toFixed(1)} ${height - pad} Z`;
+  const last = coords[coords.length - 1];
+  return (
+    <svg width="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ display: "block" }}>
+      <defs>
+        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#areaGrad)" />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={last.x} cy={last.y} r="3.5" fill={color} />
+    </svg>
+  );
+}
+
+// ============================================================
 // PERFIL DE USUARIO
 // ============================================================
 function ProfileView({ user, matches }) {
@@ -2047,36 +2105,108 @@ function ProfileView({ user, matches }) {
         ))}
       </div>
 
-      {tab === "stats" && (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
-            {statCard("PUNTOS", total)}
-            {statCard("EXACTOS 🎯", exactos, `${pctExactos}% de éxito`)}
-            {statCard("DIFERENCIA 📏", difGoles, null, "#4fc3f7")}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
-            {statCard("SIGNO ✓", parciales, null, "#b8860b")}
-            {statCard("FALLOS", fallos, null, "#cc2222")}
-            {bestGroup ? statCard("MEJOR GRUPO", `Grupo ${bestGroup[0]}`, `${bestGroup[1].pts}`) : statCard("MEJOR GRUPO", "-")}
-          </div>
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "16px" }}>
-            <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "12px" }}>DESGLOSE POR GRUPO</p>
-            {Object.keys(GROUPS).map(grp => {
-              const g = byGroup[grp];
-              if (!g.count) return null;
-              return (
-                <div key={grp} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                  <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: GREEN, minWidth: "20px" }}>{grp}</span>
-                  <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: "3px", height: "5px", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${Math.min(100, (g.pts / (g.count * 5)) * 100)}%`, background: GREEN, borderRadius: "3px" }} />
+      {tab === "stats" && (() => {
+        // Reparto de aciertos para el donut
+        const distData = [
+          { label: "Exactos", value: exactos, color: "#34d399" },
+          { label: "Diferencia", value: difGoles, color: "#4fc3f7" },
+          { label: "Signo", value: parciales, color: "#ffd54f" },
+          { label: "Fallos", value: fallos, color: "#ff6b4a" },
+        ];
+      
+        // Evolución de puntos acumulados (orden cronológico)
+        const cumulative = (() => {
+          const withDate = evaluated.map(p => {
+            const m = matches.find(x => x.id === p.match_id);
+            return { k: (m?.match_date || "") + (m?.match_time || ""), pts: p.points };
+          }).filter(x => x.k).sort((a, b) => a.k.localeCompare(b.k));
+          let acc = 0;
+          return withDate.map((x, i) => ({ x: i, y: (acc += x.pts) }));
+        })();
+      
+        // Mejor racha de aciertos (puntos > 0 seguidos)
+        const bestStreak = (() => {
+          const chrono = evaluated.map(p => {
+            const m = matches.find(x => x.id === p.match_id);
+            return { k: (m?.match_date || "") + (m?.match_time || ""), hit: p.points > 0 };
+          }).filter(x => x.k).sort((a, b) => a.k.localeCompare(b.k));
+          let best = 0, cur = 0;
+          chrono.forEach(x => { if (x.hit) { cur++; best = Math.max(best, cur); } else cur = 0; });
+          return best;
+        })();
+      
+        const avg = evaluated.length ? (total / evaluated.length).toFixed(1) : "0";
+      
+        return (
+          <>
+            {/* Tarjetas principales */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+              {statCard("PUNTOS", total)}
+              {statCard("EXACTOS 🎯", exactos, `${pctExactos}% de éxito`)}
+              {statCard("DIFERENCIA 📏", difGoles, null, "#4fc3f7")}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "16px" }}>
+              {statCard("MEDIA/PARTIDO", avg, "puntos", "#34d399")}
+              {statCard("MEJOR RACHA 🔥", bestStreak, "aciertos seguidos", "#ffd54f")}
+              {bestGroup ? statCard("MEJOR GRUPO", `Grupo ${bestGroup[0]}`, `${bestGroup[1].pts} pts`) : statCard("MEJOR GRUPO", "-")}
+            </div>
+      
+            {/* Donut: reparto de resultados */}
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+              <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "14px" }}>REPARTO DE TUS PRONÓSTICOS</p>
+              {evaluated.length === 0 ? (
+                <p style={{ fontSize: "11px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", textAlign: "center", padding: "16px 0" }}>Aún no tienes pronósticos evaluados</p>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <DonutChart data={distData} />
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: "#e0eaf8", lineHeight: 1 }}>{evaluated.length}</span>
+                      <span style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", letterSpacing: "1px" }}>EVALUADOS</span>
+                    </div>
                   </div>
-                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "#c0d8f0", minWidth: "40px", textAlign: "right" }}>{g.pts} pts</span>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {distData.map(d => (
+                      <div key={d.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ width: "10px", height: "10px", borderRadius: "3px", background: d.color, flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{d.label}</span>
+                        <span style={{ fontSize: "13px", color: "#e0eaf8", fontFamily: "'Bebas Neue', cursive" }}>{d.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+              )}
+            </div>
+      
+            {/* Evolución de puntos */}
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
+                <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>EVOLUCIÓN DE PUNTOS</p>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: GREEN }}>{total} pts</span>
+              </div>
+              <MiniAreaChart points={cumulative} />
+            </div>
+      
+            {/* Desglose por grupo */}
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "16px" }}>
+              <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "12px" }}>DESGLOSE POR GRUPO</p>
+              {Object.keys(GROUPS).map(grp => {
+                const g = byGroup[grp];
+                if (!g.count) return null;
+                return (
+                  <div key={grp} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: GREEN, minWidth: "20px" }}>{grp}</span>
+                    <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: "3px", height: "5px", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${Math.min(100, (g.pts / (g.count * 5)) * 100)}%`, background: GREEN, borderRadius: "3px" }} />
+                    </div>
+                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "#c0d8f0", minWidth: "40px", textAlign: "right" }}>{g.pts} pts</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        );
+      })()}
 
       {tab === "compare" && (
         <>
