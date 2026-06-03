@@ -1428,15 +1428,26 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const statusText = status === "saved" ? "✓" : status === "saving" ? "···" : status === "error" ? "✗" : "";
 
   const randomBtnSt = {
-    padding: "5px 8px",
+    padding: "6px 12px",
     border: `1px solid ${BORDER}`,
-    borderRadius: "6px",
-    background: "rgba(255,255,255,0.05)",
+    borderRadius: "20px",
+    background: "rgba(255,255,255,0.04)",
     color: "#a8d4f0",
     cursor: "pointer",
     fontSize: "10px",
     fontFamily: "'Inter', sans-serif",
     whiteSpace: "nowrap",
+    transition: "all 0.15s ease",
+  };
+
+  const scoreInputSt = {
+    width: "46px", height: "52px",
+    border: `1px solid rgba(79,195,247,0.35)`, borderRadius: "10px",
+    background: "linear-gradient(160deg, rgba(79,195,247,0.12), rgba(0,0,0,0.3))",
+    color: GREEN, fontSize: "30px",
+    fontFamily: "'Bebas Neue', cursive", outline: "none",
+    textAlign: "center", padding: 0,
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
   };
 
   return (
@@ -1471,13 +1482,17 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
           <>
             <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
               {isOpen ? (
-                <>
-                  <span style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>pronóst.:</span>
-                  <input value={ph} onChange={e => handleChange("h", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
-                  <span style={{ color: "#b8d4ee", fontSize: "16px" }}>-</span>
-                  <input value={pa} onChange={e => handleChange("a", e.target.value)} type="number" min="0" max="20" style={smallSt} placeholder="0" />
-                  <span style={{ fontSize: "13px", fontFamily: "'Inter', sans-serif", color: statusColor, minWidth: "20px" }}>{statusText}</span>
-                </>
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: "10px",
+                  padding: "8px 14px", borderRadius: "12px",
+                  background: "rgba(0,0,0,0.3)", border: `1px solid ${BORDER}`,
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+                }}>
+                  <input value={ph} onChange={e => handleChange("h", e.target.value)} type="number" min="0" max="20" style={scoreInputSt} placeholder="–" />
+                  <span style={{ color: "#7ab8e0", fontSize: "22px", fontFamily: "'Bebas Neue', cursive" }}>:</span>
+                  <input value={pa} onChange={e => handleChange("a", e.target.value)} type="number" min="0" max="20" style={scoreInputSt} placeholder="–" />
+                  <span style={{ fontSize: "14px", fontFamily: "'Inter', sans-serif", color: statusColor, minWidth: "18px", textAlign: "center" }}>{statusText}</span>
+                </div>
               ) : userPred ? (
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontSize: "11px", color: "#e0eefa", fontFamily: "'Inter', sans-serif" }}>{userPred.predicted_home}-{userPred.predicted_away}</span>
@@ -1501,13 +1516,13 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
             {isOpen && (
               <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>🎲 azar:</span>
-                <button onClick={() => handleRandom("H")} style={randomBtnSt} title={`Gana ${match.home}`}>
+                <button onClick={() => handleRandom("H")} className="tappable" style={randomBtnSt} title={`Gana ${match.home}`}>
                   🏠 {match.home}
                 </button>
-                <button onClick={() => handleRandom("D")} style={randomBtnSt} title="Empate">
+                <button onClick={() => handleRandom("D")} className="tappable" style={randomBtnSt} title="Empate">
                   🤝 Empate
                 </button>
-                <button onClick={() => handleRandom("A")} style={randomBtnSt} title={`Gana ${match.away}`}>
+                <button onClick={() => handleRandom("A")} className="tappable" style={randomBtnSt} title={`Gana ${match.away}`}>
                   {match.away} ✈️
                 </button>
               </div>
