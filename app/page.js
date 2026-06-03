@@ -2686,12 +2686,16 @@ function AdminView({ matches, onDataChange }) {
   const handleResult = async () => {
     if (hr === "" || ar === "") return;
     const rh = parseInt(hr), ra = parseInt(ar);
+
+    // 📌 Foto del ranking ANTES de recalcular (para las flechas sube/baja)
+    try { await saveRankingSnapshot(matches); } catch (e) { console.error("snapshot error", e); }
+
     await supabase.from("matches").update({
       result_home: rh,
       result_away: ra,
       status: "closed",
-      result_source: "manual",      // ← marca origen
-      manual_override: true,         // ← la Edge Function ya no lo pisará
+      result_source: "manual",
+      manual_override: true,
       result_updated_at: new Date().toISOString(),
     }).eq("id", sel);
     const { data: preds } = await supabase.from("predictions").select("*").eq("match_id", sel);
