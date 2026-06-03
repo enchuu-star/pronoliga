@@ -1694,6 +1694,62 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
 }
 
 // ============================================================
+// MARCADOR TIPO ESTADIO (banderas grandes + resultado central)
+// ============================================================
+function StadiumScore({ match, played }) {
+  const ht = getTeam(match.home), at = getTeam(match.away);
+  const hasResult = match.result_home !== null && match.result_away !== null;
+  const homeWin = hasResult && match.result_home > match.result_away;
+  const awayWin = hasResult && match.result_away > match.result_home;
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+      padding: "14px 10px",
+      background: "radial-gradient(120% 140% at 50% 0%, rgba(79,195,247,0.10), rgba(10,22,40,0) 70%)",
+    }}>
+      {/* Local */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "5px", opacity: hasResult && !homeWin && !awayWin ? 0.85 : 1 }}>
+        <span style={{ fontSize: "40px", lineHeight: 1, filter: awayWin ? "grayscale(0.5)" : "none" }}>{ht.flag}</span>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "13px", letterSpacing: "1px", color: homeWin ? GREEN : "#c0d8f0", textAlign: "center", lineHeight: 1.1 }}>{match.home}</span>
+      </div>
+
+      {/* Marcador central */}
+      <div style={{ flexShrink: 0, textAlign: "center", minWidth: "92px" }}>
+        {hasResult ? (
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "8px",
+            padding: "6px 14px", borderRadius: "10px",
+            background: "rgba(0,0,0,0.35)", border: `1px solid ${BORDER}`,
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 14px rgba(0,0,0,0.3)",
+          }}>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "38px", lineHeight: 1, color: homeWin ? GREEN : "#e0eaf8" }}>{match.result_home}</span>
+            <span style={{ color: "#7ab8e0", fontSize: "20px" }}>:</span>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "38px", lineHeight: 1, color: awayWin ? GREEN : "#e0eaf8" }}>{match.result_away}</span>
+          </div>
+        ) : (
+          <div style={{
+            display: "inline-block", padding: "8px 14px", borderRadius: "10px",
+            background: "rgba(0,0,0,0.25)", border: `1px solid ${BORDER}`,
+          }}>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", letterSpacing: "3px", color: "#7ab8e0" }}>VS</span>
+          </div>
+        )}
+        <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", marginTop: "5px", letterSpacing: "1px" }}>
+          {formatDate(match.match_date)}{match.match_time ? ` · ${match.match_time}h` : ""}
+        </div>
+      </div>
+
+      {/* Visitante */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "5px", opacity: hasResult && !homeWin && !awayWin ? 0.85 : 1 }}>
+        <span style={{ fontSize: "40px", lineHeight: 1, filter: homeWin ? "grayscale(0.5)" : "none" }}>{at.flag}</span>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "13px", letterSpacing: "1px", color: awayWin ? GREEN : "#c0d8f0", textAlign: "center", lineHeight: 1.1 }}>{match.away}</span>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // RESULTADOS REALES
 // ============================================================
 function ResultsView({ matches }) {
@@ -1720,50 +1776,21 @@ function ResultsView({ matches }) {
         {played.length > 0 && (
           <div style={{ marginTop: "18px" }}>
             <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "8px" }}>JUGADOS</p>
-            {played.map(m => {
-              const ht = getTeam(m.home), at = getTeam(m.away);
-              return (
-                <div key={m.id} style={{ display: "flex", alignItems: "center", padding: "10px 12px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px", marginBottom: "5px" }}>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "5px" }}>
-                    <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "right" }}>{m.home}</span>
-                    <span style={{ fontSize: "20px" }}>{ht.flag}</span>
-                  </div>
-                  <div style={{ minWidth: "64px", textAlign: "center" }}>
-                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: GREEN }}>{m.result_home}</span>
-                    <span style={{ color: "#b8d4ee", fontSize: "14px", margin: "0 3px" }}>-</span>
-                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: GREEN }}>{m.result_away}</span>
-                  </div>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "5px" }}>
-                    <span style={{ fontSize: "20px" }}>{at.flag}</span>
-                    <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{m.away}</span>
-                  </div>
-                </div>
-              );
-            })}
+            {played.map(m => (
+              <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden" }}>
+                <StadiumScore match={m} />
+              </div>
+            ))}
           </div>
         )}
         {pending.length > 0 && (
           <div style={{ marginTop: "16px" }}>
             <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "8px" }}>PENDIENTES</p>
-            {pending.map(m => {
-              const ht = getTeam(m.home), at = getTeam(m.away);
-              return (
-                <div key={m.id} style={{ padding: "10px 12px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px", marginBottom: "5px", opacity: 0.5 }}>
-                  <div style={{ textAlign: "center", fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", marginBottom: "5px" }}>📅 {formatDate(m.match_date)} · {m.match_time}h</div>
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "5px" }}>
-                      <span style={{ fontSize: "11px", color: "#a8d4f0", fontFamily: "'Inter', sans-serif" }}>{m.home}</span>
-                      <span style={{ fontSize: "20px" }}>{ht.flag}</span>
-                    </div>
-                    <div style={{ minWidth: "44px", textAlign: "center" }}><span style={{ fontSize: "10px", color: "#b8d4ee", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>VS</span></div>
-                    <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "5px" }}>
-                      <span style={{ fontSize: "20px" }}>{at.flag}</span>
-                      <span style={{ fontSize: "11px", color: "#a8d4f0", fontFamily: "'Inter', sans-serif" }}>{m.away}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {pending.map(m => (
+              <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden", opacity: 0.6 }}>
+                <StadiumScore match={m} />
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -1837,12 +1864,8 @@ function CommunityView({ matches, user }) {
     const ht = getTeam(m.home), at = getTeam(m.away);
     return (
       <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "18px" }}>{ht.flag}</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: "#e0eaf8" }}>{m.home}</span>
-          {m.result_home !== null ? <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{m.result_home}-{m.result_away}</span> : <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: "#d0e4f7" }}>vs</span>}
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: "#e0eaf8" }}>{m.away}</span>
-          <span style={{ fontSize: "18px" }}>{at.flag}</span>
+        <div style={{ margin: "-12px -12px 8px", borderBottom: `1px solid ${BORDER}` }}>
+          <StadiumScore match={m} />
         </div>
         {matchPreds.length === 0
           ? <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha enviado pronóstico</p>
