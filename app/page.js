@@ -540,27 +540,14 @@ function CountdownBanner() {
         {blocks.map(({ v, l }, i) => (
           <div key={l} style={{ display: "flex", alignItems: "flex-start", gap: "4px" }}>
             <div style={{ textAlign: "center", flex: 1, maxWidth: "74px" }}>
-              {/* ...tarjeta del número... */}
-            </div>
-        
-            {/* SOLO este separador, una vez */}
-            {i < blocks.length - 1 && (
               <div style={{
-                display: "flex", flexDirection: "column", gap: "5px", paddingTop: "16px",
-                animation:
-                  i === 2 ? "blink 1s steps(1) infinite"
-                  : i === 1 && s === "00" ? "blink 1s steps(1) infinite"
-                  : i === 0 && m === "00" && s === "00" ? "blink 1s steps(1) infinite"
-                  : "none",
+                position: "relative",
+                background: `linear-gradient(160deg, rgba(79,195,247,0.16), rgba(0,0,0,0.4))`,
+                border: `1px solid rgba(79,195,247,0.3)`,
+                borderRadius: "12px", padding: "12px 6px 10px",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 14px rgba(0,0,0,0.35)",
+                overflow: "hidden",
               }}>
-                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
-                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
-              </div>
-            )}
-          </div>
-        ))}
-                {/* Línea divisoria estilo flip-clock */}
-                <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: "1px", background: "rgba(0,0,0,0.35)" }} />
                 <span style={{
                   position: "relative",
                   fontFamily: "'Bebas Neue', monospace",
@@ -578,7 +565,8 @@ function CountdownBanner() {
               </div>
               <span style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "monospace", letterSpacing: "1px", marginTop: "6px", display: "block" }}>{l}</span>
             </div>
-            {/* Separadores: SEG parpadea siempre; los de arriba parpadean al cambiar su unidad */}
+
+            {/* Separador — una sola vez por hueco */}
             {i < blocks.length - 1 && (
               <div style={{
                 display: "flex", flexDirection: "column", gap: "5px", paddingTop: "16px",
@@ -592,20 +580,12 @@ function CountdownBanner() {
                 <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
               </div>
             )}
-            {/* Dos puntos separadores parpadeantes */}
-            {i < blocks.length - 1 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "5px", paddingTop: "16px", animation: "blink 1s steps(1) infinite" }}>
-                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
-                <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: GREEN, display: "block" }} />
-              </div>
-            )}
           </div>
         ))}
       </div>
     </div>
   );
 }
-
 // ============================================================
 // BARRA DE PROGRESO
 // ============================================================
