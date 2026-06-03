@@ -2213,31 +2213,100 @@ function RankingView({ matches }) {
         </div>
       </div>
 
-      {ranking.map((u, i) => (
-        <div key={u.id} style={{
-          display: "flex", alignItems: "center", gap: "12px",
-          background: i === 0 ? GREEN_DIM : CARD,
-          border: i === 0 ? `1px solid rgba(79,195,247,0.3)` : `1px solid ${BORDER}`,
-          borderRadius: "10px", padding: "14px 16px", marginBottom: "6px",
-        }}>
-          <span style={{ fontSize: "20px", minWidth: "28px" }}>{medals[i] || `#${i + 1}`}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "18px" }}>{u.emoji || "⚽"}</span>
-              <span style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</span>
+      {/* ===== PODIO TOP 3 ===== */}
+      {ranking.length >= 1 && (() => {
+        const PODIUM = [
+          { idx: 1, h: 70, color: "#cfd8e3", glow: "rgba(207,216,227,0.4)" },  // plata (izq)
+          { idx: 0, h: 96, color: "#ffd54f", glow: "rgba(255,213,79,0.55)" },  // oro (centro)
+          { idx: 2, h: 52, color: "#d99a6c", glow: "rgba(217,154,108,0.4)" },  // bronce (der)
+        ].filter(p => ranking[p.idx]);
+      
+        return (
+          <div style={{
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+            gap: "8px", marginBottom: "24px", padding: "8px 0",
+          }}>
+            {PODIUM.map(({ idx, h, color, glow }) => {
+              const u = ranking[idx];
+              const isFirst = idx === 0;
+              return (
+                <div key={u.id} style={{ flex: 1, maxWidth: "120px", textAlign: "center" }}>
+                  {/* Medalla */}
+                  <div style={{ fontSize: isFirst ? "30px" : "24px", marginBottom: "4px" }}>
+                    {medals[idx]}
+                  </div>
+                  {/* Avatar emoji */}
+                  <div style={{
+                    width: isFirst ? "52px" : "44px", height: isFirst ? "52px" : "44px",
+                    borderRadius: "50%", margin: "0 auto 6px",
+                    background: GREEN_DIM, border: `2px solid ${color}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: isFirst ? "26px" : "22px",
+                    boxShadow: `0 0 16px ${glow}`,
+                  }}>
+                    {u.emoji || "⚽"}
+                  </div>
+                  {/* Nombre */}
+                  <div style={{
+                    fontFamily: "monospace", fontSize: "11px", color: "#e0eaf8",
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    marginBottom: "6px",
+                  }}>
+                    {u.name?.split(" ")[0]}
+                  </div>
+                  {/* Pedestal */}
+                  <div style={{
+                    height: `${h}px`,
+                    background: `linear-gradient(180deg, ${color}22, ${color}08)`,
+                    border: `1px solid ${color}55`,
+                    borderBottom: "none",
+                    borderRadius: "10px 10px 0 0",
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                    boxShadow: isFirst ? `0 0 22px ${glow}` : "none",
+                  }}>
+                    <span style={{
+                      fontFamily: "'Bebas Neue', cursive",
+                      fontSize: isFirst ? "40px" : "30px",
+                      color, lineHeight: 1,
+                    }}>{u.total}</span>
+                    <span style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "monospace", letterSpacing: "1px" }}>PTS</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+      
+      {/* ===== RESTO DE LA TABLA (desde el 4º) ===== */}
+      {ranking.slice(3).map((u, i) => {
+        const realIdx = i + 3;
+        return (
+          <div key={u.id} style={{
+            display: "flex", alignItems: "center", gap: "12px",
+            background: CARD, border: `1px solid ${BORDER}`,
+            borderRadius: "10px", padding: "14px 16px", marginBottom: "6px",
+          }}>
+            <span style={{ fontSize: "16px", minWidth: "28px", fontFamily: "'Bebas Neue', monospace", color: "#7ab8e0" }}>#{realIdx + 1}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ fontSize: "18px" }}>{u.emoji || "⚽"}</span>
+                <span style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</span>
+              </div>
+              <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "2px" }}>
+                {u.exactos} exactos · {u.count} eval.
+                {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
+                {u.specialPts > 0 ? ` · +${u.specialPts} especiales` : ""}
+              </div>
             </div>
-            <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "2px" }}>
-              {u.exactos} exactos · {u.count} eval.
-              {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
-              {u.specialPts > 0 ? ` · +${u.specialPts} especiales` : ""}
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", lineHeight: 1 }}>{u.total}</div>
+              <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>PTS</div>
             </div>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: i === 0 ? GREEN : "#e0eaf8", lineHeight: 1 }}>{u.total}</div>
-            <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>PTS</div>
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
       <div style={{ marginTop: "16px", padding: "12px 14px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
         <p style={{ color: "#c0d8f0", fontFamily: "monospace", fontSize: "10px", lineHeight: 2 }}>
