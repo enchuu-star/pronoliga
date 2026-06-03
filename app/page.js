@@ -420,6 +420,10 @@ const css = `
   @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
   @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
   @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .tappable{transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;}
+  .tappable:hover{transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.35);}
+  .tappable:active{transform:translateY(0) scale(0.98);}
+  .skeleton{background:linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 37%, rgba(255,255,255,0.04) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:8px;}
 `;
 const inputSt = {
   width: "100%", padding: "12px 14px", marginBottom: "12px",
@@ -3352,7 +3356,7 @@ function HomeView({ user, matches, predictions, setView }) {
   const pct = Math.round((sent / TOTAL_MATCHES) * 100);
 
   const navCard = (icon, label, sub, color, border, bg, target) => (
-    <button onClick={() => setView(target)} style={{
+    <button onClick={() => setView(target)} className="tappable" style={{
       padding: "18px 12px", border: `1px solid ${border}`, borderRadius: "14px",
       background: bg, cursor: "pointer", textAlign: "center",
       display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
@@ -5139,27 +5143,27 @@ function GamesView({ user }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "monospace", letterSpacing: "3px", marginBottom: "20px" }}>ZONA DE JUEGOS</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <button onClick={() => setGame("trivia")} style={{ padding: "20px 12px", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "14px", background: "rgba(245,158,11,0.05)", cursor: "pointer", textAlign: "center" }}>
+        <button onClick={() => setGame("trivia")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "14px", background: "rgba(245,158,11,0.05)", cursor: "pointer", textAlign: "center" }}>
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🧠</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>TRIVIAL</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>10 preguntas · 1 jugador</div>
         </button>
-        <button onClick={() => setGame("flappy")} style={{ padding: "20px 12px", border: "1px solid rgba(0,176,255,0.2)", borderRadius: "14px", background: "rgba(0,176,255,0.05)", cursor: "pointer", textAlign: "center" }}>
+        <button onClick={() => setGame("flappy")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(0,176,255,0.2)", borderRadius: "14px", background: "rgba(0,176,255,0.05)", cursor: "pointer", textAlign: "center" }}>
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>⚽</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>FLAPPY BALÓN</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>Esquiva porterías · 1 jugador</div>
         </button>
-        <button onClick={() => setGame("flags")} style={{ padding: "20px 12px", border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", background: "rgba(255,193,7,0.05)", cursor: "pointer", textAlign: "center" }}>
+        <button onClick={() => setGame("flags")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", background: "rgba(255,193,7,0.05)", cursor: "pointer", textAlign: "center" }}>
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🌍</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>BANDERAS</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>48 países · 1 jugador</div>
         </button>
-        <button onClick={() => setGame("slot")} style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
+        <button onClick={() => setGame("slot")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🎰</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>TRAGAPERRAS</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace" }}>Mundial 2026 · 1 jugador</div>
         </button>
-        <button onClick={() => setGame("penalty")} style={{ padding: "20px 12px", border: "1px solid rgba(255,82,82,0.2)", borderRadius: "14px", background: "rgba(255,82,82,0.05)", cursor: "pointer", textAlign: "center" }}>
+        <button onClick={() => setGame("penalty")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(255,82,82,0.2)", borderRadius: "14px", background: "rgba(255,82,82,0.05)", cursor: "pointer", textAlign: "center" }}>
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🥅</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>PENALTIS</div>
           <div style={{ fontSize: "9px", color: "#ff8a80", fontFamily: "monospace" }}>5 penaltis · 2 jugadores 🔴</div>
