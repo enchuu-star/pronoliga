@@ -2261,6 +2261,39 @@ function ProfileView({ user, matches }) {
   );
 }
 
+// Calcula el ranking actual y guarda una foto de las posiciones
+async function saveRankingSnapshot(matches) {
+  const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
+  const { data: preds } = await supabase.from("predictions").select("*");
+  const { data: specialPreds } = await supabase.from("special_predictions").select("*");
+  const r = (profiles || []).map(p => {
+    const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
+    const predMap = {};
+    (preds || []).filter(x => x.user_id === p.id).forEach(x => { predMap[x.match_id] = x; });
+    const qualPts = calcQualifierPoints(matches, predMap);
+    const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);
+    const specialPts = mySpecial ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0) : 0;
+    return { id: p.id, total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts };
+  }).sort((a, b) => b.total - a.total);
+  const at = new Date().toISOString();
+  const rows = r.map((u, i) => ({ user_id: u.id, position: i + 1, total: u.total, snapshot_at: at }));
+  const { error } = await supabase.from("ranking_history").insert(rows);
+  if (error) throw error;
+  return rows.length;
+}
+
+// Flecha de movimiento
+function MoveIndicator({ move, size = 10 }) {
+  if (move == null) return <span style={{ fontSize: `${size}px`, color: "#7ab8e0" }}>•</span>;
+  if (move === 0) return <span style={{ fontSize: `${size}px`, color: "#7ab8e0" }}>=</span>;
+  const up = move > 0;
+  return (
+    <span style={{ fontSize: `${size}px`, color: up ? "#34d399" : "#ff6b4a", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "1px", fontFamily: "'Inter', sans-serif" }}>
+      {up ? "▲" : "▼"}{Math.abs(move)}
+    </span>
+  );
+}
+
 // ============================================================
 // RANKING
 // ============================================================
@@ -2295,7 +2328,22 @@ function RankingView({ matches, user }) {
       };
     }).sort((a, b) => b.total - a.total);
 
-    setRanking(r);
+    // Posiciones de la última foto guardada
+    const { data: snap } = await supabase
+      .from("ranking_history")
+      .select("user_id, position, snapshot_at")
+      .order("snapshot_at", { ascending: false });
+    let prevPos = {};
+    if (snap && snap.length) {
+      const latest = snap[0].snapshot_at;
+      snap.filter(s => s.snapshot_at === latest).forEach(s => { prevPos[s.user_id] = s.position; });
+    }
+    const rWithMove = r.map((u, i) => {
+      const prev = prevPos[u.id];
+      return { ...u, move: prev == null ? null : prev - (i + 1) };
+    });
+
+    setRanking(rWithMove);
     setLoading(false);
     setLastUpdated(new Date());
     if (showRefresh) setRefreshing(false);
@@ -2393,6 +2441,12 @@ function RankingView({ matches, user }) {
                   }}>
                     {u.name?.split(" ")[0]}{isMe ? " (tú)" : ""}
                   </div>
+
+                  {/* 👇 Movimiento (sube/baja) */}
+                  <div style={{ marginBottom: "6px" }}>
+                    <MoveIndicator move={u.move} size={10} />
+                  </div>
+
                   {/* Pedestal */}
                   <div style={{
                     height: `${h}px`,
@@ -2430,7 +2484,10 @@ function RankingView({ matches, user }) {
             boxShadow: isMe ? `0 0 14px rgba(79,195,247,0.35)` : "none",
             borderRadius: "10px", padding: "14px 16px", marginBottom: "6px",
           }}>
-            <span style={{ fontSize: "16px", minWidth: "28px", fontFamily: "'Bebas Neue', monospace", color: "#7ab8e0" }}>#{realIdx + 1}</span>
+            <div style={{ minWidth: "32px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+              <span style={{ fontSize: "16px", fontFamily: "'Bebas Neue', monospace", color: "#7ab8e0" }}>#{realIdx + 1}</span>
+              <MoveIndicator move={u.move} size={10} />
+            </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <span style={{ fontSize: "18px" }}>{u.emoji || "⚽"}</span>
@@ -2703,6 +2760,7 @@ function AdminView({ matches, onDataChange }) {
       {/* ADJUDICAR PRONÓSTICOS ESPECIALES */}
       <SpecialAwardsAdmin />
       <SyncResultsAdmin onDataChange={onDataChange} />
+      <SaveRankingSnapshotAdmin matches={matches} />
         
       {saved && <div style={{ padding: "10px 14px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.3)", borderRadius: "8px", color: GREEN, fontFamily: "'Inter', sans-serif", fontSize: "12px", marginBottom: "14px" }}>✓ Resultado guardado y puntos calculados</div>}
 
@@ -2811,6 +2869,40 @@ function SyncResultsAdmin({ onDataChange }) {
           animation: syncing ? "pulse 1s infinite" : "none",
         }}>
         {syncing ? "⏳ SINCRONIZANDO..." : "🔄 ACTUALIZAR RESULTADOS AHORA"}
+      </button>
+    </div>
+  );
+}
+
+function SaveRankingSnapshotAdmin({ matches }) {
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const go = async () => {
+    setSaving(true); setMsg("");
+    try {
+      const n = await saveRankingSnapshot(matches);
+      setMsg(`✓ Posiciones fijadas (${n} jugadores). Las flechas se calcularán desde aquí.`);
+    } catch (e) {
+      setMsg("✗ Error: " + (e.message || String(e)));
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMsg(""), 6000);
+    }
+  };
+  return (
+    <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+      <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginBottom: "10px" }}>
+        📌 Fija las posiciones actuales como referencia. Después de cargar los resultados del siguiente partido, las flechas mostrarán quién sube y quién baja respecto a esta foto.
+      </p>
+      {msg && <p style={{ fontSize: "11px", color: msg.startsWith("✓") ? "#34d399" : "#cc2222", fontFamily: "'Inter', sans-serif", marginBottom: "10px" }}>{msg}</p>}
+      <button onClick={go} disabled={saving} style={{
+        width: "100%", padding: "12px", borderRadius: "7px",
+        background: GREEN_DIM, color: GREEN, fontFamily: "'Inter', sans-serif",
+        fontSize: "12px", fontWeight: 700, cursor: saving ? "default" : "pointer",
+        letterSpacing: "2px", border: `1px solid ${BORDER}`,
+        animation: saving ? "pulse 1s infinite" : "none",
+      }}>
+        {saving ? "Guardando..." : "📌 FIJAR POSICIONES ACTUALES"}
       </button>
     </div>
   );
