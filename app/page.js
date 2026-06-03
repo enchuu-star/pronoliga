@@ -1459,8 +1459,8 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
-            <span style={{ fontSize: "11px", color: "#c0d8f0", textAlign: "right", fontFamily: "'Inter', sans-serif" }}>{match.home}</span>
-            <span style={{ fontSize: "22px" }}>{ht.flag}</span>
+            <span style={{ fontSize: "12px", color: "#c0d8f0", textAlign: "right", fontFamily: "'Inter', sans-serif" }}>{match.home}</span>
+            <span style={{ fontSize: "28px" }}>{ht.flag}</span>
           </div>
           {hasResult ? (
             <div style={{ minWidth: "64px", textAlign: "center" }}>
