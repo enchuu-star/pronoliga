@@ -415,6 +415,8 @@ const css = `
   input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes popIn{0%{opacity:0;transform:scale(0.85)}60%{transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}
+  @keyframes glowPulse{0%,100%{box-shadow:0 0 18px rgba(79,195,247,0.25)}50%{box-shadow:0 0 42px rgba(79,195,247,0.7)}}
 `;
 const inputSt = {
   width: "100%", padding: "12px 14px", marginBottom: "12px",
@@ -2254,6 +2256,20 @@ function UserActivityLog() {
       setLoading(false);
     })();
   }, []);
+  // Mostrar el aviso de emoji UNA vez por dispositivo (relanzamiento v2, más visible)
+  useEffect(() => {
+    if (!user) return;
+    try {
+      if (!localStorage.getItem("emojiTipV2_seen")) setShowEmojiTip(true);
+    } catch {
+      setShowEmojiTip(true);
+    }
+  }, [user]);
+
+  const dismissEmojiTip = () => {
+    setShowEmojiTip(false);
+    try { localStorage.setItem("emojiTipV2_seen", "1"); } catch {}
+  };
 
   if (loading) return <p style={{ color: "#d0e4f7", fontFamily: "monospace", fontSize: "11px" }}>Cargando...</p>;
 
@@ -5228,7 +5244,6 @@ export default function Home() {
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", u.id).single();
     setUser({ ...u, emoji: profile?.emoji || "⚽" });
     setScreen("app");
-    if (profile?.emoji === null || profile?.emoji === undefined) setShowEmojiTip(true);
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); setUser(null); setScreen("login"); };
@@ -5268,37 +5283,51 @@ export default function Home() {
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
           {showEmojiTip && (
-  <div style={{
-    position: "fixed", top: "58px", left: "50%",
-    transform: "translateX(-50%)",
-    width: "calc(100% - 28px)", maxWidth: "500px",
-    zIndex: 150, animation: "fadeIn 0.3s ease",
-  }}>
-    <div style={{
-      background: "#0f1c2e",
-      border: `1px solid ${GREEN}`,
-      borderRadius: "12px", padding: "14px 16px",
-      display: "flex", alignItems: "center", gap: "12px",
-      boxShadow: "0 4px 20px rgba(79,195,247,0.15)",
-    }}>
-      <span style={{ fontSize: "28px" }}>👆</span>
-      <div style={{ flex: 1 }}>
-        <p style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: GREEN, letterSpacing: "2px", marginBottom: "3px" }}>
-          PERSONALIZA TU PERFIL
-        </p>
-        <p style={{ fontFamily: "monospace", fontSize: "11px", color: "#c0d8f0", lineHeight: 1.5 }}>
-          Ve a tu perfil y elige un emoji que te represente en el ranking
-        </p>
-      </div>
-      <button onClick={() => setShowEmojiTip(false)} style={{
-        padding: "6px 10px", border: `1px solid ${BORDER}`,
-        borderRadius: "8px", background: "transparent",
-        color: "#d0e4f7", fontFamily: "monospace",
-        fontSize: "11px", cursor: "pointer", flexShrink: 0,
-      }}>✕</button>
-    </div>
-  </div>
-)}
+            <div
+              onClick={dismissEmojiTip}
+              style={{
+                position: "fixed", inset: 0, zIndex: 250,
+                background: "rgba(5,12,24,0.82)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: "24px", animation: "fadeIn 0.25s ease",
+              }}>
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: "100%", maxWidth: "360px",
+                  background: "linear-gradient(160deg,#102339,#0a1628)",
+                  border: `2px solid ${GREEN}`, borderRadius: "18px",
+                  padding: "28px 24px 20px", textAlign: "center",
+                  animation: "popIn 0.4s ease, glowPulse 2s ease-in-out infinite",
+                }}>
+                <div style={{ fontSize: "56px", lineHeight: 1, marginBottom: "12px", animation: "pulse 1.4s ease-in-out infinite" }}>👤⚽</div>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "24px", color: GREEN, letterSpacing: "2px", marginBottom: "8px" }}>
+                  ¡PERSONALIZA TU PERFIL!
+                </div>
+                <p style={{ fontFamily: "monospace", fontSize: "12px", color: "#c0d8f0", lineHeight: 1.6, marginBottom: "20px" }}>
+                  Elige un emoji que te represente en el ranking y en los chats. Toca tu avatar arriba a la derecha o pulsa el botón.
+                </p>
+                <button
+                  onClick={() => { dismissEmojiTip(); setView("profile"); }}
+                  style={{
+                    width: "100%", padding: "14px", border: "none", borderRadius: "10px",
+                    background: `linear-gradient(135deg,${GREEN},#0077cc)`,
+                    color: "#0a1628", fontFamily: "monospace", fontSize: "13px", fontWeight: 800,
+                    letterSpacing: "2px", cursor: "pointer", marginBottom: "8px",
+                  }}>
+                  👤 IR A MI PERFIL →
+                </button>
+                <button
+                  onClick={dismissEmojiTip}
+                  style={{
+                    width: "100%", padding: "10px", border: "none", background: "transparent",
+                    color: "#7ab8e0", fontFamily: "monospace", fontSize: "11px", cursor: "pointer",
+                  }}>
+                  Ahora no
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
