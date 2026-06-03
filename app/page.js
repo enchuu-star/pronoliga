@@ -2129,7 +2129,7 @@ function ProfileView({ user, matches }) {
 // ============================================================
 // RANKING
 // ============================================================
-function RankingView({ matches }) {
+function RankingView({ matches, user }) {
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -2229,6 +2229,7 @@ function RankingView({ matches }) {
             {PODIUM.map(({ idx, h, color, glow }) => {
               const u = ranking[idx];
               const isFirst = idx === 0;
+              const isMe = user && u.id === user.id;
               return (
                 <div key={u.id} style={{ flex: 1, maxWidth: "120px", textAlign: "center" }}>
                   {/* Medalla */}
@@ -2239,20 +2240,23 @@ function RankingView({ matches }) {
                   <div style={{
                     width: isFirst ? "52px" : "44px", height: isFirst ? "52px" : "44px",
                     borderRadius: "50%", margin: "0 auto 6px",
-                    background: GREEN_DIM, border: `2px solid ${color}`,
+                    background: GREEN_DIM,
+                    border: `2px solid ${isMe ? GREEN : color}`,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: isFirst ? "26px" : "22px",
-                    boxShadow: `0 0 16px ${glow}`,
+                    boxShadow: isMe ? `0 0 18px ${GREEN}` : `0 0 16px ${glow}`,
                   }}>
                     {u.emoji || "⚽"}
                   </div>
                   {/* Nombre */}
                   <div style={{
-                    fontFamily: "monospace", fontSize: "11px", color: "#e0eaf8",
+                    fontFamily: "monospace", fontSize: "11px",
+                    color: isMe ? GREEN : "#e0eaf8",
+                    fontWeight: isMe ? 700 : 400,
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                     marginBottom: "6px",
                   }}>
-                    {u.name?.split(" ")[0]}
+                    {u.name?.split(" ")[0]}{isMe ? " (tú)" : ""}
                   </div>
                   {/* Pedestal */}
                   <div style={{
@@ -2282,17 +2286,22 @@ function RankingView({ matches }) {
       {/* ===== RESTO DE LA TABLA (desde el 4º) ===== */}
       {ranking.slice(3).map((u, i) => {
         const realIdx = i + 3;
+        const isMe = user && u.id === user.id;
         return (
           <div key={u.id} style={{
             display: "flex", alignItems: "center", gap: "12px",
-            background: CARD, border: `1px solid ${BORDER}`,
+            background: isMe ? GREEN_DIM : CARD,
+            border: `1px solid ${isMe ? GREEN : BORDER}`,
+            boxShadow: isMe ? `0 0 14px rgba(79,195,247,0.35)` : "none",
             borderRadius: "10px", padding: "14px 16px", marginBottom: "6px",
           }}>
             <span style={{ fontSize: "16px", minWidth: "28px", fontFamily: "'Bebas Neue', monospace", color: "#7ab8e0" }}>#{realIdx + 1}</span>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <span style={{ fontSize: "18px" }}>{u.emoji || "⚽"}</span>
-                <span style={{ fontFamily: "monospace", fontSize: "14px", color: "#e0eaf8" }}>{u.name}</span>
+                <span style={{ fontFamily: "monospace", fontSize: "14px", color: isMe ? GREEN : "#e0eaf8", fontWeight: isMe ? 700 : 400 }}>
+                  {u.name}{isMe ? " (tú)" : ""}
+                </span>
               </div>
               <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "monospace", marginTop: "2px" }}>
                 {u.exactos} exactos · {u.count} eval.
@@ -5423,7 +5432,7 @@ export default function Home() {
             {view === "results" && <ResultsView matches={matches} />}
             {view === "community" && <CommunityView matches={matches} user={user} />}
             {view === "profile" && <ProfileView user={user} matches={matches} />}
-            {view === "ranking" && <RankingView matches={matches} />}
+            {view === "ranking" && <RankingView matches={matches} user={user} />}
             {view === "games" && <GamesView user={user} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
