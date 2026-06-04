@@ -483,6 +483,20 @@ function SkeletonRanking({ count = 6 }) {
   );
 }
 
+function EmptyState({ emoji, title, text }) {
+  return (
+    <div style={{
+      background: CARD, border: `1px dashed ${BORDER}`, borderRadius: "14px",
+      padding: "40px 24px", textAlign: "center",
+      animation: "fadeIn 0.4s ease",
+    }}>
+      <div style={{ fontSize: "52px", marginBottom: "12px", animation: "floaty 2.5s ease-in-out infinite" }}>{emoji}</div>
+      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN, letterSpacing: "2px", marginBottom: "8px" }}>{title}</div>
+      <p style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6, maxWidth: "300px", margin: "0 auto" }}>{text}</p>
+    </div>
+  );
+}
+
 // ============================================================
 // LOGIN
 // ============================================================
@@ -2065,8 +2079,8 @@ function CommunityView({ matches, user }) {
         </div>
       )}
       {viewMode === "day"
-        ? matchesByDay(currentDay).length === 0 ? <p style={{ color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>Se mostrarán los pronosticos de todos los participantes cuando empiece el mundial</p> : matchesByDay(currentDay).map(m => renderMatchPreds(m))
-        : closedMatches.length === 0 ? <p style={{ color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>Se mostrarán los pronosticos de todos los participantes cuando empiece el mundial</p> : days.map(day => { const dm = matchesByDay(day); if (!dm.length) return null; return <div key={day} style={{ marginBottom: "20px" }}><p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>📅 {formatDate(day)}</p>{dm.map(m => renderMatchPreds(m))}</div>; })
+        ? matchesByDay(currentDay).length === 0 ? <EmptyState emoji="⚽" title="TODAVÍA NADA QUE VER" text="Aquí aparecerán los pronósticos de todos los participantes en cuanto empiece el Mundial y se cierren los primeros partidos." /> : matchesByDay(currentDay).map(m => renderMatchPreds(m))
+        : closedMatches.length === 0 ? <EmptyState emoji="⚽" title="TODAVÍA NADA QUE VER" text="Aquí aparecerán los pronósticos de todos los participantes en cuanto empiece el Mundial y se cierren los primeros partidos." /> : days.map(day => { const dm = matchesByDay(day); if (!dm.length) return null; return <div key={day} style={{ marginBottom: "20px" }}><p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>📅 {formatDate(day)}</p>{dm.map(m => renderMatchPreds(m))}</div>; })
       }
     </div>
   );
