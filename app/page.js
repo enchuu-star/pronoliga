@@ -3803,12 +3803,43 @@ function HomeView({ user, matches, predictions, setView }) {
   const sent = predictions.length;
   const pct = Math.round((sent / TOTAL_MATCHES) * 100);
   // Partidos de hoy (solo cuando el Mundial ya ha arrancado)
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = "2026-06-11"; // ⚠️ PRUEBA — quitar antes de publicar
   const mundialStarted = todayStr >= "2026-06-11";
   const todayMatches = matches
     .filter(m => m.match_date === todayStr)
     .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
 
+  const [myRank, setMyRank] = useState(null);
+
+  useEffect(() => {
+    if (!mundialStarted) return;
+    (async () => {
+      const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
+      const { data: preds } = await supabase.from("predictions").select("*");
+      const { data: specialPreds } = await supabase.from("special_predictions").select("*");
+      const r = (profiles || []).map(p => {
+        const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
+        const predMap = {};
+        (preds || []).filter(x => x.user_id === p.id).forEach(x => { predMap[x.match_id] = x; });
+        const qualPts = calcQualifierPoints(matches, predMap);
+        const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);
+        const specialPts = mySpecial ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0) : 0;
+        return { id: p.id, total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts };
+      }).sort((a, b) => b.total - a.total);
+
+      const pos = r.findIndex(u => u.id === user.id);
+      if (pos === -1) { setMyRank(null); return; }
+      const me = r[pos];
+      const ahead = pos > 0 ? r[pos - 1] : null; // el que va justo por delante
+      setMyRank({
+        position: pos + 1,
+        total: me.total,
+        toNext: ahead ? ahead.total - me.total : null,
+        nextIsTie: ahead ? ahead.total === me.total : false,
+      });
+    })();
+  }, [mundialStarted, matches, user.id]);
+  
   const navCard = (icon, label, sub, color, border, bg, target) => (
     <button onClick={() => setView(target)} className="tappable" style={{
       padding: "18px 12px", border: `1px solid ${border}`, borderRadius: "14px",
@@ -3883,6 +3914,38 @@ function HomeView({ user, matches, predictions, setView }) {
           )}
         </div>
       )}
+
+      {/* Tu posición */}
+      {mundialStarted && myRank && (
+        <button onClick={() => setView("ranking")} className="tappable" style={{
+          width: "100%", display: "flex", alignItems: "center", gap: "14px",
+          padding: "16px", marginBottom: "20px", cursor: "pointer",
+          background: `linear-gradient(135deg, rgba(79,195,247,0.14), rgba(0,119,204,0.06))`,
+          border: `1px solid ${GREEN}`, borderRadius: "14px",
+        }}>
+          <div style={{ textAlign: "center", flexShrink: 0 }}>
+            <div style={{ fontSize: "9px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>VAS</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "44px", color: GREEN, lineHeight: 1 }}>
+              {myRank.position}<span style={{ fontSize: "20px" }}>º</span>
+            </div>
+          </div>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: "#e0eaf8", lineHeight: 1 }}>{myRank.total}</span>
+              <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>puntos</span>
+            </div>
+            <div style={{ fontSize: "11px", color: "#a8d4f0", fontFamily: "'Inter', sans-serif", marginTop: "4px", lineHeight: 1.4 }}>
+              {myRank.position === 1
+                ? "🥇 ¡Lideras la porra!"
+                : myRank.toNext === 0
+                  ? `Empatado con el ${myRank.position - 1}º`
+                  : `Te faltan ${myRank.toNext} pts para el ${myRank.position - 1}º`}
+            </div>
+          </div>
+          <span style={{ fontSize: "20px", color: GREEN, flexShrink: 0 }}>→</span>
+        </button>
+      )}
+
       {/* Grid de accesos */}
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>ACCESO RÁPIDO</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
