@@ -2079,8 +2079,8 @@ function CommunityView({ matches, user }) {
         </div>
       )}
       {viewMode === "day"
-        ? matchesByDay(currentDay).length === 0 ? <EmptyState emoji="⚽" title="TODAVÍA NADA QUE VER" text="Aquí aparecerán los pronósticos de todos los participantes en cuanto empiece el Mundial y se cierren los primeros partidos." /> : matchesByDay(currentDay).map(m => renderMatchPreds(m))
-        : closedMatches.length === 0 ? <EmptyState emoji="⚽" title="TODAVÍA NADA QUE VER" text="Aquí aparecerán los pronósticos de todos los participantes en cuanto empiece el Mundial y se cierren los primeros partidos." /> : days.map(day => { const dm = matchesByDay(day); if (!dm.length) return null; return <div key={day} style={{ marginBottom: "20px" }}><p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>📅 {formatDate(day)}</p>{dm.map(m => renderMatchPreds(m))}</div>; })
+        ? matchesByDay(currentDay).length === 0 ? <EmptyState emoji="⚽" title="TODAVÍA NADA QUE VER" text="Aquí aparecerán los pronósticos de todos los participantes en cuanto empiece el Mundial." /> : matchesByDay(currentDay).map(m => renderMatchPreds(m))
+        : closedMatches.length === 0 ? <EmptyState emoji="⚽" title="TODAVÍA NADA QUE VER" text="Aquí aparecerán los pronósticos de todos los participantes en cuanto empiece el Mundial." /> : days.map(day => { const dm = matchesByDay(day); if (!dm.length) return null; return <div key={day} style={{ marginBottom: "20px" }}><p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>📅 {formatDate(day)}</p>{dm.map(m => renderMatchPreds(m))}</div>; })
       }
     </div>
   );
