@@ -1821,51 +1821,135 @@ function StadiumScore({ match, played }) {
 // RESULTADOS REALES
 // ============================================================
 function ResultsView({ matches }) {
+  const [viewMode, setViewMode] = useState("day"); // "day" | "group"
   const [g, setG] = useState("A");
-  const played = matches.filter(m => m.grp === g && m.result_home !== null);
-  const pending = matches.filter(m => m.grp === g && m.result_home === null);
+
+  // Días disponibles (ordenados)
+  const days = [...new Set(matches.map(m => m.match_date))].sort();
+
+  // Día por defecto: hoy si hay partidos, si no el más cercano hacia adelante,
+  // y si todo es pasado, el último día.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const defaultDay = days.includes(todayStr)
+    ? todayStr
+    : (days.find(d => d >= todayStr) || days[days.length - 1] || null);
+
+  const [selectedDay, setSelectedDay] = useState(defaultDay);
+  const currentDay = selectedDay || defaultDay;
+
+  const dayMatches = matches
+    .filter(m => m.match_date === currentDay)
+    .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
+
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RESULTADOS REALES</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
-        {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#e0eefa" }}>{gr}</button>)}
+
+      {/* Selector modo */}
+      <div style={{ display: "flex", marginBottom: "16px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
+        {[{ id: "day", label: "📅 Por día" }, { id: "group", label: "⚽ Por grupo" }].map(opt => (
+          <button key={opt.id} onClick={() => setViewMode(opt.id)} style={{
+            flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer",
+            fontSize: "11px", letterSpacing: "2px", fontFamily: "'Inter', sans-serif", textTransform: "uppercase",
+            background: viewMode === opt.id ? GREEN : "transparent",
+            color: viewMode === opt.id ? "#0a1628" : "#e0eefa", fontWeight: 700,
+          }}>{opt.label}</button>
+        ))}
       </div>
-      <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.1)", borderRadius: "12px", padding: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-          <div style={{ width: "36px", height: "36px", borderRadius: "7px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{g}</span>
+
+      {/* ===== POR DÍA ===== */}
+      {viewMode === "day" && (
+        <>
+          {/* Selector de días */}
+          <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px", marginBottom: "16px" }}>
+            {days.map(day => {
+              const isToday = day === todayStr;
+              const sel = currentDay === day;
+              return (
+                <button key={day} onClick={() => setSelectedDay(day)} style={{
+                  padding: "7px 12px",
+                  border: `1px solid ${sel ? GREEN : BORDER}`,
+                  borderRadius: "8px", cursor: "pointer", whiteSpace: "nowrap",
+                  background: sel ? GREEN_DIM : CARD,
+                  color: sel ? GREEN : "#a8d4f0",
+                  fontFamily: "'Inter', sans-serif", fontSize: "11px", flexShrink: 0,
+                  position: "relative",
+                }}>
+                  {formatDate(day)}
+                  {isToday && (
+                    <span style={{
+                      position: "absolute", top: "-4px", right: "-4px",
+                      width: "8px", height: "8px", borderRadius: "50%",
+                      background: GREEN, border: "1px solid #0a1628",
+                    }} />
+                  )}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "17px", color: "#e0eaf8" }}>GRUPO {g} — REAL</div>
-            <div style={{ display: "flex", gap: "5px", marginTop: "3px" }}>{GROUPS[g].map(t => <span key={t.name} style={{ fontSize: "15px" }} title={t.name}>{t.flag}</span>)}</div>
-          </div>
-        </div>
-        <StandingTable standings={calcRealStandings(g, matches)} />
-        {played.length > 0 && (
-          <div style={{ marginTop: "18px" }}>
-            <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "8px" }}>JUGADOS</p>
-            {played.map(m => (
-              <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden" }}>
+
+          {/* Partidos del día */}
+          {dayMatches.length === 0 ? (
+            <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center", padding: "20px 0" }}>
+              No hay partidos este día
+            </p>
+          ) : (
+            dayMatches.map(m => (
+              <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden", opacity: m.result_home !== null ? 1 : 0.6 }}>
                 <StadiumScore match={m} />
               </div>
-            ))}
-          </div>
-        )}
-        {pending.length > 0 && (
-          <div style={{ marginTop: "16px" }}>
-            <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "8px" }}>PENDIENTES</p>
-            {pending.map(m => (
-              <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden", opacity: 0.6 }}>
-                <StadiumScore match={m} />
+            ))
+          )}
+        </>
+      )}
+
+      {/* ===== POR GRUPO ===== */}
+      {viewMode === "group" && (() => {
+        const played = matches.filter(m => m.grp === g && m.result_home !== null);
+        const pending = matches.filter(m => m.grp === g && m.result_home === null);
+        return (
+          <>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
+              {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#e0eefa" }}>{gr}</button>)}
+            </div>
+            <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.1)", borderRadius: "12px", padding: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "7px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{g}</span>
+                </div>
+                <div>
+                  <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "17px", color: "#e0eaf8" }}>GRUPO {g} — REAL</div>
+                  <div style={{ display: "flex", gap: "5px", marginTop: "3px" }}>{GROUPS[g].map(t => <span key={t.name} style={{ fontSize: "15px" }} title={t.name}>{t.flag}</span>)}</div>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <StandingTable standings={calcRealStandings(g, matches)} />
+              {played.length > 0 && (
+                <div style={{ marginTop: "18px" }}>
+                  <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "8px" }}>JUGADOS</p>
+                  {played.map(m => (
+                    <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden" }}>
+                      <StadiumScore match={m} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {pending.length > 0 && (
+                <div style={{ marginTop: "16px" }}>
+                  <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "8px" }}>PENDIENTES</p>
+                  {pending.map(m => (
+                    <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden", opacity: 0.6 }}>
+                      <StadiumScore match={m} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
-
 // ============================================================
 // COMUNIDAD
 // ============================================================
