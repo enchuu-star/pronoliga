@@ -2006,9 +2006,18 @@ function CommunityView({ matches, user }) {
   }, []);
 
   const getName = id => profiles.find(p => p.id === id)?.name || "Usuario";
-  const days = [...new Set(matches.map(m => m.match_date))].sort();
   const closedMatches = matches.filter(m => m.status === "closed" || m.result_home !== null);
-  const currentDay = selectedDay || days[0];
+  // Solo días que tienen al menos un partido cerrado (con pronósticos visibles)
+  const days = [...new Set(closedMatches.map(m => m.match_date))].sort();
+
+  // Día por defecto: hoy si tiene partidos cerrados; si no, el más cercano hacia
+  // adelante; y si todo es pasado, el último.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const defaultDay = days.includes(todayStr)
+    ? todayStr
+    : (days.find(d => d >= todayStr) || days[days.length - 1] || null);
+
+  const currentDay = selectedDay || defaultDay;
   const matchesByDay = day => closedMatches.filter(m => m.match_date === day);
 
   const renderMatchPreds = m => {
