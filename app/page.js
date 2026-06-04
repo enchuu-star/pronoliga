@@ -515,7 +515,7 @@ function LoginPage({ onLogin }) {
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(18px,5vw,26px)", letterSpacing: "6px", color: "#e0eefa", marginTop: "2px" }}>MUNDIAL 2026</div>
           <div style={{ fontSize: "10px", color: "#d0e4f7", letterSpacing: "3px", fontFamily: "'Inter', sans-serif", marginTop: "6px" }}>USA · CANADA · MEXICO</div>
         </div>
-        <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: "16px", padding: "24px" }}>
+        <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(79,195,247,0.15)", borderRadius: "16px", padding: "24px" }}>
           <div style={{ display: "flex", marginBottom: "20px", background: "rgba(200,215,235,0.5)", borderRadius: "8px", padding: "3px" }}>
             {["login", "register"].map(m => <button key={m} onClick={() => { setMode(m); setError(""); }} style={{ flex: 1, padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "'Inter', sans-serif", textTransform: "uppercase", background: mode === m ? GREEN : "transparent", color: mode === m ? "#0a1628" : "#d0e4f7", fontWeight: 700 }}>{m === "login" ? "Entrar" : "Registro"}</button>)}
           </div>
@@ -657,7 +657,7 @@ function ProgressBar({ predictions, matches }) {
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "#cce0f5", letterSpacing: "2px" }}>TUS PRONÓSTICOS</span>
         <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: sent === TOTAL_MATCHES ? GREEN : "#7ab8e0" }}>{sent}/{TOTAL_MATCHES}</span>
       </div>
-      <div style={{ background: "rgba(245,158,11,0.08)", borderRadius: "4px", height: "6px", overflow: "hidden" }}>
+      <div style={{ background: "rgba(79,195,247,0.08)", borderRadius: "4px", height: "6px", overflow: "hidden" }}>
         <div style={{ height: "100%", width: pct + "%", background: `linear-gradient(90deg,${GREEN},#005599)`, borderRadius: "4px", transition: "width 0.5s ease" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: "5px" }}>
@@ -689,7 +689,7 @@ function NavBar({ user, view, setView, onLogout }) {
           <button onClick={() => setView("profile")} style={{
             width: "32px", height: "32px", borderRadius: "50%",
             background: view === "profile" ? GREEN : GREEN_DIM,
-            border: `1px solid ${view === "profile" ? GREEN : "rgba(245,158,11,0.3)"}`,
+            border: `1px solid ${view === "profile" ? GREEN : "rgba(79,195,247,0.3)"}`,
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
             marginRight: "10px", flexShrink: 0,
           }}>
@@ -724,7 +724,7 @@ function StandingTable({ standings }) {
         {["EQUIPO", "PJ", "GF", "GC", "PTS"].map(c => <span key={c} style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "1px", textAlign: c === "EQUIPO" ? "left" : "center" }}>{c}</span>)}
       </div>
       {standings.map((t, i) => (
-        <div key={t.name} style={{ display: "grid", gridTemplateColumns: "1fr 28px 28px 28px 36px", gap: "1px", padding: "8px", borderRadius: "7px", marginBottom: "3px", background: i < 2 ? GREEN_DIM : CARD, border: i < 2 ? "1px solid rgba(245,158,11,0.18)" : `1px solid ${BORDER}`, borderLeft: i < 2 ? `3px solid ${GREEN}` : "3px solid transparent" }}>
+        <div key={t.name} style={{ display: "grid", gridTemplateColumns: "1fr 28px 28px 28px 36px", gap: "1px", padding: "8px", borderRadius: "7px", marginBottom: "3px", background: i < 2 ? GREEN_DIM : CARD, border: i < 2 ? "1px solid rgba(79,195,247,0.18)" : `1px solid ${BORDER}`, borderLeft: i < 2 ? `3px solid ${GREEN}` : "3px solid transparent" }}>
           <span style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
             <span style={{ fontSize: "15px" }}>{t.flag}</span>
             <span style={{ fontSize: "11px", color: i < 2 ? "#e0eaf8" : "#a8d4f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name}</span>
@@ -1519,7 +1519,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
                       padding: "3px 10px", borderRadius: "12px", fontSize: "12px",
                       fontFamily: "'Inter', sans-serif", fontWeight: 700,
                       background: predPoints === 5 ? GREEN_DIM : predPoints === 3 ? "rgba(79,195,247,0.08)" : predPoints === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)",
-                      color: predPoints === 5 ? GREEN : predPoints === 3 ? "#4fc3f7" : predPoints === 1 ? "#b8860b" : "#cc2222",
+                      color: predPoints === 5 ? GREEN : predPoints === 3 ? "#4fc3f7" : predPoints === 1 ? "#ffd54f" : "#cc2222",
                     }}>
                       {predPoints === 5 ? "🎯 +5" : predPoints === 3 ? "📏 +3" : predPoints === 1 ? "✓ +1" : "✗ +0"}
                     </span>
@@ -1912,9 +1912,9 @@ function ResultsView({ matches }) {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "20px" }}>
               {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "40px", height: "40px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "8px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "18px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#e0eefa" }}>{gr}</button>)}
             </div>
-            <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.1)", borderRadius: "12px", padding: "16px" }}>
+            <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.1)", borderRadius: "12px", padding: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-                <div style={{ width: "36px", height: "36px", borderRadius: "7px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "7px", background: GREEN_DIM, border: "1px solid rgba(79,195,247,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{g}</span>
                 </div>
                 <div>
@@ -2034,7 +2034,7 @@ function CommunityView({ matches, user }) {
             <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
               <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1 }}>{getName(pred.user_id)}</span>
               <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>{pred.predicted_home}-{pred.predicted_away}</span>
-              {pred.points !== null && pred.points !== undefined && <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#b8860b" : "#cc2222" }}>{pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}</span>}
+              {pred.points !== null && pred.points !== undefined && <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>{pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}</span>}
             </div>
           ))}
 
@@ -2222,7 +2222,7 @@ function ProfileView({ user, matches }) {
   <div style={{ position: "relative" }}>
     <div style={{
       width: "56px", height: "56px", borderRadius: "50%",
-      background: GREEN_DIM, border: `1px solid rgba(245,158,11,0.3)`,
+      background: GREEN_DIM, border: `1px solid rgba(79,195,247,0.3)`,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: "28px", cursor: "pointer",
     }} onClick={() => { setEditingEmoji(true); setEmojiInput(emoji); }}>
@@ -2422,7 +2422,7 @@ function ProfileView({ user, matches }) {
           {compareWith && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
-                <div style={{ background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.2)", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                <div style={{ background: GREEN_DIM, border: "1px solid rgba(79,195,247,0.2)", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
                   <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: GREEN }}>{total}</div>
                   <div style={{ fontSize: "9px", color: "#cce0f5", fontFamily: "'Inter', sans-serif" }}>{user.name?.split(" ")[0]}</div>
                 </div>
@@ -2445,10 +2445,10 @@ function ProfileView({ user, matches }) {
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <div style={{ textAlign: "left" }}>
                           <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eefa" }}>{mine?.predicted_home}-{mine?.predicted_away}</span>
-                          {mine?.points !== null && <span style={{ marginLeft: "6px", fontSize: "11px", color: mine?.points === 5 ? GREEN : mine?.points === 3 ? "#4fc3f7" : mine?.points === 1 ? "#b8860b" : "#cc2222" }}>{mine?.points === 5 ? "🎯+5" : mine?.points === 3 ? "📏+3" : mine?.points === 1 ? "✓+1" : "✗+0"}</span>}
+                          {mine?.points !== null && <span style={{ marginLeft: "6px", fontSize: "11px", color: mine?.points === 5 ? GREEN : mine?.points === 3 ? "#4fc3f7" : mine?.points === 1 ? "#ffd54f" : "#cc2222" }}>{mine?.points === 5 ? "🎯+5" : mine?.points === 3 ? "📏+3" : mine?.points === 1 ? "✓+1" : "✗+0"}</span>}
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          {theirs?.points !== null && <span style={{ marginRight: "6px", fontSize: "11px", color: theirs?.points === 5 ? GREEN : theirs?.points === 3 ? "#4fc3f7" : theirs?.points === 1 ? "#b8860b" : "#cc2222" }}>{theirs?.points === 5 ? "🎯+5" : theirs?.points === 3 ? "📏+3" : theirs?.points === 1 ? "✓+1" : "✗+0"}</span>}
+                          {theirs?.points !== null && <span style={{ marginRight: "6px", fontSize: "11px", color: theirs?.points === 5 ? GREEN : theirs?.points === 3 ? "#4fc3f7" : theirs?.points === 1 ? "#ffd54f" : "#cc2222" }}>{theirs?.points === 5 ? "🎯+5" : theirs?.points === 3 ? "📏+3" : theirs?.points === 1 ? "✓+1" : "✗+0"}</span>}
                           <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eefa" }}>{theirs?.predicted_home}-{theirs?.predicted_away}</span>
                         </div>
                       </div>
@@ -2718,7 +2718,7 @@ function RankingView({ matches, user }) {
 
       <div style={{ marginTop: "16px", padding: "12px 14px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
         <p style={{ color: "#c0d8f0", fontFamily: "'Inter', sans-serif", fontSize: "10px", lineHeight: 2 }}>
-          <span style={{ color: GREEN }}>+5</span> exacto · <span style={{ color: "#4fc3f7" }}>+3</span> ganador + diferencia · <span style={{ color: "#b8860b" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
+          <span style={{ color: GREEN }}>+5</span> exacto · <span style={{ color: "#4fc3f7" }}>+3</span> ganador + diferencia · <span style={{ color: "#ffd54f" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
         </p>
       </div>
     </div>
@@ -2758,7 +2758,7 @@ function ParticipantProgress() {
               {p.count}/{TOTAL_MATCHES} · {p.pct}%
             </span>
           </div>
-          <div style={{ background: "rgba(245,158,11,0.08)", borderRadius: "4px", height: "5px", overflow: "hidden" }}>
+          <div style={{ background: "rgba(79,195,247,0.08)", borderRadius: "4px", height: "5px", overflow: "hidden" }}>
             <div style={{
               height: "100%",
               width: p.pct + "%",
@@ -2973,7 +2973,7 @@ function AdminView({ matches, onDataChange }) {
       <SyncResultsAdmin onDataChange={onDataChange} />
       <SaveRankingSnapshotAdmin matches={matches} />
         
-      {saved && <div style={{ padding: "10px 14px", background: GREEN_DIM, border: "1px solid rgba(245,158,11,0.3)", borderRadius: "8px", color: GREEN, fontFamily: "'Inter', sans-serif", fontSize: "12px", marginBottom: "14px" }}>✓ Resultado guardado y puntos calculados</div>}
+      {saved && <div style={{ padding: "10px 14px", background: GREEN_DIM, border: "1px solid rgba(79,195,247,0.3)", borderRadius: "8px", color: GREEN, fontFamily: "'Inter', sans-serif", fontSize: "12px", marginBottom: "14px" }}>✓ Resultado guardado y puntos calculados</div>}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "16px" }}>
         {Object.keys(GROUPS).map(gr => <button key={gr} onClick={() => setG(gr)} style={{ width: "38px", height: "38px", border: `1px solid ${g === gr ? GREEN : BORDER}`, borderRadius: "7px", cursor: "pointer", fontFamily: "'Bebas Neue', cursive", fontSize: "17px", background: g === gr ? GREEN_DIM : CARD, color: g === gr ? GREEN : "#e0eefa" }}>{gr}</button>)}
@@ -3003,7 +3003,7 @@ function AdminView({ matches, onDataChange }) {
               )}
               {m.result_source && (
                 <span style={{ fontSize: "8px", fontFamily: "'Inter', sans-serif", padding: "2px 6px", borderRadius: "6px",
-                  background: m.result_source === "manual" ? "rgba(245,158,11,0.1)" : "rgba(0,176,255,0.08)",
+                  background: m.result_source === "manual" ? "rgba(79,195,247,0.1)" : "rgba(0,176,255,0.08)",
                   color: m.result_source === "manual" ? GREEN : "#4fc3f7" }}>
                   {m.result_source === "manual" ? "✏️ manual" : "🤖 auto"}
                 </span>
@@ -3016,7 +3016,7 @@ function AdminView({ matches, onDataChange }) {
                   <button onClick={handleResult} style={{ padding: "6px 14px", border: "none", borderRadius: "6px", background: GREEN, color: "#0a1628", cursor: "pointer", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>OK</button>
                   <button onClick={() => setSel(null)} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "6px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontSize: "11px", fontFamily: "'Inter', sans-serif" }}>✕</button>
                 </div>
-                : <button onClick={() => { setSel(m.id); setHr(""); setAr(""); }} style={{ padding: "5px 12px", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "5px", background: GREEN_DIM, color: GREEN, cursor: "pointer", fontSize: "9px", fontFamily: "'Inter', sans-serif" }}>Resultado</button>
+                : <button onClick={() => { setSel(m.id); setHr(""); setAr(""); }} style={{ padding: "5px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "5px", background: GREEN_DIM, color: GREEN, cursor: "pointer", fontSize: "9px", fontFamily: "'Inter', sans-serif" }}>Resultado</button>
               }
             </div>
           </div>
@@ -3674,7 +3674,7 @@ function ExportView({ matches, onBack }) {
                 </div>
                 <span style={{ fontSize: "11px", color: "#007a3a", textAlign: "center", fontWeight: 700 }}>{u.exactos}</span>
                 <span style={{ fontSize: "11px", color: "#0077cc", textAlign: "center" }}>{u.difGoles}</span>
-                <span style={{ fontSize: "11px", color: "#b8860b", textAlign: "center" }}>{u.parciales}</span>
+                <span style={{ fontSize: "11px", color: "#ffd54f", textAlign: "center" }}>{u.parciales}</span>
                 <span style={{ fontSize: "11px", color: "#cc2222", textAlign: "center" }}>{u.fallos}</span>
                 <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: i === 0 ? GREEN : "#1a2a3a", textAlign: "center", overflow: "visible" }}>{u.total}</span>
               </div>
@@ -3739,7 +3739,7 @@ function ExportView({ matches, onBack }) {
                       {pred ? (
                         <span style={{
                           fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: 700,
-                          color: pts === 5 ? "#007a3a" : pts === 3 ? "#0077cc" : pts === 1 ? "#b8860b" : "#cc2222",
+                          color: pts === 5 ? "#007a3a" : pts === 3 ? "#0077cc" : pts === 1 ? "#ffd54f" : "#cc2222",
                           background: pts === 5 ? "rgba(0,122,58,0.1)" : pts === 3 ? "rgba(0,119,204,0.1)" : pts === 1 ? "rgba(184,134,11,0.1)" : "rgba(204,34,34,0.08)",
                           padding: "1px 4px", borderRadius: "4px",
                         }}>
@@ -3809,12 +3809,12 @@ function HomeView({ user, matches, predictions, setView }) {
       {/* Grid de accesos */}
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>ACCESO RÁPIDO</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
-        {navCard("⚽", "MIS PRONÓSTICOS", `${sent}/${TOTAL_MATCHES} enviados`, "#f59e0b", "rgba(245,158,11,0.2)", "rgba(245,158,11,0.05)", "groups")}
+        {navCard("⚽", "MIS PRONÓSTICOS", `${sent}/${TOTAL_MATCHES} enviados`, GREEN, "rgba(79,195,247,0.2)", "rgba(79,195,247,0.05)", "groups")}
         {navCard("👥", "TODOS", "ver todos los pronósticos", "#005599", "rgba(0,176,255,0.2)", "rgba(0,176,255,0.05)", "community")}
         {navCard("🏆", "RANKING", "clasificación general", "#ffd700", "rgba(255,215,0,0.2)", "rgba(255,215,0,0.05)", "ranking")}
-        {navCard("📊", "RESULTADOS", "marcadores reales", "#ff8a00", "rgba(255,138,0,0.2)", "rgba(255,138,0,0.05)", "results")}
-        {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", "#f59e0b", "rgba(245,158,11,0.15)", "rgba(245,158,11,0.04)", "games")}
-        {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#e0eefa", "rgba(245,158,11,0.15)", "rgba(255,255,255,0.03)", "profile")}
+        {navCard("📊", "RESULTADOS", "marcadores reales", GREEN, "rgba(79,195,247,0.2)", "rgba(79,195,247,0.05)", "results")}
+        {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", GREEN, "rgba(79,195,247,0.15)", "rgba(79,195,247,0.04)", "games")}
+        {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#e0eefa", "rgba(79,195,247,0.15)", "rgba(255,255,255,0.03)", "profile")}
         {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#cc2222", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
         {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
       </div>
@@ -4021,15 +4021,15 @@ function TriviaGame({ user, onBack }) {
         <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>TRIVIAL MUNDIAL</p>
       </div>
-      <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.15)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
+      <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.15)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
         <div style={{ fontSize: "48px", marginBottom: "12px" }}>🧠</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>TRIVIAL MUNDIAL 2026</div>
-        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8, marginBottom: "20px" }}>10 preguntas · 15 segundos por pregunta<br/><span style={{ color: GREEN }}>+3</span> rápido · <span style={{ color: "#b8860b" }}>+2</span> normal · <span style={{ color: "#ff8a00" }}>+1</span> lento · <span style={{ color: "#cc2222" }}>+0</span> fallo</p>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8, marginBottom: "20px" }}>10 preguntas · 15 segundos por pregunta<br/><span style={{ color: GREEN }}>+3</span> rápido · <span style={{ color: "#ffd54f" }}>+2</span> normal · <span style={{ color: "#ff8a00" }}>+1</span> lento · <span style={{ color: "#cc2222" }}>+0</span> fallo</p>
         <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
       {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8" }}>{r.score}</span>
@@ -4052,12 +4052,12 @@ function TriviaGame({ user, onBack }) {
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "#d0e4f7" }}>Pregunta {current + 1}/10</span>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{score} PTS</span>
-          <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: `3px solid ${timeLeft > 8 ? GREEN : timeLeft > 4 ? "#b8860b" : "#cc2222"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: timeLeft > 8 ? GREEN : timeLeft > 4 ? "#b8860b" : "#cc2222" }}>{timeLeft}</span>
+          <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: `3px solid ${timeLeft > 8 ? GREEN : timeLeft > 4 ? "#ffd54f" : "#cc2222"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: timeLeft > 8 ? GREEN : timeLeft > 4 ? "#ffd54f" : "#cc2222" }}>{timeLeft}</span>
           </div>
         </div>
       </div>
-      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(245,158,11,0.12)", borderRadius: "14px", padding: "20px", marginBottom: "14px" }}>
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(79,195,247,0.12)", borderRadius: "14px", padding: "20px", marginBottom: "14px" }}>
         <div style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "3px", marginBottom: "16px", overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${(current / 10) * 100}%`, background: GREEN, borderRadius: "3px" }} />
         </div>
@@ -4067,7 +4067,7 @@ function TriviaGame({ user, onBack }) {
         {q.opts.map((opt, i) => {
           let bg = CARD, border = BORDER, color = "#a8d4f0";
           if (answered) {
-            if (i === q.a) { bg = GREEN_DIM; border = "rgba(245,158,11,0.5)"; color = GREEN; }
+            if (i === q.a) { bg = GREEN_DIM; border = "rgba(79,195,247,0.5)"; color = GREEN; }
             else if (i === selected) { bg = "rgba(255,82,82,0.1)"; border = "rgba(255,82,82,0.4)"; color = "#cc2222"; }
           }
           return (
@@ -4089,7 +4089,7 @@ function TriviaGame({ user, onBack }) {
   if (phase === "result") return (
     <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
       <button onClick={() => setPhase("menu")} style={{ marginBottom: "20px", padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
-      <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.15)", borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
+      <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.15)", borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
         <div style={{ fontSize: "44px", marginBottom: "10px" }}>{score >= 25 ? "🏆" : score >= 15 ? "⚽" : "😅"}</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#d0e4f7", letterSpacing: "3px" }}>TU PUNTUACIÓN</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: GREEN, lineHeight: 1 }}>{score}</div>
@@ -4099,7 +4099,7 @@ function TriviaGame({ user, onBack }) {
       <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
       {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8" }}>{r.score}</span>
@@ -4307,7 +4307,7 @@ function FlappyGame({ user, onBack }) {
 
       {phase === "menu" && (
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
-          <div style={{ background: CARD, border: "1px solid rgba(245,158,11,0.15)", borderRadius: "14px", padding: "24px", marginBottom: "20px" }}>
+          <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.15)", borderRadius: "14px", padding: "24px", marginBottom: "20px" }}>
             <div style={{ fontSize: "52px", marginBottom: "10px" }}>⚽</div>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>FLAPPY BALÓN</div>
             <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8, marginBottom: "6px" }}>Esquiva las porterías · Toca para saltar</p>
@@ -4316,7 +4316,7 @@ function FlappyGame({ user, onBack }) {
           </div>
           <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FLAPPY</p>
           {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
               <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
               <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
               <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8" }}>{r.score}</span>
@@ -4452,15 +4452,15 @@ function FlagsGame({ user, onBack }) {
       <div style={{ background: CARD, border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
         <div style={{ fontSize: "48px", marginBottom: "12px" }}>🌍</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>ADIVINA LA BANDERA</div>
-        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8, marginBottom: "20px" }}>10 banderas del Mundial 2026<br/><span style={{ color: GREEN }}>+1</span> acierto · <span style={{ color: "#b8860b" }}>+2</span> con racha de 3 seguidas 🔥</p>
-        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8, marginBottom: "20px" }}>10 banderas del Mundial 2026<br/><span style={{ color: GREEN }}>+1</span> acierto · <span style={{ color: "#ffd54f" }}>+2</span> con racha de 3 seguidas 🔥</p>
+        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#ffd54f,#ff8a00)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
       {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(255,193,7,0.1)" : CARD, border: i === 0 ? "1px solid rgba(255,193,7,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? "#b8860b" : "#e0eaf8" }}>{r.score}</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? "#ffd54f" : "#e0eaf8" }}>{r.score}</span>
           <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>PTS</span>
         </div>
       ))}
@@ -4479,12 +4479,12 @@ function FlagsGame({ user, onBack }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "#d0e4f7" }}>{current + 1}/10</span>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {streak >= 2 && <span style={{ fontSize: "10px", fontFamily: "'Inter', sans-serif", color: "#b8860b" }}>🔥 ×{streak}</span>}
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#b8860b" }}>{score} PTS</span>
+          {streak >= 2 && <span style={{ fontSize: "10px", fontFamily: "'Inter', sans-serif", color: "#ffd54f" }}>🔥 ×{streak}</span>}
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#ffd54f" }}>{score} PTS</span>
         </div>
       </div>
       <div style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "3px", marginBottom: "24px", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${(current / 10) * 100}%`, background: "#b8860b", borderRadius: "3px" }} />
+        <div style={{ height: "100%", width: `${(current / 10) * 100}%`, background: "#ffd54f", borderRadius: "3px" }} />
       </div>
       <div style={{ textAlign: "center", marginBottom: "28px" }}>
         <div style={{ fontSize: "96px", lineHeight: 1, marginBottom: "12px" }}>{q.correct.flag}</div>
@@ -4494,7 +4494,7 @@ function FlagsGame({ user, onBack }) {
         {q.opts.map(opt => {
           let bg = CARD, border = BORDER, color = "#a8d4f0";
           if (answered) {
-            if (opt.name === q.correct.name) { bg = GREEN_DIM; border = "rgba(245,158,11,0.5)"; color = GREEN; }
+            if (opt.name === q.correct.name) { bg = GREEN_DIM; border = "rgba(79,195,247,0.5)"; color = GREEN; }
             else if (opt.name === selected) { bg = "rgba(255,82,82,0.1)"; border = "rgba(255,82,82,0.4)"; color = "#cc2222"; }
           }
           return (
@@ -4510,7 +4510,7 @@ function FlagsGame({ user, onBack }) {
           {selected === q.correct.name
             ? <p style={{ color: GREEN, fontFamily: "'Inter', sans-serif", fontSize: "13px", marginBottom: "12px" }}>✓ ¡Correcto! {streak >= 3 ? "+2 🔥 RACHA!" : "+1"}</p>
             : <p style={{ color: "#cc2222", fontFamily: "'Inter', sans-serif", fontSize: "13px", marginBottom: "12px" }}>✗ Era {q.correct.name}</p>}
-          <button onClick={next} style={{ padding: "12px 32px", border: "none", borderRadius: "9px", background: "#b8860b", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>{current + 1 >= questions.length ? "VER RESULTADO" : "SIGUIENTE →"}</button>
+          <button onClick={next} style={{ padding: "12px 32px", border: "none", borderRadius: "9px", background: "#ffd54f", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>{current + 1 >= questions.length ? "VER RESULTADO" : "SIGUIENTE →"}</button>
         </div>
       )}
     </div>
@@ -4522,16 +4522,16 @@ function FlagsGame({ user, onBack }) {
       <div style={{ background: CARD, border: "1px solid rgba(255,193,7,0.2)", borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
         <div style={{ fontSize: "44px", marginBottom: "10px" }}>{score >= 14 ? "🏆" : score >= 8 ? "🌍" : "😅"}</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#d0e4f7", letterSpacing: "3px" }}>TU PUNTUACIÓN</div>
-        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: "#b8860b", lineHeight: 1 }}>{score}</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: "#ffd54f", lineHeight: 1 }}>{score}</div>
         <p style={{ marginTop: "10px", fontSize: "12px", color: "#e0eefa", fontFamily: "'Inter', sans-serif" }}>{score >= 14 ? "¡Experto en geografía! 🌍" : score >= 8 ? "Buen conocimiento ⚽" : "A practicar geografía 😅"}</p>
       </div>
-      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
+      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#ffd54f,#ff8a00)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
       {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(255,193,7,0.1)" : CARD, border: i === 0 ? "1px solid rgba(255,193,7,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? "#b8860b" : "#e0eaf8" }}>{r.score}</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? "#ffd54f" : "#e0eaf8" }}>{r.score}</span>
           <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>PTS</span>
         </div>
       ))}
@@ -5000,10 +5000,10 @@ function drawIdleScene(ctx, W, H, shooter, keeper, highlightZone) {
   };
   Object.entries(zones).forEach(([key, z]) => {
     const isHover = highlightZone === key;
-    ctx.fillStyle = isHover ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.04)";
+    ctx.fillStyle = isHover ? "rgba(79,195,247,0.25)" : "rgba(255,255,255,0.04)";
     ctx.fillRect(z.x, z.y, z.w, z.h);
     if (isHover) {
-      ctx.strokeStyle = "rgba(245,158,11,0.7)"; ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(79,195,247,0.7)"; ctx.lineWidth = 2;
       ctx.strokeRect(z.x, z.y, z.w, z.h);
     }
     // Zone label
@@ -5192,7 +5192,7 @@ function usePenaltyCanvas(canvasRef, animState) {
 
       if (t >= 1) {
         ctx.save();
-        ctx.fillStyle = scored ? "rgba(245,158,11,0.18)" : "rgba(0,100,200,0.18)";
+        ctx.fillStyle = scored ? "rgba(79,195,247,0.18)" : "rgba(0,100,200,0.18)";
         ctx.fillRect(0, 0, W, H);
         ctx.font = "bold 36px 'Bebas Neue', monospace";
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -5433,7 +5433,7 @@ function PenaltyGame({ user, onBack }) {
   if (phase === "playing" && room) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", marginBottom: "12px", alignItems: "center" }}>
-        <div style={{ background: GREEN_DIM, border: `1px solid rgba(245,158,11,0.3)`, borderRadius: "10px", padding: "10px", textAlign: "center" }}>
+        <div style={{ background: GREEN_DIM, border: `1px solid rgba(79,195,247,0.3)`, borderRadius: "10px", padding: "10px", textAlign: "center" }}>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "36px", color: GREEN }}>{myScore}</div>
           <div style={{ fontSize: "9px", fontFamily: "'Inter', sans-serif", color: "#c0d8f0" }}>TÚ · {amIShooter ? "⚽ LANZAS" : "🧤 PARAS"}</div>
         </div>
@@ -5476,8 +5476,8 @@ function PenaltyGame({ user, onBack }) {
                   width: "21%",
                   cursor: "pointer",
                   borderRadius: "4px",
-                  background: myChoice === zone ? "rgba(245,158,11,0.15)" : "transparent",
-                  border: myChoice === zone ? "2px solid rgba(245,158,11,0.8)" : "2px solid transparent",
+                  background: myChoice === zone ? "rgba(79,195,247,0.15)" : "transparent",
+                  border: myChoice === zone ? "2px solid rgba(79,195,247,0.8)" : "2px solid transparent",
                   transition: "all 0.15s ease",
                 }}
               />
@@ -5496,7 +5496,7 @@ function PenaltyGame({ user, onBack }) {
 
       {/* Confirm button or result */}
       {animState ? (
-        <div style={{ padding: "12px", background: animState.scored ? GREEN_DIM : "rgba(255,82,82,0.1)", border: `1px solid ${animState.scored ? "rgba(245,158,11,0.4)" : "rgba(255,82,82,0.3)"}`, borderRadius: "10px", textAlign: "center" }}>
+        <div style={{ padding: "12px", background: animState.scored ? GREEN_DIM : "rgba(255,82,82,0.1)", border: `1px solid ${animState.scored ? "rgba(79,195,247,0.4)" : "rgba(255,82,82,0.3)"}`, borderRadius: "10px", textAlign: "center" }}>
           <p style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "24px", letterSpacing: "3px", color: animState.scored ? GREEN : "#cc2222" }}>
             {animState.scored ? "⚽ ¡GOL!" : "🧤 ¡PARADA!"}
           </p>
@@ -5536,7 +5536,7 @@ function PenaltyGame({ user, onBack }) {
     const draw = myScore === theirScore;
     return (
       <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
-        <div style={{ background: CARD, border: `1px solid ${iWon ? "rgba(245,158,11,0.4)" : draw ? BORDER : "rgba(255,82,82,0.25)"}`, borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
+        <div style={{ background: CARD, border: `1px solid ${iWon ? "rgba(79,195,247,0.4)" : draw ? BORDER : "rgba(255,82,82,0.25)"}`, borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
           <div style={{ fontSize: "52px", marginBottom: "10px" }}>{iWon ? "🏆" : draw ? "🤝" : "😔"}</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: iWon ? GREEN : draw ? "#e0eefa" : "#cc2222", letterSpacing: "3px", marginBottom: "16px" }}>
             {iWon ? "¡GANASTE!" : draw ? "EMPATE" : "PERDISTE"}
@@ -5577,7 +5577,7 @@ function GamesView({ user }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "20px" }}>ZONA DE JUEGOS</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <button onClick={() => setGame("trivia")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(245,158,11,0.2)", borderRadius: "14px", background: "rgba(245,158,11,0.05)", cursor: "pointer", textAlign: "center" }}>
+        <button onClick={() => setGame("trivia")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🧠</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>TRIVIAL</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>10 preguntas · 1 jugador</div>
@@ -5668,7 +5668,7 @@ function OnboardingTooltips({ user, onFinish, setView }) {
             position: "absolute", bottom: 0, left: `calc(${tabIdx / tabCount * 100}%)`,
             width: `${100 / tabCount}%`, height: "64px",
             background: "transparent",
-            boxShadow: `0 0 0 9999px rgba(28,21,16,0.85), 0 0 20px 4px rgba(245,158,11,0.5)`,
+            boxShadow: `0 0 0 9999px rgba(28,21,16,0.85), 0 0 20px 4px rgba(79,195,247,0.5)`,
             borderRadius: "8px 8px 0 0",
           }} />
         )}
@@ -5691,11 +5691,11 @@ function OnboardingTooltips({ user, onFinish, setView }) {
         <div style={{
           background: "#0f0f0f", border: `1px solid ${GREEN}`,
           borderRadius: "14px", padding: "18px 18px 14px",
-          boxShadow: `0 0 30px rgba(245,158,11,0.2)`,
+          boxShadow: `0 0 30px rgba(79,195,247,0.2)`,
         }}>
           <div style={{ display: "flex", gap: "5px", marginBottom: "12px" }}>
             {ONBOARDING_STEPS.map((_, i) => (
-              <div key={i} style={{ flex: 1, height: "3px", borderRadius: "2px", background: i <= step ? GREEN : "rgba(245,158,11,0.15)", transition: "background 0.3s" }} />
+              <div key={i} style={{ flex: 1, height: "3px", borderRadius: "2px", background: i <= step ? GREEN : "rgba(79,195,247,0.15)", transition: "background 0.3s" }} />
             ))}
           </div>
 
