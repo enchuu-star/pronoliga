@@ -406,7 +406,6 @@ const CARD = "rgba(255,255,255,0.06)";  // Tarjetas translúcidas
 const BORDER = "rgba(79,195,247,0.2)";
 const TEXT = "#e8f4fd";
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:#0a1628; color:#e8f4fd;}
@@ -3535,7 +3534,7 @@ function ExportView({ matches, onBack }) {
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: "24px", paddingBottom: "18px", borderBottom: "2px solid rgba(26,58,107,0.12)" }}>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "40px", color: GREEN, letterSpacing: "4px", lineHeight: 1 }}>PORRA VALLAU</div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "##3a5a7a", letterSpacing: "6px", marginTop: "2px" }}>MUNDIAL 2026</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#3a5a7a", letterSpacing: "6px", marginTop: "2px" }}>MUNDIAL 2026</div>
             <div style={{ fontSize: "10px", color: "#5a6a7a", marginTop: "6px", letterSpacing: "2px" }}>🏆 RANKING GENERAL · {today.toUpperCase()}</div>
           </div>
 
@@ -4006,7 +4005,7 @@ function TriviaGame({ user, onBack }) {
       </div>
       <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TRIVIAL</p>
-      {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
@@ -4223,7 +4222,7 @@ function FlappyGame({ user, onBack }) {
             <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
           </div>
           <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FLAPPY</p>
-          {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
+          {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(245,158,11,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
               <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
               <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
@@ -4364,7 +4363,7 @@ function FlagsGame({ user, onBack }) {
         <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
-      {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(255,193,7,0.1)" : CARD, border: i === 0 ? "1px solid rgba(255,193,7,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
@@ -4435,7 +4434,7 @@ function FlagsGame({ user, onBack }) {
       </div>
       <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#b8860b,#ff8a00)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING BANDERAS</p>
-      {loadingRank ? <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cargando...</p> : rankings.map((r, i) => (
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(255,193,7,0.1)" : CARD, border: i === 0 ? "1px solid rgba(255,193,7,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
@@ -4701,7 +4700,7 @@ function SlotGame({ user, onBack }) {
 
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING — MEJOR BOTE</p>
       {loadingRank
-        ? <p style={{ color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cargando...</p>
+        ? <SkeletonRanking count={4} />
         : rankings.map((r, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? `1px solid rgba(79,195,247,0.3)` : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
             <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
@@ -5649,7 +5648,6 @@ export default function Home() {
   const [loadingSession, setLoadingSession] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showEmojiTip, setShowEmojiTip] = useState(false);
-  const [yaVoto, setYaVoto] = useState(true); // ENCUESTA — quitar mañana
 
   // PWA — registrar service worker
   useEffect(() => {
