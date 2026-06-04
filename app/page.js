@@ -1533,7 +1533,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
             {/* 🎲 Botones de relleno aleatorio por ganador */}
             {isOpen && (
               <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>🎲 azar:</span>
+                <span style={{ fontSize: "13px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>🎲 azar:</span>
                 <button onClick={() => handleRandom("H")} className="tappable" style={randomBtnSt} title={`Gana ${match.home}`}>
                   <span style={{ fontSize: "20px", lineHeight: 1 }}>{ht.flag}</span>
                 </button>
