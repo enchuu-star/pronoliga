@@ -1445,7 +1445,7 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const statusColor = status === "saved" ? GREEN : status === "saving" ? "#a8d4f0" : status === "error" ? "#cc2222" : "#7ab8e0";
   const statusText = status === "saved" ? "✓" : status === "saving" ? "···" : status === "error" ? "✗" : "";
 
-  cconst randomBtnSt = {
+  const randomBtnSt = {
     width: "46px", height: "40px",
     display: "flex", alignItems: "center", justifyContent: "center",
     border: `1px solid ${BORDER}`,
