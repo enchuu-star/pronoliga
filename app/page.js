@@ -3803,8 +3803,8 @@ function HomeView({ user, matches, predictions, setView }) {
   const sent = predictions.length;
   const pct = Math.round((sent / TOTAL_MATCHES) * 100);
   // Partidos de hoy (solo cuando el Mundial ya ha arrancado)
-  const todayStr = "2026-06-11"; // ⚠️ PRUEBA — quitar antes de publicar
-  const mundialStarted = todayStr >= "2026-06-14";
+  const todayStr = "2026-06-14"; // ⚠️ PRUEBA — quitar antes de publicar
+  const mundialStarted = todayStr >= "2026-06-11";
   const todayMatches = matches
     .filter(m => m.match_date === todayStr)
     .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
@@ -3833,16 +3833,43 @@ function HomeView({ user, matches, predictions, setView }) {
             <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>PARTIDOS DE HOY</p>
           </div>
           {todayMatches.length > 0 ? (
-            todayMatches.map(m => (
-              <button key={m.id} onClick={() => setView("results")} className="tappable" style={{
-                display: "block", width: "100%", padding: 0, marginBottom: "6px",
-                background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px",
-                overflow: "hidden", cursor: "pointer",
-                opacity: m.result_home !== null ? 1 : 0.85,
-              }}>
-                <StadiumScore match={m} />
-              </button>
-            ))
+            todayMatches.map(m => {
+              const ht = getTeam(m.home), at = getTeam(m.away);
+              const hasResult = m.result_home !== null && m.result_away !== null;
+              const homeWin = hasResult && m.result_home > m.result_away;
+              const awayWin = hasResult && m.result_away > m.result_home;
+              return (
+                <button key={m.id} onClick={() => setView("results")} className="tappable" style={{
+                  display: "flex", alignItems: "center", gap: "8px", width: "100%",
+                  padding: "8px 12px", marginBottom: "5px",
+                  background: CARD, border: `1px solid ${BORDER}`, borderRadius: "9px",
+                  cursor: "pointer", opacity: hasResult ? 1 : 0.85,
+                }}>
+                  {/* Local */}
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px", overflow: "hidden" }}>
+                    <span style={{ fontSize: "11px", color: homeWin ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.home}</span>
+                    <span style={{ fontSize: "20px", lineHeight: 1, flexShrink: 0 }}>{ht.flag}</span>
+                  </div>
+                  {/* Centro: resultado o hora */}
+                  <div style={{ flexShrink: 0, minWidth: "52px", textAlign: "center" }}>
+                    {hasResult ? (
+                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#e0eaf8", letterSpacing: "1px" }}>
+                        <span style={{ color: homeWin ? GREEN : "#e0eaf8" }}>{m.result_home}</span>
+                        <span style={{ color: "#7ab8e0", margin: "0 2px" }}>-</span>
+                        <span style={{ color: awayWin ? GREEN : "#e0eaf8" }}>{m.result_away}</span>
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>{m.match_time || "--:--"}h</span>
+                    )}
+                  </div>
+                  {/* Visitante */}
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
+                    <span style={{ fontSize: "20px", lineHeight: 1, flexShrink: 0 }}>{at.flag}</span>
+                    <span style={{ fontSize: "11px", color: awayWin ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.away}</span>
+                  </div>
+                </button>
+              );
+            })
           ) : (
             <div style={{
               background: CARD, border: `1px dashed ${BORDER}`, borderRadius: "12px",
