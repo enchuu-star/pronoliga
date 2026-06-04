@@ -1445,17 +1445,17 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
   const statusColor = status === "saved" ? GREEN : status === "saving" ? "#a8d4f0" : status === "error" ? "#cc2222" : "#7ab8e0";
   const statusText = status === "saved" ? "✓" : status === "saving" ? "···" : status === "error" ? "✗" : "";
 
-  const randomBtnSt = {
-    padding: "6px 12px",
+  cconst randomBtnSt = {
+    width: "46px", height: "40px",
+    display: "flex", alignItems: "center", justifyContent: "center",
     border: `1px solid ${BORDER}`,
-    borderRadius: "20px",
+    borderRadius: "10px",
     background: "rgba(255,255,255,0.04)",
     color: "#a8d4f0",
     cursor: "pointer",
-    fontSize: "10px",
     fontFamily: "'Inter', sans-serif",
-    whiteSpace: "nowrap",
     transition: "all 0.15s ease",
+    flexShrink: 0,
   };
 
   const scoreInputSt = {
@@ -1532,16 +1532,16 @@ function MatchRow({ match, userPred, user, onSaved, allClosed }) {
 
             {/* 🎲 Botones de relleno aleatorio por ganador */}
             {isOpen && (
-              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", flexWrap: "wrap" }}>
+              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                 <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>🎲 azar:</span>
                 <button onClick={() => handleRandom("H")} className="tappable" style={randomBtnSt} title={`Gana ${match.home}`}>
-                  🏠 {match.home}
+                  <span style={{ fontSize: "20px", lineHeight: 1 }}>{ht.flag}</span>
                 </button>
                 <button onClick={() => handleRandom("D")} className="tappable" style={randomBtnSt} title="Empate">
-                  🤝 Empate
+                  <span style={{ fontSize: "16px", lineHeight: 1 }}>🤝</span>
                 </button>
                 <button onClick={() => handleRandom("A")} className="tappable" style={randomBtnSt} title={`Gana ${match.away}`}>
-                  {match.away} ✈️
+                  <span style={{ fontSize: "20px", lineHeight: 1 }}>{at.flag}</span>
                 </button>
               </div>
             )}
