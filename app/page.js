@@ -664,7 +664,7 @@ function CountdownBanner() {
 function ProgressBar({ predictions, matches }) {
   const open = matches.filter(m => m.status === "open").length;
   const sent = predictions.length;
-  const pct = Math.round((sent / TOTAL_MATCHES) * 100);
+   Math.round((sent / TOTAL_MATCHES) * 100);
   return (
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 14px", marginBottom: "16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
@@ -3802,6 +3802,12 @@ function ExportView({ matches, onBack }) {
 function HomeView({ user, matches, predictions, setView }) {
   const sent = predictions.length;
   const pct = Math.round((sent / TOTAL_MATCHES) * 100);
+  // Partidos de hoy (solo cuando el Mundial ya ha arrancado)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const mundialStarted = todayStr >= "2026-06-11";
+  const todayMatches = matches
+    .filter(m => m.match_date === todayStr)
+    .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
 
   const navCard = (icon, label, sub, color, border, bg, target) => (
     <button onClick={() => setView(target)} className="tappable" style={{
@@ -3817,9 +3823,27 @@ function HomeView({ user, matches, predictions, setView }) {
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      {/* Cuenta atrás */}
-      <CountdownBanner />
-      
+      {/* Cuenta atrás (solo antes de empezar) */}
+      {!mundialStarted && <CountdownBanner />}
+      {/* Partidos de hoy */}
+      {mundialStarted && todayMatches.length > 0 && (
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: GREEN, boxShadow: `0 0 8px ${GREEN}`, animation: "pulse 1.5s infinite" }} />
+            <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>PARTIDOS DE HOY</p>
+          </div>
+          {todayMatches.map(m => (
+            <button key={m.id} onClick={() => setView("results")} className="tappable" style={{
+              display: "block", width: "100%", padding: 0, marginBottom: "6px",
+              background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px",
+              overflow: "hidden", cursor: "pointer",
+              opacity: m.result_home !== null ? 1 : 0.85,
+            }}>
+              <StadiumScore match={m} />
+            </button>
+          ))}
+        </div>
+      )}
       {/* Grid de accesos */}
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>ACCESO RÁPIDO</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
