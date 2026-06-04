@@ -3804,7 +3804,7 @@ function HomeView({ user, matches, predictions, setView }) {
   const pct = Math.round((sent / TOTAL_MATCHES) * 100);
   // Partidos de hoy (solo cuando el Mundial ya ha arrancado)
   const todayStr = "2026-06-11"; // ⚠️ PRUEBA — quitar antes de publicar
-  const mundialStarted = todayStr >= "2026-06-11";
+  const mundialStarted = todayStr >= "2026-06-14";
   const todayMatches = matches
     .filter(m => m.match_date === todayStr)
     .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
