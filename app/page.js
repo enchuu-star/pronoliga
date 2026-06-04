@@ -3826,22 +3826,34 @@ function HomeView({ user, matches, predictions, setView }) {
       {/* Cuenta atrás (solo antes de empezar) */}
       {!mundialStarted && <CountdownBanner />}
       {/* Partidos de hoy */}
-      {mundialStarted && todayMatches.length > 0 && (
+      {mundialStarted && (
         <div style={{ marginBottom: "20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: GREEN, boxShadow: `0 0 8px ${GREEN}`, animation: "pulse 1.5s infinite" }} />
             <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>PARTIDOS DE HOY</p>
           </div>
-          {todayMatches.map(m => (
-            <button key={m.id} onClick={() => setView("results")} className="tappable" style={{
-              display: "block", width: "100%", padding: 0, marginBottom: "6px",
-              background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px",
-              overflow: "hidden", cursor: "pointer",
-              opacity: m.result_home !== null ? 1 : 0.85,
+          {todayMatches.length > 0 ? (
+            todayMatches.map(m => (
+              <button key={m.id} onClick={() => setView("results")} className="tappable" style={{
+                display: "block", width: "100%", padding: 0, marginBottom: "6px",
+                background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px",
+                overflow: "hidden", cursor: "pointer",
+                opacity: m.result_home !== null ? 1 : 0.85,
+              }}>
+                <StadiumScore match={m} />
+              </button>
+            ))
+          ) : (
+            <div style={{
+              background: CARD, border: `1px dashed ${BORDER}`, borderRadius: "12px",
+              padding: "28px 20px", textAlign: "center",
             }}>
-              <StadiumScore match={m} />
-            </button>
-          ))}
+              <div style={{ fontSize: "38px", marginBottom: "8px" }}>😴</div>
+              <p style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.5 }}>
+                Hoy no hay partidos.<br/>¡Vuelve mañana!
+              </p>
+            </div>
+          )}
         </div>
       )}
       {/* Grid de accesos */}
