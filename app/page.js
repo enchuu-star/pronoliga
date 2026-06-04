@@ -421,6 +421,7 @@ const css = `
   @keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
   @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
   @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
   .tappable{transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;}
   .tappable:hover{transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.35);}
   .tappable:active{transform:translateY(0) scale(0.98);}
@@ -523,7 +524,25 @@ function LoginPage({ onLogin }) {
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" style={inputSt} />
           <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Contraseña" type="password" style={inputSt} onKeyDown={e => e.key === "Enter" && go()} />
           {error && <p style={{ color: "#cc2222", fontSize: "13px", marginBottom: "12px", fontFamily: "'Inter', sans-serif" }}>⚠ {error}</p>}
-          <button onClick={go} disabled={loading} style={{ width: "100%", padding: "14px", border: "none", borderRadius: "8px", cursor: "pointer", background: loading ? "#0a1628" : `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontWeight: 800, fontSize: "13px", letterSpacing: "3px", fontFamily: "'Inter', sans-serif", textTransform: "uppercase" }}>{loading ? "..." : mode === "login" ? "⚡ ENTRAR" : "🚀 REGISTRARME"}</button>
+          <button onClick={go} disabled={loading} style={{
+            width: "100%", padding: "14px", border: "none", borderRadius: "8px",
+            cursor: loading ? "default" : "pointer",
+            background: loading ? "rgba(79,195,247,0.15)" : `linear-gradient(135deg,${GREEN},#0077cc)`,
+            color: loading ? GREEN : "#0a1628", fontWeight: 800, fontSize: "13px",
+            letterSpacing: "3px", fontFamily: "monospace", textTransform: "uppercase",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+          }}>
+            {loading ? (
+              <>
+                <span style={{
+                  width: "14px", height: "14px", borderRadius: "50%",
+                  border: "2px solid rgba(79,195,247,0.3)", borderTopColor: GREEN,
+                  display: "inline-block", animation: "spin 0.7s linear infinite",
+                }} />
+                {mode === "login" ? "ENTRANDO..." : "CREANDO CUENTA..."}
+              </>
+            ) : (mode === "login" ? "⚡ ENTRAR" : "🚀 REGISTRARME")}
+          </button>
         </div>
       </div>
     </div>
