@@ -2038,22 +2038,55 @@ function CommunityView({ matches, user }) {
   const renderMatchPreds = m => {
     const matchPreds = allPreds.filter(p => p.match_id === m.id);
     const ht = getTeam(m.home), at = getTeam(m.away);
+
+    // Agrupar por signo del pronóstico
+    const local = [], empate = [], visitante = [];
+    matchPreds.forEach(p => {
+      if (p.predicted_home > p.predicted_away) local.push(p);
+      else if (p.predicted_home < p.predicted_away) visitante.push(p);
+      else empate.push(p);
+    });
+
+    const predChip = (pred) => (
+      <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "5px 8px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
+        <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{getName(pred.user_id)}</span>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: "#e0eefa" }}>{pred.predicted_home}-{pred.predicted_away}</span>
+        {pred.points !== null && pred.points !== undefined && (
+          <span style={{ padding: "1px 6px", borderRadius: "8px", fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>
+            {pred.points === 5 ? "🎯+5" : pred.points === 3 ? "📏+3" : pred.points === 1 ? "✓+1" : "✗+0"}
+          </span>
+        )}
+      </div>
+    );
+
+    const column = (titulo, icono, lista, accent) => (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", marginBottom: "6px", paddingBottom: "5px", borderBottom: `2px solid ${accent}` }}>
+          <span style={{ fontSize: "16px" }}>{icono}</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: accent }}>{lista.length}</span>
+        </div>
+        {lista.length === 0
+          ? <p style={{ fontSize: "9px", color: "#6aacda", fontFamily: "'Inter', sans-serif", textAlign: "center", fontStyle: "italic" }}>—</p>
+          : lista.map(predChip)}
+      </div>
+    );
+
     return (
       <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
         <div style={{ margin: "-12px -12px 8px", borderBottom: `1px solid ${BORDER}` }}>
           <StadiumScore match={m} />
         </div>
-        {matchPreds.length === 0
-          ? <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha enviado pronóstico</p>
-          : matchPreds.map(pred => (
-            <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
-              <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1 }}>{getName(pred.user_id)}</span>
-              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>{pred.predicted_home}-{pred.predicted_away}</span>
-              {pred.points !== null && pred.points !== undefined && <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>{pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}</span>}
-            </div>
-          ))}
 
-        {/* ← AÑADIR ESTO */}
+        {matchPreds.length === 0 ? (
+          <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha enviado pronóstico</p>
+        ) : (
+          <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+            {column(`Gana ${m.home}`, ht.flag, local, GREEN)}
+            {column("Empate", "🤝", empate, "#ffd54f")}
+            {column(`Gana ${m.away}`, at.flag, visitante, "#4fc3f7")}
+          </div>
+        )}
+
         <MatchChat match={m} user={user} />
       </div>
     );
