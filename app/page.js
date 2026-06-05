@@ -108,6 +108,7 @@ const GROUPS = {
 };
 
 const TOTAL_MATCHES = 72;
+const CUOTA = 20; // euros por participante
 
 function getTeam(name) {
   return Object.values(GROUPS).flat().find(t => t.name === name) || { name, flag: "🏳️" };
@@ -3795,6 +3796,206 @@ function ExportView({ matches, onBack }) {
   );
 }
 
+// ============================================================
+// EL BOTE / PAGOS
+// ============================================================
+function useCountUp(target, dur = 1300) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let raf, start = null;
+    const step = ts => {
+      if (start === null) start = ts;
+      const p = Math.min((ts - start) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(eased * target));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, dur]);
+  return val;
+}
+
+function MoneyBag({ ratio = 0, pot = 0, paid = 0, total = 0 }) {
+  const [fill, setFill] = useState(0);
+  const shownPot = useCountUp(pot);
+  useEffect(() => {
+    const t = setTimeout(() => setFill(Math.max(0, Math.min(1, ratio))), 250);
+    return () => clearTimeout(t);
+  }, [ratio]);
+
+  const top = 74, bottom = 196;
+  const h = (bottom - top) * fill;
+  const y = bottom - h;
+  const bag = "M 80 70 C 56 84, 42 122, 47 156 C 51 186, 80 197, 100 197 C 120 197, 149 186, 153 156 C 158 122, 144 84, 120 70 Z";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <svg viewBox="0 0 200 210" width="190" height="200" style={{ animation: "floaty 3s ease-in-out infinite", overflow: "visible" }}>
+        <defs>
+          <linearGradient id="goldFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ffe79a" />
+            <stop offset="45%" stopColor="#ffd54f" />
+            <stop offset="100%" stopColor="#e6a100" />
+          </linearGradient>
+          <clipPath id="bagClip"><path d={bag} /></clipPath>
+        </defs>
+
+        <ellipse cx="100" cy="203" rx="46" ry="7" fill="rgba(0,0,0,0.35)" />
+        <path d={bag} fill="rgba(255,255,255,0.05)" stroke="rgba(255,213,79,0.5)" strokeWidth="2" />
+
+        <g clipPath="url(#bagClip)">
+          <rect x="30" y={y} width="140" height={h} fill="url(#goldFill)"
+            style={{ transition: "y 1.4s cubic-bezier(.22,1,.36,1), height 1.4s cubic-bezier(.22,1,.36,1)" }} />
+          <rect x="30" y={y} width="140" height={Math.min(7, h)} fill="rgba(255,255,255,0.4)"
+            style={{ transition: "y 1.4s cubic-bezier(.22,1,.36,1)" }} />
+        </g>
+
+        <path d={bag} fill="none" stroke="rgba(255,213,79,0.85)" strokeWidth="2.5" />
+        <path d="M 78 70 Q 100 60 122 70 L 118 56 Q 100 48 82 56 Z" fill="#e6a100" stroke="rgba(255,213,79,0.9)" strokeWidth="1.5" />
+        <path d="M 82 56 Q 100 40 118 56" fill="none" stroke="rgba(255,213,79,0.9)" strokeWidth="3" strokeLinecap="round" />
+
+        <text x="100" y="152" textAnchor="middle" fontSize="56"
+          fill="rgba(255,255,255,0.82)" style={{ fontFamily: "'Bebas Neue', monospace" }}>€</text>
+
+        {fill > 0.12 && [0, 1, 2].map(i => (
+          <circle key={i} cx={70 + i * 30} cy={y - 5} r="5"
+            fill="#ffd54f" stroke="#e6a100" strokeWidth="1"
+            style={{ animation: `pulse ${1.6 + i * 0.3}s ease-in-out infinite` }} />
+        ))}
+      </svg>
+
+      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "46px", color: "#ffd54f", lineHeight: 1, textShadow: "0 0 18px rgba(255,213,79,0.4)" }}>
+        {shownPot}€
+      </div>
+      <div style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", letterSpacing: "1px", marginTop: "4px" }}>
+        BOTE ACTUAL · {paid}/{total} pagados
+      </div>
+    </div>
+  );
+}
+
+function PaymentsView({ user }) {
+  const [profiles, setProfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState(null);
+
+  const load = async () => {
+    const { data } = await supabase.from("profiles").select("*").eq("role", "user");
+    const sorted = (data || []).sort((a, b) =>
+      (b.has_paid ? 1 : 0) - (a.has_paid ? 1 : 0) || (a.name || "").localeCompare(b.name || "")
+    );
+    setProfiles(sorted);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    const ch = supabase.channel("payments_rt")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => load())
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, []);
+
+  const togglePaid = async (p) => {
+    if (user.role !== "admin") return;
+    setSavingId(p.id);
+    await supabase.from("profiles").update({ has_paid: !p.has_paid }).eq("id", p.id);
+    await load();
+    setSavingId(null);
+  };
+
+  const paid = profiles.filter(p => p.has_paid);
+  const unpaid = profiles.filter(p => !p.has_paid);
+  const pot = paid.length * CUOTA;
+  const ratio = profiles.length ? paid.length / profiles.length : 0;
+
+  if (loading) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div className="skeleton" style={{ width: "100%", height: "260px", borderRadius: "16px", marginBottom: "20px" }} />
+      <SkeletonRows count={6} height={48} />
+    </div>
+  );
+
+  const row = (p) => (
+    <div key={p.id} style={{
+      display: "flex", alignItems: "center", gap: "12px",
+      background: p.has_paid ? "rgba(0,200,100,0.07)" : "rgba(255,107,74,0.06)",
+      border: `1px solid ${p.has_paid ? "rgba(0,200,100,0.25)" : "rgba(255,107,74,0.25)"}`,
+      borderLeft: `3px solid ${p.has_paid ? "#34d399" : "#ff6b4a"}`,
+      borderRadius: "10px", padding: "12px 14px", marginBottom: "6px",
+    }}>
+      <span style={{ fontSize: "22px" }}>{p.emoji || "⚽"}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8", fontWeight: 700 }}>
+          {p.name}{p.id === user.id ? " (tú)" : ""}
+        </div>
+        <div style={{ fontSize: "9px", color: p.has_paid ? "#34d399" : "#ff6b4a", fontFamily: "'Inter', sans-serif" }}>
+          {p.has_paid ? `✓ Ha pagado · ${CUOTA}€` : "⏳ Pendiente de pago"}
+        </div>
+      </div>
+      {user.role === "admin" ? (
+        <button onClick={() => togglePaid(p)} disabled={savingId === p.id} style={{
+          padding: "7px 12px", borderRadius: "8px", cursor: "pointer",
+          border: `1px solid ${p.has_paid ? "rgba(255,107,74,0.3)" : "rgba(0,200,100,0.3)"}`,
+          background: p.has_paid ? "rgba(255,107,74,0.08)" : "rgba(0,200,100,0.1)",
+          color: p.has_paid ? "#ff6b4a" : "#007a3a",
+          fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, whiteSpace: "nowrap",
+        }}>
+          {savingId === p.id ? "···" : p.has_paid ? "Marcar moroso" : "✓ Pagado"}
+        </button>
+      ) : (
+        <span style={{ fontSize: "18px" }}>{p.has_paid ? "✅" : "❌"}</span>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "16px" }}>EL BOTE</p>
+
+      <div style={{
+        background: "radial-gradient(120% 120% at 50% 0%, rgba(255,213,79,0.12), rgba(10,22,40,0) 70%), rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,213,79,0.25)", borderRadius: "16px",
+        padding: "24px 16px 20px", marginBottom: "20px",
+      }}>
+        <MoneyBag ratio={ratio} pot={pot} paid={paid.length} total={profiles.length} />
+        <div style={{ marginTop: "16px", background: "rgba(255,255,255,0.04)", borderRadius: "8px", height: "8px", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.round(ratio * 100)}%`, background: "linear-gradient(90deg,#ffd54f,#e6a100)", borderRadius: "8px", transition: "width 1.4s ease" }} />
+        </div>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "10px" }}>
+          {unpaid.length === 0
+            ? "🎉 ¡Todos han pagado! Bote completo."
+            : `Faltan ${unpaid.length} por pagar · ${unpaid.length * CUOTA}€ pendientes`}
+        </p>
+      </div>
+
+      {paid.length > 0 && (
+        <>
+          <p style={{ fontSize: "9px", color: "#34d399", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "10px" }}>
+            ✅ HAN PAGADO ({paid.length})
+          </p>
+          {paid.map(row)}
+        </>
+      )}
+
+      {unpaid.length > 0 && (
+        <>
+          <p style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", margin: "18px 0 10px" }}>
+            ⚠️ MOROSOS ({unpaid.length})
+          </p>
+          {unpaid.map(row)}
+        </>
+      )}
+
+      {user.role === "admin" && (
+        <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", marginTop: "14px", lineHeight: 1.5, textAlign: "center" }}>
+          Como admin, pulsa el botón de cada jugador para marcar si ha pagado.
+        </p>
+      )}
+    </div>
+  );
+}
 
 // ============================================================
 // PANTALLA DE INICIO
@@ -3811,6 +4012,16 @@ function HomeView({ user, matches, predictions, setView }) {
 
   const [myRank, setMyRank] = useState(null);
 
+  const [payInfo, setPayInfo] = useState(null);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("profiles").select("has_paid").eq("role", "user");
+      const total = (data || []).length;
+      const paidCount = (data || []).filter(p => p.has_paid).length;
+      setPayInfo({ paid: paidCount, total, pot: paidCount * CUOTA });
+    })();
+  }, []);
+  
   useEffect(() => {
     if (!mundialStarted) return;
     (async () => {
@@ -3856,6 +4067,25 @@ function HomeView({ user, matches, predictions, setView }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       {/* Cuenta atrás (solo antes de empezar) */}
       {!mundialStarted && <CountdownBanner />}
+      {payInfo && (
+        <button onClick={() => setView("payments")} className="tappable" style={{
+          width: "100%", display: "flex", alignItems: "center", gap: "14px",
+          padding: "14px 16px", marginBottom: "20px", cursor: "pointer",
+          background: "linear-gradient(135deg, rgba(255,213,79,0.14), rgba(230,161,0,0.05))",
+          border: "1px solid rgba(255,213,79,0.4)", borderRadius: "14px",
+        }}>
+          <span style={{ fontSize: "32px", lineHeight: 1 }}>💰</span>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#ffd54f", letterSpacing: "1px", lineHeight: 1 }}>
+              EL BOTE · {payInfo.pot}€
+            </div>
+            <div style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "3px" }}>
+              {payInfo.paid}/{payInfo.total} han pagado{payInfo.total - payInfo.paid > 0 ? ` · ${payInfo.total - payInfo.paid} morosos` : " · ¡completo! 🎉"}
+            </div>
+          </div>
+          <span style={{ fontSize: "20px", color: "#ffd54f" }}>→</span>
+        </button>
+      )}
       {/* Partidos de hoy */}
       {mundialStarted && (
         <div style={{ marginBottom: "20px" }}>
@@ -6011,6 +6241,9 @@ export default function Home() {
             {view === "profile" && <ProfileView user={user} matches={matches} />}
             {view === "ranking" && <RankingView matches={matches} user={user} />}
             {view === "games" && <GamesView user={user} />}
+            {view === "games" && <GamesView user={user} />}
+            {view === "payments" && <PaymentsView user={user} />}
+            {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
