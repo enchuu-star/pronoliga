@@ -3848,7 +3848,7 @@ function MoneyBag({ ratio = 0, pot = 0, paid = 0, total = 0 }) {
           <rect x="30" y={y} width="140" height={h} fill="url(#goldFill)"
             style={{ transition: "y 1.4s cubic-bezier(.22,1,.36,1), height 1.4s cubic-bezier(.22,1,.36,1)" }} />
           <rect x="30" y={y} width="140" height={Math.min(7, h)} fill="rgba(255,255,255,0.4)"
-            style={{ transition: "y 2.8s cubic-bezier(.22,1,.36,1), height 2.8s cubic-bezier(.22,1,.36,1)" }}
+            style={{ transition: "y 2.8s cubic-bezier(.22,1,.36,1), height 2.8s cubic-bezier(.22,1,.36,1)" }} />
         </g>
 
         <path d={bag} fill="none" stroke="rgba(255,213,79,0.85)" strokeWidth="2.5" />
