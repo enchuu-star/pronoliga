@@ -6086,19 +6086,6 @@ function GamesView({ user }) {
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>PENALTIS</div>
           <div style={{ fontSize: "9px", color: "#ff8a80", fontFamily: "'Inter', sans-serif" }}>5 penaltis · 2 jugadores 🔴</div>
         </button>
-        {/* Aquí termina tu botón de Penaltis */}
-        <button onClick={() => setGame("penalty")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(255,82,82,0.2)", borderRadius: "14px", background: "rgba(255,82,82,0.05)", cursor: "pointer", textAlign: "center" }}>
-          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🥅</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>PENALTIS</div>
-          <div style={{ fontSize: "9px", color: "#ff8a80", fontFamily: "'Inter', sans-serif" }}>5 penaltis · 2 jugadores 🔴</div>
-        </button>
-
-        {/* 👇 NUEVO BOTÓN DEL DRAFT 👇 */}
-        <Link href="/draft" className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.4)", borderRadius: "14px", background: "linear-gradient(135deg, rgba(79,195,247,0.1), rgba(0,119,204,0.1))", cursor: "pointer", textAlign: "center", textDecoration: "none", display: "block" }}>
-          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🃏</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>MUNDIAL DRAFT</div>
-          <div style={{ fontSize: "9px", color: "#4fc3f7", fontFamily: "'Inter', sans-serif" }}>Haz tu equipo · Guardar ranking</div>
-        </Link>
       </div>
     </div>
   );
