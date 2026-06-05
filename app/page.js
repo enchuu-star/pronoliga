@@ -6143,6 +6143,17 @@ export default function Home() {
 
   useEffect(() => { if (user) loadData(); }, [user]);
 
+  // 🔄 Realtime: refresca partidos/resultados sin recargar la página
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel("matches_realtime")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "matches" }, () => loadData())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches" }, () => loadData())
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [user]);
+
   useEffect(() => {
       if (user) {
         // Actualiza la fecha de última actividad en la base de datos
