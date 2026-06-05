@@ -2047,29 +2047,32 @@ function CommunityView({ matches, user }) {
       else empate.push(p);
     });
 
-    const predChip = (pred) => (
-      <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "5px 8px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
-        <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{getName(pred.user_id)}</span>
-        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: "#e0eefa" }}>{pred.predicted_home}-{pred.predicted_away}</span>
+    const predRow = (pred) => (
+      <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
+        <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1 }}>{getName(pred.user_id)}</span>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>{pred.predicted_home}-{pred.predicted_away}</span>
         {pred.points !== null && pred.points !== undefined && (
-          <span style={{ padding: "1px 6px", borderRadius: "8px", fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>
-            {pred.points === 5 ? "🎯+5" : pred.points === 3 ? "📏+3" : pred.points === 1 ? "✓+1" : "✗+0"}
+          <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>
+            {pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}
           </span>
         )}
       </div>
     );
 
-    const column = (titulo, icono, lista, accent) => (
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", marginBottom: "6px", paddingBottom: "5px", borderBottom: `2px solid ${accent}` }}>
-          <span style={{ fontSize: "16px" }}>{icono}</span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: accent }}>{lista.length}</span>
+    const bloque = (icono, titulo, lista, accent) => {
+      if (lista.length === 0) return null;
+      return (
+        <div style={{ marginBottom: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
+            <span style={{ fontSize: "15px" }}>{icono}</span>
+            <span style={{ fontSize: "9px", color: accent, fontFamily: "'Inter', sans-serif", letterSpacing: "1px", fontWeight: 700, textTransform: "uppercase" }}>{titulo}</span>
+            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>· {lista.length}</span>
+            <div style={{ flex: 1, height: "1px", background: accent, opacity: 0.3 }} />
+          </div>
+          {lista.map(predRow)}
         </div>
-        {lista.length === 0
-          ? <p style={{ fontSize: "9px", color: "#6aacda", fontFamily: "'Inter', sans-serif", textAlign: "center", fontStyle: "italic" }}>—</p>
-          : lista.map(predChip)}
-      </div>
-    );
+      );
+    };
 
     return (
       <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
@@ -2080,11 +2083,11 @@ function CommunityView({ matches, user }) {
         {matchPreds.length === 0 ? (
           <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha enviado pronóstico</p>
         ) : (
-          <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
-            {column(`Gana ${m.home}`, ht.flag, local, GREEN)}
-            {column("Empate", "🤝", empate, "#ffd54f")}
-            {column(`Gana ${m.away}`, at.flag, visitante, "#4fc3f7")}
-          </div>
+          <>
+            {bloque(ht.flag, `Gana ${m.home}`, local, GREEN)}
+            {bloque("🤝", "Empate", empate, "#ffd54f")}
+            {bloque(at.flag, `Gana ${m.away}`, visitante, "#4fc3f7")}
+          </>
         )}
 
         <MatchChat match={m} user={user} />
