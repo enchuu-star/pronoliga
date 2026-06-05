@@ -2036,64 +2036,74 @@ function CommunityView({ matches, user }) {
   const matchesByDay = day => closedMatches.filter(m => m.match_date === day);
 
   const renderMatchPreds = m => {
-    const matchPreds = allPreds.filter(p => p.match_id === m.id);
-    const ht = getTeam(m.home), at = getTeam(m.away);
+  const matchPreds = allPreds.filter(p => p.match_id === m.id);
+  const ht = getTeam(m.home), at = getTeam(m.away);
+  
+  // Agrupar por signo del pronóstico
+  const local = [], empate = [], visitante = [];
+  matchPreds.forEach(p => {
+    if (p.predicted_home > p.predicted_away) local.push(p);
+    else if (p.predicted_home < p.predicted_away) visitante.push(p);
+    else empate.push(p);
+  });
 
-    // Agrupar por signo del pronóstico
-    const local = [], empate = [], visitante = [];
-    matchPreds.forEach(p => {
-      if (p.predicted_home > p.predicted_away) local.push(p);
-      else if (p.predicted_home < p.predicted_away) visitante.push(p);
-      else empate.push(p);
-    });
+  // --- LÓGICA DE ORDENACIÓN ALFABÉTICA ---
+  const sortByName = (a, b) => getName(a.user_id).localeCompare(getName(b.user_id));
+  
+  local.sort(sortByName);
+  empate.sort(sortByName);
+  visitante.sort(sortByName);
+  // ---------------------------------------
 
-    const predRow = (pred) => (
-      <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
-        <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1 }}>{getName(pred.user_id)}</span>
-        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>{pred.predicted_home}-{pred.predicted_away}</span>
-        {pred.points !== null && pred.points !== undefined && (
-          <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>
-            {pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}
-          </span>
-        )}
-      </div>
-    );
+  const predRow = (pred) => (
+    <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
+      <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1 }}>
+        {getName(pred.user_id)}
+      </span>
+      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>
+        {pred.predicted_home}-{pred.predicted_away}
+      </span>
+      {pred.points !== null && pred.points !== undefined && (
+        <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>
+          {pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}
+        </span>
+      )}
+    </div>
+  );
 
-    const bloque = (icono, titulo, lista, accent) => {
-      if (lista.length === 0) return null;
-      return (
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
-            <span style={{ fontSize: "15px" }}>{icono}</span>
-            <span style={{ fontSize: "9px", color: accent, fontFamily: "'Inter', sans-serif", letterSpacing: "1px", fontWeight: 700, textTransform: "uppercase" }}>{titulo}</span>
-            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>· {lista.length}</span>
-            <div style={{ flex: 1, height: "1px", background: accent, opacity: 0.3 }} />
-          </div>
-          {lista.map(predRow)}
-        </div>
-      );
-    };
-
+  const bloque = (icono, titulo, lista, accent) => {
+    if (lista.length === 0) return null;
     return (
-      <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
-        <div style={{ margin: "-12px -12px 8px", borderBottom: `1px solid ${BORDER}` }}>
-          <StadiumScore match={m} />
+      <div style={{ marginBottom: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
+          <span style={{ fontSize: "15px" }}>{icono}</span>
+          <span style={{ fontSize: "9px", color: accent, fontFamily: "'Inter', sans-serif", letterSpacing: "1px", fontWeight: 700, textTransform: "uppercase" }}>{titulo}</span>
+          <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>· {lista.length}</span>
+          <div style={{ flex: 1, height: "1px", background: accent, opacity: 0.3 }} />
         </div>
-
-        {matchPreds.length === 0 ? (
-          <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha enviado pronóstico</p>
-        ) : (
-          <>
-            {bloque(ht.flag, `Gana ${m.home}`, local, GREEN)}
-            {bloque("🤝", "Empate", empate, "#ffd54f")}
-            {bloque(at.flag, `Gana ${m.away}`, visitante, "#4fc3f7")}
-          </>
-        )}
-
-        <MatchChat match={m} user={user} />
+        {lista.map(predRow)}
       </div>
     );
   };
+
+  return (
+    <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
+      <div style={{ margin: "-12px -12px 8px", borderBottom: `1px solid ${BORDER}` }}>
+        <StadiumScore match={m} />
+      </div>
+      {matchPreds.length === 0 ? (
+        <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha enviado pronóstico</p>
+      ) : (
+        <>
+          {bloque(ht.flag, `Gana ${m.home}`, local, GREEN)}
+          {bloque("🤝", "Empate", empate, "#ffd54f")}
+          {bloque(at.flag, `Gana ${m.away}`, visitante, "#4fc3f7")}
+        </>
+      )}
+      <MatchChat match={m} user={user} />
+    </div>
+  );
+};
 
   if (loading) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
