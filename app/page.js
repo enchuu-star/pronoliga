@@ -3818,7 +3818,7 @@ function useCountUp(target, dur = 1300) {
 
 function MoneyBag({ ratio = 0, pot = 0, paid = 0, total = 0 }) {
   const [fill, setFill] = useState(0);
-  const shownPot = useCountUp(pot);
+  const shownPot = useCountUp(pot, 2600); // antes 1300 (por defecto)
   useEffect(() => {
     const t = setTimeout(() => setFill(Math.max(0, Math.min(1, ratio))), 250);
     return () => clearTimeout(t);
@@ -3848,7 +3848,7 @@ function MoneyBag({ ratio = 0, pot = 0, paid = 0, total = 0 }) {
           <rect x="30" y={y} width="140" height={h} fill="url(#goldFill)"
             style={{ transition: "y 1.4s cubic-bezier(.22,1,.36,1), height 1.4s cubic-bezier(.22,1,.36,1)" }} />
           <rect x="30" y={y} width="140" height={Math.min(7, h)} fill="rgba(255,255,255,0.4)"
-            style={{ transition: "y 1.4s cubic-bezier(.22,1,.36,1)" }} />
+            style={{ transition: "y 2.8s cubic-bezier(.22,1,.36,1), height 2.8s cubic-bezier(.22,1,.36,1)" }}
         </g>
 
         <path d={bag} fill="none" stroke="rgba(255,213,79,0.85)" strokeWidth="2.5" />
@@ -3952,7 +3952,7 @@ function PaymentsView({ user }) {
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "16px" }}>EL BOTE</p>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "16px" }}>BOTE</p>
 
       <div style={{
         background: "radial-gradient(120% 120% at 50% 0%, rgba(255,213,79,0.12), rgba(10,22,40,0) 70%), rgba(255,255,255,0.03)",
@@ -3961,7 +3961,7 @@ function PaymentsView({ user }) {
       }}>
         <MoneyBag ratio={ratio} pot={pot} paid={paid.length} total={profiles.length} />
         <div style={{ marginTop: "16px", background: "rgba(255,255,255,0.04)", borderRadius: "8px", height: "8px", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.round(ratio * 100)}%`, background: "linear-gradient(90deg,#ffd54f,#e6a100)", borderRadius: "8px", transition: "width 1.4s ease" }} />
+          <div style={{ height: "100%", width: `${Math.round(ratio * 100)}%`, background: "linear-gradient(90deg,#ffd54f,#e6a100)", borderRadius: "8px", transition: "width 2.8s ease" }} />
         </div>
         <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "10px" }}>
           {unpaid.length === 0
