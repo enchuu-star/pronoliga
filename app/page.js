@@ -2984,6 +2984,7 @@ function AdminView({ matches, onDataChange }) {
       </div>
 
       {/* ADJUDICAR PRONÓSTICOS ESPECIALES */}
+      <SpecialLocksAdmin />
       <SpecialAwardsAdmin />
       <SyncResultsAdmin onDataChange={onDataChange} />
       <SaveRankingSnapshotAdmin matches={matches} />
@@ -3142,6 +3143,7 @@ function SpecialPredictions({ userId, locked }) {
   const [inputScorer, setInputScorer] = useState("");
   const [inputPlayer, setInputPlayer] = useState("");
   const [activeTab, setActiveTab] = useState("scorer");
+  const [locks, setLocks] = useState({ top_scorer: false, best_player: false });  // ⬅️ nuevo
 
   useEffect(() => {
     (async () => {
@@ -3156,12 +3158,17 @@ function SpecialPredictions({ userId, locked }) {
         setInputScorer(data.top_scorer || "");
         setInputPlayer(data.best_player || "");
       }
+      // cargar bloqueos individuales
+      const { data: lk } = await supabase.from("special_locks").select("*");   // ⬅️ nuevo
+      const map = { top_scorer: false, best_player: false };
+      (lk || []).forEach(r => { map[r.id] = r.locked; });
+      setLocks(map);
       setLoading(false);
     })();
   }, [userId]);
 
   const savePick = async (field, value) => {
-    if (locked || !value.trim()) return;
+    if (locked || locks[field] || !value.trim()) return;
     const { error } = await supabase
       .from("special_predictions")
       .upsert({ user_id: userId, [field]: value.trim() }, { onConflict: "user_id" });
@@ -3187,6 +3194,7 @@ function SpecialPredictions({ userId, locked }) {
 
   const renderTab = (field) => {
     const isScorer = field === "top_scorer";
+    const fieldLocked = locked || locks[field];
     const current = isScorer ? topScorer : bestPlayer;
     const input = isScorer ? inputScorer : inputPlayer;
     const setInput = isScorer ? setInputScorer : setInputPlayer;
@@ -3215,7 +3223,7 @@ function SpecialPredictions({ userId, locked }) {
             {saved[savedKey] && (
               <span style={{ color: GREEN, fontFamily: "'Inter', sans-serif", fontSize: "12px" }}>✓ guardado</span>
             )}
-            {!locked && (
+            {!fieldLocked && (
               <button onClick={() => clearPick(field)}
                 style={{ padding: "4px 8px", border: `1px solid rgba(204,34,34,0.3)`, borderRadius: "6px", background: "rgba(204,34,34,0.06)", color: "#cc2222", cursor: "pointer", fontSize: "10px", fontFamily: "'Inter', sans-serif" }}>
                 ✕
@@ -3229,13 +3237,13 @@ function SpecialPredictions({ userId, locked }) {
             marginBottom: "14px", textAlign: "center"
           }}>
             <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>
-              {locked ? `No enviaste pronóstico de ${label}` : `Escribe el nombre del ${label}`}
+              {fieldLocked ? `No enviaste pronóstico de ${label}` : `Escribe el nombre del ${label}`}
             </span>
           </div>
         )}
 
         {/* Input libre */}
-        {!locked && (
+        {!fieldLocked && (
           <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
               <input
@@ -3265,7 +3273,7 @@ function SpecialPredictions({ userId, locked }) {
           </div>
         )}
 
-        {locked && current && (
+        {fieldLocked && current && (
           <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "8px" }}>
             🔒 Pronóstico cerrado
           </p>
@@ -3277,7 +3285,7 @@ function SpecialPredictions({ userId, locked }) {
   return (
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "14px" }}>
-        PRONÓSTICOS ESPECIALES · +5 PTS c/u
+        PRONÓSTICOS ESPECIALES · +10 PTS c/u
       </p>
 
       {/* Tabs */}
@@ -3397,6 +3405,58 @@ function SpecialPredictionsTable({ currentUserId }) {
     </div>
   );
 }
+
+function SpecialLocksAdmin() {
+  const [locks, setLocks] = useState({ top_scorer: false, best_player: false });
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    const { data } = await supabase.from("special_locks").select("*");
+    const map = { top_scorer: false, best_player: false };
+    (data || []).forEach(r => { map[r.id] = r.locked; });
+    setLocks(map);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const toggle = async (id) => {
+    const next = !locks[id];
+    setLocks(l => ({ ...l, [id]: next }));
+    await supabase.from("special_locks").upsert({ id, locked: next }, { onConflict: "id" });
+  };
+
+  if (loading) return null;
+
+  const row = (id, icon, label) => (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+      <span style={{ fontSize: "20px" }}>{icon}</span>
+      <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#e0eaf8" }}>{label}</span>
+      <span style={{ fontSize: "10px", fontFamily: "'Inter', sans-serif", color: locks[id] ? "#ff6b4a" : "#34d399" }}>
+        {locks[id] ? "🔒 Cerrado" : "🔓 Abierto"}
+      </span>
+      <button onClick={() => toggle(id)} style={{
+        padding: "6px 12px", borderRadius: "8px", cursor: "pointer", whiteSpace: "nowrap",
+        border: `1px solid ${locks[id] ? "rgba(0,200,100,0.3)" : "rgba(255,107,74,0.3)"}`,
+        background: locks[id] ? "rgba(0,200,100,0.1)" : "rgba(255,107,74,0.08)",
+        color: locks[id] ? "#007a3a" : "#ff6b4a",
+        fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700,
+      }}>
+        {locks[id] ? "Abrir" : "Cerrar"}
+      </button>
+    </div>
+  );
+
+  return (
+    <div style={{ background: CARD, border: "1px solid rgba(255,193,7,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>
+        🔐 ABRIR / CERRAR PRONÓSTICOS ESPECIALES
+      </p>
+      {row("top_scorer", "⚽", "Máximo goleador")}
+      {row("best_player", "🏅", "Mejor jugador")}
+    </div>
+  );
+}
                 
 function SpecialAwardsAdmin() {
   const [topScorer, setTopScorer] = useState("");
@@ -3410,8 +3470,8 @@ function SpecialAwardsAdmin() {
     const { data: preds } = await supabase.from("special_predictions").select("*");
     for (const u of (preds || [])) {
       await supabase.from("special_predictions").update({
-        top_scorer_points: topScorer && u.top_scorer?.toLowerCase().trim() === topScorer.toLowerCase().trim() ? 5 : u.top_scorer_points,
-        best_player_points: bestPlayer && u.best_player?.toLowerCase().trim() === bestPlayer.toLowerCase().trim() ? 5 : u.best_player_points,
+        top_scorer_points: topScorer && u.top_scorer?.toLowerCase().trim() === topScorer.toLowerCase().trim() ? 10 : u.top_scorer_points,
+        best_player_points: bestPlayer && u.best_player?.toLowerCase().trim() === bestPlayer.toLowerCase().trim() ? 10 : u.best_player_points,
       }).eq("id", u.id);
     }
     setSaving(false); setDone(true);
