@@ -664,7 +664,7 @@ function CountdownBanner() {
 function ProgressBar({ predictions, matches }) {
   const open = matches.filter(m => m.status === "open").length;
   const sent = predictions.length;
-   Math.round((sent / TOTAL_MATCHES) * 100);
+  const pct = Math.round((sent / TOTAL_MATCHES) * 100);   // ✅ corregido
   return (
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 14px", marginBottom: "16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
