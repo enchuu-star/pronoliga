@@ -409,21 +409,7 @@ const TEXT = "#e8f4fd";
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
-  body {
-    background-color: #0a1628;
-    /* Esto crea el foco de luz superior */
-    background-image: radial-gradient(circle at 50% -10%, #153866 0%, #0a1628 60%);
-    background-attachment: fixed;
-    color: #e8f4fd;
-  }
-  
-  /* Añadimos una clase para el efecto cristal */
-  .glass-nav {
-    background: rgba(10, 22, 40, 0.75) !important;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
+  body{background:#0a1628; color:#e8f4fd;}
   ::-webkit-scrollbar{width:3px;}
   ::-webkit-scrollbar-track{background:#0a1628;}
   ::-webkit-scrollbar-thumb{background:#4fc3f7;border-radius:2px;}
@@ -711,7 +697,7 @@ function NavBar({ user, view, setView, onLogout }) {
 
   return (
     <>
-      <div className="glass-top" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100 }}>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,22,40,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto", padding: "0 14px", display: "flex", alignItems: "center", height: "50px" }}>
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", letterSpacing: "2px", color: "#e0eaf8", flex: 1 }}>PORRA <span style={{ color: GREEN }}>VALLAU</span></span>
           {/* Avatar / perfil en header */}
@@ -729,8 +715,7 @@ function NavBar({ user, view, setView, onLogout }) {
           <button onClick={onLogout} style={{ padding: "5px 10px", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "6px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontSize: "11px", fontFamily: "'Inter', sans-serif" }}>salir</button>
         </div>
       </div>
-      
-      <div className="glass-bottom" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100 }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: "rgba(10,22,40,0.97)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto", display: "flex" }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "11px 2px 9px", border: "none", cursor: "pointer", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", borderTop: view === t.id ? `2px solid ${GREEN}` : "2px solid transparent" }}>
