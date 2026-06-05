@@ -3879,6 +3879,7 @@ function PaymentsView({ user }) {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
+  const [barW, setBarW] = useState(0);
 
   const load = async () => {
     const { data } = await supabase.from("profiles").select("*").eq("role", "user");
@@ -3897,6 +3898,12 @@ function PaymentsView({ user }) {
     return () => supabase.removeChannel(ch);
   }, []);
 
+  useEffect(() => {
+  if (loading) return;
+  const t = setTimeout(() => setBarW(Math.round(ratio * 100)), 250);
+  return () => clearTimeout(t);
+}, [loading, ratio]);
+  
   const togglePaid = async (p) => {
     if (user.role !== "admin") return;
     setSavingId(p.id);
@@ -3961,7 +3968,7 @@ function PaymentsView({ user }) {
       }}>
         <MoneyBag ratio={ratio} pot={pot} paid={paid.length} total={profiles.length} />
         <div style={{ marginTop: "16px", background: "rgba(255,255,255,0.04)", borderRadius: "8px", height: "8px", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${Math.round(ratio * 100)}%`, background: "linear-gradient(90deg,#ffd54f,#e6a100)", borderRadius: "8px", transition: "width 2.8s ease" }} />
+          <div style={{ height: "100%", width: `${barW}%`, background: "linear-gradient(90deg,#ffd54f,#e6a100)", borderRadius: "8px", transition: "width 2.8s ease" }} />
         </div>
         <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "10px" }}>
           {unpaid.length === 0
@@ -4077,7 +4084,7 @@ function HomeView({ user, matches, predictions, setView }) {
           <span style={{ fontSize: "32px", lineHeight: 1 }}>💰</span>
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#ffd54f", letterSpacing: "1px", lineHeight: 1 }}>
-              EL BOTE · {payInfo.pot}€
+              BOTE · {payInfo.pot}€
             </div>
             <div style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "3px" }}>
               {payInfo.paid}/{payInfo.total} han pagado{payInfo.total - payInfo.paid > 0 ? ` · ${payInfo.total - payInfo.paid} morosos` : " · ¡completo! 🎉"}
