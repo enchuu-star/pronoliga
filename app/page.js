@@ -3897,12 +3897,6 @@ function PaymentsView({ user }) {
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, []);
-
-  useEffect(() => {
-  if (loading) return;
-  const t = setTimeout(() => setBarW(Math.round(ratio * 100)), 250);
-  return () => clearTimeout(t);
-}, [loading, ratio]);
   
   const togglePaid = async (p) => {
     if (user.role !== "admin") return;
@@ -3916,6 +3910,12 @@ function PaymentsView({ user }) {
   const unpaid = profiles.filter(p => !p.has_paid);
   const pot = paid.length * CUOTA;
   const ratio = profiles.length ? paid.length / profiles.length : 0;
+
+  useEffect(() => {
+    if (loading) return;
+    const t = setTimeout(() => setBarW(Math.round(ratio * 100)), 250);
+    return () => clearTimeout(t);
+  }, [loading, ratio]);
 
   if (loading) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -6247,7 +6247,6 @@ export default function Home() {
             {view === "community" && <CommunityView matches={matches} user={user} />}
             {view === "profile" && <ProfileView user={user} matches={matches} />}
             {view === "ranking" && <RankingView matches={matches} user={user} />}
-            {view === "games" && <GamesView user={user} />}
             {view === "games" && <GamesView user={user} />}
             {view === "payments" && <PaymentsView user={user} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
