@@ -6071,133 +6071,6 @@ const DRAFT_ELIG = {
 };
 // Formación 4-3-3 (x,y en %, ataque arriba)
 const DRAFT_FORMATION = [
-  { pos: "ST", label: "DC", x: 50, y: 14 },
-  { pos: "LW", label: "EI", x: 20, y: 24 },
-  { pos: "RW", label: "ED", x: 80, y: 24 },
-  { pos: "CM", label: "MC", x: 28, y: 48 },
-  { pos: "CM", label: "MC", x: 50, y: 44 },
-  { pos: "CM", label: "MC", x: 72, y: 48 },
-  { pos: "LB", label: "LI", x: 15, y: 73 },
-  { pos: "CB", label: "DFC", x: 38, y: 77 },
-  { pos: "CB", label: "DFC", x: 62, y: 77 },
-  { pos: "RB", label: "LD", x: 85, y: 73 },
-  { pos: "GK", label: "POR", x: 50, y: 92 },
-];
-const draftEligible = (p, pos) => DRAFT_ELIG[pos].some(x => p.positions.includes(x));
-
-function draftDraw(players, pos, usedIds, n = 5) {
-  const pool = players.filter(p => draftEligible(p, pos) && !usedIds.has(p.id));
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  return pool.slice(0, n);
-}
-function draftPlayerChem(player, pos, eleven) {
-  const others = eleven.filter(x => x && x.id !== player.id);
-  const inPos = draftEligible(player, pos);
-  const nation = others.filter(o => o.nation === player.nation).length;
-  const league = others.filter(o => o.league && o.league === player.league).length;
-  const club = others.filter(o => o.club && o.club === player.club).length;
-  const pts = Math.min(club, 2) * 2 + Math.min(nation, 3) + Math.min(league, 3);
-  let chem = pts >= 5 ? 3 : pts >= 3 ? 2 : pts >= 1 ? 1 : 0;
-  if (!inPos) chem = Math.min(chem, 1);
-  return chem;
-}
-function draftScoreSquad(picks) {
-  const eleven = picks.map(p => p.player);
-  const chems = picks.map(pk => draftPlayerChem(pk.player, pk.pos, eleven));
-  const teamChem = chems.reduce((s, c) => s + c, 0);
-  const teamRating = Math.round(eleven.reduce((s, p) => s + p.rating, 0) / eleven.length);
-  return { teamRating, teamChem, total: teamRating + teamChem, chems };
-}
-const chemCol = c => (c >= 3 ? GREEN : c === 2 ? "#34d399" : c === 1 ? "#ffd54f" : "#ff6b4a");
-
-// Avatar con foto y fallback a bandera
-function DraftFace({ p, size }) {
-  const [err, setErr] = useState(false);
-  if (!p.photo || err) {
-    return (
-      <div style={{ width: size, height: size, borderRadius: "8px", background: "rgba(0,0,0,0.3)", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5 }}>
-        {draftFlag(p.nation)}
-      </div>
-    );
-  }
-  return <img src={p.photo} width={size} height={size} alt="" onError={() => setErr(true)} style={{ borderRadius: "8px", objectFit: "cover", background: "rgba(0,0,0,0.3)" }} />;
-}
-
-// Campo: compact (durante el draft) o completo (resultado, con química)
-function DraftPitch({ picks, current, chems, compact }) {
-  const H = compact ? 200 : 360;
-  return (
-    <div style={{
-      position: "relative", width: "100%", height: `${H}px`,
-      borderRadius: "12px", overflow: "hidden", border: `1px solid ${BORDER}`,
-      background: "repeating-linear-gradient(0deg,#0f2e1a 0 8.33%,#0d2817 8.33% 16.66%)",
-      marginBottom: "14px",
-    }}>
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(120% 80% at 50% 0%, rgba(79,195,247,0.10), transparent 60%)" }} />
-      <div style={{ position: "absolute", left: "12%", right: "12%", top: "7%", bottom: "7%", border: "2px solid rgba(255,255,255,0.10)", borderRadius: "4px" }} />
-      <div style={{ position: "absolute", left: "50%", top: "50%", width: "70px", height: "70px", transform: "translate(-50%,-50%)", border: "2px solid rgba(255,255,255,0.08)", borderRadius: "50%" }} />
-      {DRAFT_FORMATION.map((slot, i) => {
-        const pick = picks[i]?.player;
-        const active = i === current;
-        const av = compact ? 30 : 40;
-        return (
-          <div key={i} style={{ position: "absolute", left: `${slot.x}%`, top: `${slot.y}%`, transform: "translate(-50%,-50%)", textAlign: "center", width: "64px" }}>
-            <div style={{
-              width: `${av + 8}px`, height: `${av + 8}px`, margin: "0 auto", borderRadius: "50%",
-              border: `2px solid ${active ? GREEN : pick ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)"}`,
-              background: pick ? "rgba(10,22,40,0.5)" : "rgba(10,22,40,0.25)",
-              display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
-              boxShadow: active ? `0 0 0 3px rgba(79,195,247,0.2), 0 0 16px rgba(79,195,247,0.4)` : "none",
-              animation: active ? "pulse 1.6s ease-in-out infinite" : "none",
-            }}>
-              {pick ? <DraftFace p={pick} size={av} /> : (
-                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>{slot.label}</span>
-              )}
-              {pick && chems && (
-                <span style={{ position: "absolute", bottom: "-5px", right: "-5px", width: "16px", height: "16px", borderRadius: "50%", background: chemCol(chems[i]), color: "#0a1628", fontSize: "10px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #0a1628" }}>{chems[i]}</span>
-              )}
-            </div>
-            {!compact && pick && (
-              <div style={{ marginTop: "3px", fontSize: "9px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textShadow: "0 1px 2px #000" }}>{pick.name}</div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ============================================================
-// MUNDIAL DRAFT (estilo FUT Draft) — un juego más de la pestaña Juegos
-// Requiere: players.json en /public  ·  tabla draft_scores en Supabase
-// Usa el tema/fuentes/supabase globales del archivo (GREEN, CARD, BORDER...).
-// ============================================================
-
-// Banderas por nación (nombres tal cual vienen en players.json)
-const DRAFT_FLAGS = {
-  "France": "🇫🇷", "Spain": "🇪🇸", "Argentina": "🇦🇷", "England": "🇬🇧", "Portugal": "🇵🇹",
-  "Brazil": "🇧🇷", "Netherlands": "🇳🇱", "Morocco": "🇲🇦", "Belgium": "🇧🇪", "Germany": "🇩🇪",
-  "Croatia": "🇭🇷", "Colombia": "🇨🇴", "Senegal": "🇸🇳", "Mexico": "🇲🇽", "United States": "🇺🇸",
-  "Uruguay": "🇺🇾", "Japan": "🇯🇵", "Switzerland": "🇨🇭", "Iran": "🇮🇷", "Austria": "🇦🇹",
-  "Ecuador": "🇪🇨", "Australia": "🇦🇺", "South Korea": "🇰🇷", "Egypt": "🇪🇬", "Canada": "🇨🇦",
-  "Ivory Coast": "🇨🇮", "Qatar": "🇶🇦", "Algeria": "🇩🇿", "Sweden": "🇸🇪", "Tunisia": "🇹🇳",
-  "Czechia": "🇨🇿", "Türkiye": "🇹🇷", "Norway": "🇳🇴", "Scotland": "🇬🇧", "DR Congo": "🇨🇩",
-  "Bosnia & Herzegovina": "🇧🇦", "Panama": "🇵🇦", "Saudi Arabia": "🇸🇦", "South Africa": "🇿🇦",
-  "Iraq": "🇮🇶", "Uzbekistan": "🇺🇿", "Paraguay": "🇵🇾", "Ghana": "🇬🇭", "Jordan": "🇯🇴",
-  "Cape Verde": "🇨🇻", "Curaçao": "🇨🇼", "Haiti": "🇭🇹", "New Zealand": "🇳🇿",
-};
-const draftFlag = n => DRAFT_FLAGS[n] || "🏳️";
-
-// Posiciones compatibles por hueco
-const DRAFT_ELIG = {
-  GK: ["GK"], LB: ["LB", "LWB"], RB: ["RB", "RWB"], CB: ["CB"],
-  CM: ["CM", "CDM", "CAM"], LW: ["LW", "LM"], RW: ["RW", "RM"], ST: ["ST", "CF"],
-};
-// Formación 4-3-3 (x,y en %, ataque arriba)
-const DRAFT_FORMATION = [
   { pos: "ST", label: "DC", x: 50, y: 11 },
   { pos: "LW", label: "EI", x: 19, y: 25 },
   { pos: "RW", label: "ED", x: 81, y: 25 },
@@ -6315,6 +6188,7 @@ function DraftGame({ user, onBack }) {
   const [rankings, setRankings] = useState([]);
   const [loadingRank, setLoadingRank] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [viewing, setViewing] = useState(null); // ranking de quien estamos viendo su 11
 
   // Cargar jugadores
   useEffect(() => {
@@ -6330,9 +6204,18 @@ function DraftGame({ user, onBack }) {
     const { data: profiles } = await supabase.from("profiles").select("*");
     if (scores && profiles) {
       const byUser = {};
-      scores.forEach(s => { if (!byUser[s.user_id] || s.score > byUser[s.user_id]) byUser[s.user_id] = s.score; });
+      scores.forEach(s => {
+        const cur = byUser[s.user_id];
+        if (!cur || s.score > cur.score) byUser[s.user_id] = { score: s.score, squad: s.squad || null };
+      });
       const r = Object.entries(byUser)
-        .map(([uid, sc]) => ({ name: profiles.find(p => p.id === uid)?.name || "Usuario", emoji: profiles.find(p => p.id === uid)?.emoji || "⚽", score: sc }))
+        .map(([uid, v]) => ({
+          id: uid,
+          name: profiles.find(p => p.id === uid)?.name || "Usuario",
+          emoji: profiles.find(p => p.id === uid)?.emoji || "⚽",
+          score: v.score,
+          squad: v.squad,
+        }))
         .sort((a, b) => b.score - a.score);
       setRankings(r);
     }
@@ -6362,10 +6245,52 @@ function DraftGame({ user, onBack }) {
   const finish = async (finalPicks) => {
     const r = draftScoreSquad(finalPicks);
     setPhase("result");
-    await supabase.from("draft_scores").insert({ user_id: user.id, score: r.total });
+    const squad = finalPicks.map(p => ({ pos: p.pos, id: p.player.id }));
+    await supabase.from("draft_scores").insert({ user_id: user.id, score: r.total, squad });
     setSaved(true);
     loadRankings();
   };
+
+  // Modal: ver el once de otro jugador (se resuelve con players.json)
+  const squadModal = viewing ? (() => {
+    const byId = {};
+    players.forEach(p => { byId[p.id] = p; });
+    const vpicks = (viewing.squad || []).map(s => ({ pos: s.pos, player: byId[s.id] || null }));
+    const full = vpicks.length === 11 && vpicks.every(x => x.player);
+    const vres = full ? draftScoreSquad(vpicks) : null;
+    return (
+      <div onClick={() => setViewing(null)} style={{ position: "fixed", inset: 0, zIndex: 260, background: "rgba(5,12,24,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", animation: "fadeIn 0.25s ease" }}>
+        <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "420px", maxHeight: "90vh", overflowY: "auto", background: "linear-gradient(160deg,#102339,#0a1628)", border: `2px solid ${GREEN}`, borderRadius: "16px", padding: "18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+            <span style={{ fontSize: "26px" }}>{viewing.emoji}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#e0eaf8", letterSpacing: "1px", lineHeight: 1 }}>{viewing.name}</div>
+              <div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>El once con su mejor marca</div>
+            </div>
+            <button onClick={() => setViewing(null)} style={{ width: "30px", height: "30px", borderRadius: "8px", border: `1px solid ${BORDER}`, background: "transparent", color: "#c0d8f0", cursor: "pointer", fontSize: "14px" }}>✕</button>
+          </div>
+
+          {vpicks.length === 0 ? (
+            <p style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center", padding: "20px 0" }}>
+              Esta marca se guardó antes de registrar las alineaciones, así que no hay equipo que mostrar.
+            </p>
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "12px 8px", marginBottom: "12px" }}>
+                {[{ l: "MEDIA", v: vres ? vres.teamRating : "—", c: "#e0eaf8" }, { l: "QUÍMICA", v: vres ? vres.teamChem : "—", c: "#34d399" }, { l: "TOTAL", v: viewing.score, c: GREEN, big: true }].map((s, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: "center", borderLeft: i ? `1px solid ${BORDER}` : "none" }}>
+                    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: s.big ? "38px" : "28px", color: s.c, lineHeight: 1 }}>{s.v}</div>
+                    <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginTop: "3px" }}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+              <DraftPitch picks={vpicks} current={-1} chems={vres ? vres.chems : null} />
+            </>
+          )}
+        </div>
+      </div>
+    );
+  })() : null;
 
   const medals = ["🥇", "🥈", "🥉"];
 
@@ -6379,6 +6304,7 @@ function DraftGame({ user, onBack }) {
 
   // ---------- MENU ----------
   if (phase === "menu") return (
+    <>
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
         <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
@@ -6393,17 +6319,21 @@ function DraftGame({ user, onBack }) {
         </p>
         <button onClick={start} disabled={players.length === 0} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
       </div>
-      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING DRAFT</p>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "6px" }}>RANKING DRAFT</p>
+      <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", marginBottom: "12px" }}>Toca a un jugador para ver su once 👁️</p>
       {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+        <button key={i} onClick={() => r.squad && setViewing(r)} className="tappable" style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", cursor: r.squad ? "pointer" : "default" }}>
           <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
           <span style={{ fontSize: "18px" }}>{r.emoji}</span>
           <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.name}</span>
+          {r.squad && <span style={{ fontSize: "13px", color: "#7ab8e0" }}>👁️</span>}
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8" }}>{r.score}</span>
           <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>PTS</span>
-        </div>
+        </button>
       ))}
     </div>
+    {squadModal}
+    </>
   );
 
   // ---------- PLAYING ----------
@@ -6453,6 +6383,7 @@ function DraftGame({ user, onBack }) {
   const r = result;
   const myRank = rankings.findIndex(x => x.name === user.name && x.score === r.total) + 1;
   return (
+    <>
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
         <button onClick={() => setPhase("menu")} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
@@ -6473,24 +6404,29 @@ function DraftGame({ user, onBack }) {
 
       <button onClick={start} className="tappable" style={{ width: "100%", padding: "13px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 JUGAR OTRA VEZ</button>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>RANKING DRAFT</p>
         {myRank > 0 && <span style={{ fontSize: "11px", color: GREEN, fontFamily: "'Inter', sans-serif" }}>Tu puesto #{myRank}</span>}
       </div>
+      <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", marginBottom: "12px" }}>Toca a un jugador para ver su once 👁️</p>
       {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((x, i) => {
         const isMe = x.name === user.name;
         return (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: isMe ? GREEN_DIM : CARD, border: `1px solid ${isMe ? GREEN : BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+          <button key={i} onClick={() => x.squad && setViewing(x)} className="tappable" style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: "12px", background: isMe ? GREEN_DIM : CARD, border: `1px solid ${isMe ? GREEN : BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", cursor: x.squad ? "pointer" : "default" }}>
             <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
             <span style={{ fontSize: "18px" }}>{x.emoji}</span>
             <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: isMe ? GREEN : "#e0eaf8", fontWeight: isMe ? 700 : 400 }}>{x.name}{isMe ? " (tú)" : ""}</span>
+            {x.squad && <span style={{ fontSize: "13px", color: "#7ab8e0" }}>👁️</span>}
             <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8" }}>{x.score}</span>
-          </div>
+          </button>
         );
       })}
     </div>
+    {squadModal}
+    </>
   );
 }
+
 // ============================================================
 // VISTA JUEGOS
 // ============================================================
