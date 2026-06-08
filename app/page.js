@@ -6170,7 +6170,142 @@ function DraftPitch({ picks, current, chems, compact }) {
   );
 }
 
-//JUEGO DRAFT//
+// ============================================================
+// MUNDIAL DRAFT (estilo FUT Draft) — un juego más de la pestaña Juegos
+// Requiere: players.json en /public  ·  tabla draft_scores en Supabase
+// Usa el tema/fuentes/supabase globales del archivo (GREEN, CARD, BORDER...).
+// ============================================================
+
+// Banderas por nación (nombres tal cual vienen en players.json)
+const DRAFT_FLAGS = {
+  "France": "🇫🇷", "Spain": "🇪🇸", "Argentina": "🇦🇷", "England": "🇬🇧", "Portugal": "🇵🇹",
+  "Brazil": "🇧🇷", "Netherlands": "🇳🇱", "Morocco": "🇲🇦", "Belgium": "🇧🇪", "Germany": "🇩🇪",
+  "Croatia": "🇭🇷", "Colombia": "🇨🇴", "Senegal": "🇸🇳", "Mexico": "🇲🇽", "United States": "🇺🇸",
+  "Uruguay": "🇺🇾", "Japan": "🇯🇵", "Switzerland": "🇨🇭", "Iran": "🇮🇷", "Austria": "🇦🇹",
+  "Ecuador": "🇪🇨", "Australia": "🇦🇺", "South Korea": "🇰🇷", "Egypt": "🇪🇬", "Canada": "🇨🇦",
+  "Ivory Coast": "🇨🇮", "Qatar": "🇶🇦", "Algeria": "🇩🇿", "Sweden": "🇸🇪", "Tunisia": "🇹🇳",
+  "Czechia": "🇨🇿", "Türkiye": "🇹🇷", "Norway": "🇳🇴", "Scotland": "🇬🇧", "DR Congo": "🇨🇩",
+  "Bosnia & Herzegovina": "🇧🇦", "Panama": "🇵🇦", "Saudi Arabia": "🇸🇦", "South Africa": "🇿🇦",
+  "Iraq": "🇮🇶", "Uzbekistan": "🇺🇿", "Paraguay": "🇵🇾", "Ghana": "🇬🇭", "Jordan": "🇯🇴",
+  "Cape Verde": "🇨🇻", "Curaçao": "🇨🇼", "Haiti": "🇭🇹", "New Zealand": "🇳🇿",
+};
+const draftFlag = n => DRAFT_FLAGS[n] || "🏳️";
+
+// Posiciones compatibles por hueco
+const DRAFT_ELIG = {
+  GK: ["GK"], LB: ["LB", "LWB"], RB: ["RB", "RWB"], CB: ["CB"],
+  CM: ["CM", "CDM", "CAM"], LW: ["LW", "LM"], RW: ["RW", "RM"], ST: ["ST", "CF"],
+};
+// Formación 4-3-3 (x,y en %, ataque arriba)
+const DRAFT_FORMATION = [
+  { pos: "ST", label: "DC", x: 50, y: 11 },
+  { pos: "LW", label: "EI", x: 19, y: 25 },
+  { pos: "RW", label: "ED", x: 81, y: 25 },
+  { pos: "CM", label: "MC", x: 27, y: 46 },
+  { pos: "CM", label: "MC", x: 50, y: 42 },
+  { pos: "CM", label: "MC", x: 73, y: 46 },
+  { pos: "LB", label: "LI", x: 14, y: 69 },
+  { pos: "CB", label: "DFC", x: 38, y: 73 },
+  { pos: "CB", label: "DFC", x: 62, y: 73 },
+  { pos: "RB", label: "LD", x: 86, y: 69 },
+  { pos: "GK", label: "POR", x: 50, y: 88 },
+];
+const draftEligible = (p, pos) => DRAFT_ELIG[pos].some(x => p.positions.includes(x));
+
+function draftDraw(players, pos, usedIds, n = 5) {
+  const pool = players.filter(p => draftEligible(p, pos) && !usedIds.has(p.id));
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, n);
+}
+function draftPlayerChem(player, pos, eleven) {
+  const others = eleven.filter(x => x && x.id !== player.id);
+  const inPos = draftEligible(player, pos);
+  const nation = others.filter(o => o.nation === player.nation).length;
+  const league = others.filter(o => o.league && o.league === player.league).length;
+  const club = others.filter(o => o.club && o.club === player.club).length;
+  const pts = Math.min(club, 2) * 2 + Math.min(nation, 3) + Math.min(league, 3);
+  let chem = pts >= 5 ? 3 : pts >= 3 ? 2 : pts >= 1 ? 1 : 0;
+  if (!inPos) chem = Math.min(chem, 1);
+  return chem;
+}
+function draftScoreSquad(picks) {
+  const eleven = picks.map(p => p.player);
+  const chems = picks.map(pk => draftPlayerChem(pk.player, pk.pos, eleven));
+  const teamChem = chems.reduce((s, c) => s + c, 0);
+  const teamRating = Math.round(eleven.reduce((s, p) => s + p.rating, 0) / eleven.length);
+  return { teamRating, teamChem, total: teamRating + teamChem, chems };
+}
+const chemCol = c => (c >= 3 ? GREEN : c === 2 ? "#34d399" : c === 1 ? "#ffd54f" : "#ff6b4a");
+
+// Avatar con foto y fallback a bandera
+function DraftFace({ p, size }) {
+  const [err, setErr] = useState(false);
+  if (!p.photo || err) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: "8px", background: "rgba(0,0,0,0.3)", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5 }}>
+        {draftFlag(p.nation)}
+      </div>
+    );
+  }
+  return <img src={p.photo} width={size} height={size} alt="" onError={() => setErr(true)} style={{ borderRadius: "8px", objectFit: "cover", background: "rgba(0,0,0,0.3)" }} />;
+}
+
+// Campo con jugadores. Cada hueco ocupado muestra valoración (badge),
+// nombre y equipo; en el resultado además la química (badge verde).
+function DraftPitch({ picks, current, chems }) {
+  const H = 360, av = 38;
+  return (
+    <div style={{
+      position: "relative", width: "100%", height: `${H}px`,
+      borderRadius: "12px", overflow: "hidden", border: `1px solid ${BORDER}`,
+      background: "repeating-linear-gradient(0deg,#0f2e1a 0 8.33%,#0d2817 8.33% 16.66%)",
+      marginBottom: "14px",
+    }}>
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(120% 80% at 50% 0%, rgba(79,195,247,0.10), transparent 60%)" }} />
+      <div style={{ position: "absolute", left: "12%", right: "12%", top: "5%", bottom: "5%", border: "2px solid rgba(255,255,255,0.10)", borderRadius: "4px" }} />
+      <div style={{ position: "absolute", left: "50%", top: "50%", width: "70px", height: "70px", transform: "translate(-50%,-50%)", border: "2px solid rgba(255,255,255,0.08)", borderRadius: "50%" }} />
+      {DRAFT_FORMATION.map((slot, i) => {
+        const pick = picks[i]?.player;
+        const active = i === current;
+        return (
+          <div key={i} style={{ position: "absolute", left: `${slot.x}%`, top: `${slot.y}%`, transform: "translate(-50%,-50%)", textAlign: "center", width: "78px", zIndex: active ? 4 : pick ? 3 : 1 }}>
+            <div style={{
+              width: `${av + 8}px`, height: `${av + 8}px`, margin: "0 auto", borderRadius: "50%",
+              border: `2px solid ${active ? GREEN : pick ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)"}`,
+              background: pick ? "rgba(10,22,40,0.5)" : "rgba(10,22,40,0.25)",
+              display: "flex", alignItems: "center", justifyContent: "center", position: "relative",
+              boxShadow: active ? `0 0 0 3px rgba(79,195,247,0.2), 0 0 16px rgba(79,195,247,0.4)` : "none",
+              animation: active ? "pulse 1.6s ease-in-out infinite" : "none",
+            }}>
+              {pick ? <DraftFace p={pick} size={av} /> : (
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>{slot.label}</span>
+              )}
+              {/* Valoración (puntos) */}
+              {pick && (
+                <span style={{ position: "absolute", top: "-7px", left: "-7px", width: "21px", height: "21px", borderRadius: "50%", background: GREEN, color: "#0a1628", fontFamily: "'Bebas Neue', cursive", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #0a1628" }}>{pick.rating}</span>
+              )}
+              {/* Química (solo en el resultado) */}
+              {pick && chems && (
+                <span style={{ position: "absolute", bottom: "-6px", right: "-6px", width: "17px", height: "17px", borderRadius: "50%", background: chemCol(chems[i]), color: "#0a1628", fontSize: "10px", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #0a1628" }}>{chems[i]}</span>
+              )}
+            </div>
+            {/* Nombre + equipo */}
+            {pick && (
+              <div style={{ marginTop: "3px", display: "inline-block", maxWidth: "78px", padding: "2px 5px", borderRadius: "5px", background: "rgba(10,22,40,0.8)", border: `1px solid ${BORDER}` }}>
+                <div style={{ fontSize: "9.5px", fontWeight: 700, color: "#e0eaf8", fontFamily: "'Inter', sans-serif", lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{pick.name}</div>
+                <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{draftFlag(pick.nation)} {pick.club || pick.nation}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function DraftGame({ user, onBack }) {
   const [players, setPlayers] = useState([]);
   const [phase, setPhase] = useState("loading"); // loading|menu|playing|result
@@ -6279,7 +6414,7 @@ function DraftGame({ user, onBack }) {
         <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#c0d8f0" }}><span style={{ color: GREEN }}>{current + 1}</span> / 11</span>
       </div>
 
-      <DraftPitch picks={picks} current={current} compact />
+      <DraftPitch picks={picks} current={current} />
 
       <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>
         ELIGE TU {slot.label}
@@ -6356,7 +6491,6 @@ function DraftGame({ user, onBack }) {
     </div>
   );
 }
-
 // ============================================================
 // VISTA JUEGOS
 // ============================================================
