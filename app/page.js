@@ -114,6 +114,88 @@ function getTeam(name) {
   return Object.values(GROUPS).flat().find(t => t.name === name) || { name, flag: "🏳️" };
 }
 
+// ============================================================
+// CANALES DE TV (España). DAZN emite todos los partidos; La 1 algunos.
+// Pega este bloque junto a tus helpers (p. ej. justo debajo de getTeam).
+// ============================================================
+const TV_BY_MATCH = {
+  "Alemania|Costa de Marfil": "DAZN",
+  "Alemania|Curazao": "La 1 + DAZN",
+  "Alemania|Ecuador": "La 1 + DAZN",
+  "Arabia Saudí|Cabo Verde": "DAZN",
+  "Arabia Saudí|España": "La 1 + DAZN",
+  "Arabia Saudí|Uruguay": "DAZN",
+  "Argelia|Argentina": "DAZN",
+  "Argelia|Austria": "DAZN",
+  "Argelia|Jordania": "DAZN",
+  "Argentina|Austria": "La 1 + DAZN",
+  "Argentina|Jordania": "DAZN",
+  "Australia|Estados Unidos": "La 1 + DAZN",
+  "Australia|Paraguay": "DAZN",
+  "Australia|Turquía": "DAZN",
+  "Austria|Jordania": "DAZN",
+  "Bosnia y Herz.|Canadá": "La 1 + DAZN",
+  "Bosnia y Herz.|Qatar": "DAZN",
+  "Bosnia y Herz.|Suiza": "La 1 + DAZN",
+  "Brasil|Escocia": "La 1 + DAZN",
+  "Brasil|Haití": "DAZN",
+  "Brasil|Marruecos": "La 1 + DAZN",
+  "Bélgica|Egipto": "DAZN",
+  "Bélgica|Irán": "DAZN",
+  "Bélgica|Nueva Zelanda": "DAZN",
+  "Cabo Verde|España": "La 1 + DAZN",
+  "Cabo Verde|Uruguay": "DAZN",
+  "Canadá|Qatar": "DAZN",
+  "Canadá|Suiza": "DAZN",
+  "Colombia|Portugal": "DAZN",
+  "Colombia|RD Congo": "DAZN",
+  "Corea del Sur|México": "DAZN",
+  "Corea del Sur|Rep. Checa": "DAZN",
+  "Corea del Sur|Sudáfrica": "DAZN",
+  "Costa de Marfil|Curazao": "DAZN",
+  "Costa de Marfil|Ecuador": "DAZN",
+  "Croacia|Ghana": "DAZN",
+  "Croacia|Inglaterra": "La 1 + DAZN",
+  "Croacia|Panamá": "DAZN",
+  "Curazao|Ecuador": "DAZN",
+  "Egipto|Irán": "DAZN",
+  "Egipto|Nueva Zelanda": "DAZN",
+  "Escocia|Haití": "DAZN",
+  "Escocia|Marruecos": "DAZN",
+  "España|Uruguay": "La 1 + DAZN",
+  "Estados Unidos|Paraguay": "DAZN",
+  "Estados Unidos|Turquía": "DAZN",
+  "Francia|Iraq": "DAZN",
+  "Francia|Noruega": "DAZN",
+  "Francia|Senegal": "La 1 + DAZN",
+  "Ghana|Inglaterra": "La 1 + DAZN",
+  "Haití|Marruecos": "DAZN",
+  "Inglaterra|Panamá": "DAZN",
+  "Iraq|Noruega": "DAZN",
+  "Iraq|Senegal": "DAZN",
+  "Irán|Nueva Zelanda": "DAZN",
+  "Japón|Países Bajos": "DAZN",
+  "Japón|Suecia": "DAZN",
+  "Japón|Túnez": "DAZN",
+  "México|Rep. Checa": "DAZN",
+  "México|Sudáfrica": "La 1 + DAZN",
+  "Noruega|Senegal": "DAZN",
+  "Paraguay|Turquía": "DAZN",
+  "Países Bajos|Suecia": "La 1 + DAZN",
+  "Países Bajos|Túnez": "DAZN",
+  "Portugal|RD Congo": "DAZN",
+  "Portugal|Uzbekistán": "DAZN",
+  "Qatar|Suiza": "DAZN",
+  "RD Congo|Uzbekistán": "DAZN",
+  "Rep. Checa|Sudáfrica": "DAZN",
+  "Suecia|Túnez": "DAZN",
+};
+// Devuelve el canal de un partido. Por defecto DAZN (emite todos).
+function tvFor(match) {
+  const key = [match.home, match.away].sort().join("|");
+  return TV_BY_MATCH[key] || "DAZN";
+}
+
 function calcPoints(pred, rh, ra) {
   // 5 puntos → marcador exacto
   if (pred.predicted_home === rh && pred.predicted_away === ra) return 5;
@@ -1820,6 +1902,9 @@ function StadiumScore({ match, played }) {
         )}
         <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", marginTop: "5px", letterSpacing: "1px" }}>
           {formatDate(match.match_date)}{match.match_time ? ` · ${match.match_time}h` : ""}
+        </div>
+        <div style={{ fontSize: "8px", color: GREEN, fontFamily: "'Inter', sans-serif", marginTop: "3px", letterSpacing: "1px" }}>
+          📺 {tvFor(match)}
         </div>
       </div>
 
@@ -4235,6 +4320,7 @@ function HomeView({ user, matches, predictions, setView }) {
                     ) : (
                       <span style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>{m.match_time || "--:--"}h</span>
                     )}
+                    <div style={{ fontSize: "7px", color: GREEN, fontFamily: "'Inter', sans-serif", marginTop: "2px", whiteSpace: "nowrap" }}>📺 {tvFor(m)}</div>
                   </div>
                   {/* Visitante */}
                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
