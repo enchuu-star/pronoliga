@@ -2099,7 +2099,7 @@ function CommunityView({ matches, user }) {
 
   useEffect(() => {
     (async () => {
-      const { data: preds } = await supabase.from("predictions").select("*");
+      const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
       const { data: profs } = await supabase.from("profiles").select("*");
       setAllPreds(preds || []); setProfiles(profs || []); setLoading(false);
     })();
@@ -2302,9 +2302,9 @@ function ProfileView({ user, matches }) {
 
   useEffect(() => {
     (async () => {
-      const { data: mp } = await supabase.from("predictions").select("*").eq("user_id", user.id);
+      const { data: mp } = await supabase.from("predictions").select("*").range(0, 99999).eq("user_id", user.id);
       const { data: profs } = await supabase.from("profiles").select("*").eq("role", "user");
-      const { data: ap } = await supabase.from("predictions").select("*");
+      const { data: ap } = await supabase.from("predictions").select("*").range(0, 99999);
       setMyPreds(mp || []); setProfiles(profs || []); setAllPreds(ap || []);
       setLoading(false);
     })();
@@ -2612,7 +2612,7 @@ function ProfileView({ user, matches }) {
 // Calcula el ranking actual y guarda una foto de las posiciones
 async function saveRankingSnapshot(matches) {
   const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
-  const { data: preds } = await supabase.from("predictions").select("*");
+  const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
   const { data: specialPreds } = await supabase.from("special_predictions").select("*");
   const r = (profiles || []).map(p => {
     const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
@@ -2654,7 +2654,7 @@ function RankingView({ matches, user }) {
   const loadRanking = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
-    const { data: preds } = await supabase.from("predictions").select("*");
+    const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
     const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
     const { data: specialPreds } = await supabase.from("special_predictions").select("*");
     const r = (profiles || []).map(p => {
@@ -3054,7 +3054,7 @@ function AdminView({ matches, onDataChange }) {
       manual_override: true,
       result_updated_at: new Date().toISOString(),
     }).eq("id", sel);
-    const { data: preds } = await supabase.from("predictions").select("*").eq("match_id", sel);
+    const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999).eq("match_id", sel);
     for (const pred of (preds || [])) await supabase.from("predictions").update({ points: calcPoints(pred, rh, ra) }).eq("id", pred.id);
     setSaved(true); setSel(null); setHr(""); setAr(""); onDataChange();
     setTimeout(() => setSaved(false), 3000);
@@ -3675,7 +3675,7 @@ function ExportView({ matches, onBack }) {
   useEffect(() => {
     (async () => {
       const { data: profs } = await supabase.from("profiles").select("*").eq("role", "user");
-      const { data: preds } = await supabase.from("predictions").select("*");
+      const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
       const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
       const { data: special } = await supabase.from("special_predictions").select("*");
       setProfiles(profs || []);
@@ -4227,7 +4227,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
     if (!mundialStarted) return;
     (async () => {
       const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
-      const { data: preds } = await supabase.from("predictions").select("*");
+      const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
       const { data: specialPreds } = await supabase.from("special_predictions").select("*");
       const r = (profiles || []).map(p => {
         const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
@@ -6941,7 +6941,7 @@ export default function Home() {
     setMatches(finalMatches);
     setAllClosed(finalMatches.length > 0 && finalMatches.every(m => m.status === "closed"));
     if (user) {
-      const { data: p } = await supabase.from("predictions").select("*").eq("user_id", user.id);
+      const { data: p } = await supabase.from("predictions").select("*").range(0, 99999).eq("user_id", user.id);
       setPredictions(p || []);
     }
     setLoadingData(false);
