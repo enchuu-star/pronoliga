@@ -6575,8 +6575,7 @@ function DraftGame({ user, onBack }) {
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {candidates.map((p) => {
           const inPos = draftEligible(p, slot.pos);
-          );
- 
+
           return (
             <button key={p.id} onClick={() => pick(p)} className="tappable" style={{
               display: "flex", alignItems: "center", gap: "12px", width: "100%", textAlign: "left",
