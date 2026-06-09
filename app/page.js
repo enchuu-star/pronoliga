@@ -6199,6 +6199,102 @@ function draftScoreSquad(picks) {
 }
 const chemCol = c => (c >= 3 ? GREEN : c === 2 ? "#34d399" : c === 1 ? "#ffd54f" : "#ff6b4a");
 
+// Devuelve los enlaces de un jugador con el resto del once
+function draftLinks(player, eleven) {
+  const others = eleven.filter(x => x && x.id !== player.id);
+  return {
+    nation: others.filter(o => o.nation === player.nation).length,
+    league: others.filter(o => o.league && o.league === player.league).length,
+    club: others.filter(o => o.club && o.club === player.club).length,
+  };
+}
+ 
+// 3 puntitos de química (0–3) con el color del nivel
+function ChemDots({ value, size = 8 }) {
+  return (
+    <span style={{ display: "inline-flex", gap: "3px", alignItems: "center" }}>
+      {[1, 2, 3].map(i => (
+        <span key={i} style={{
+          width: size, height: size, borderRadius: "50%",
+          background: i <= value ? chemCol(value) : "rgba(255,255,255,0.15)",
+          boxShadow: i <= value ? `0 0 5px ${chemCol(value)}55` : "none",
+        }} />
+      ))}
+    </span>
+  );
+}
+ 
+// Modal explicativo de la química
+function DraftChemInfo({ onClose }) {
+  const row = (icon, title, text) => (
+    <div style={{ display: "flex", gap: "10px", marginBottom: "12px", alignItems: "flex-start" }}>
+      <span style={{ fontSize: "20px", lineHeight: 1.2, flexShrink: 0 }}>{icon}</span>
+      <div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: GREEN, letterSpacing: "1px", lineHeight: 1.2 }}>{title}</div>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.55, marginTop: "2px" }}>{text}</p>
+      </div>
+    </div>
+  );
+ 
+  const tableRow = (enlaces, quim, color) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 12px", borderTop: `1px solid ${BORDER}` }}>
+      <span style={{ fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>{enlaces}</span>
+      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <ChemDots value={quim} size={7} />
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color }}>{quim}</span>
+      </span>
+    </div>
+  );
+ 
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, zIndex: 270, background: "rgba(5,12,24,0.85)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
+      animation: "fadeIn 0.25s ease",
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: "100%", maxWidth: "420px", maxHeight: "90vh", overflowY: "auto",
+        background: "linear-gradient(160deg,#102339,#0a1628)", border: `2px solid ${GREEN}`,
+        borderRadius: "16px", padding: "20px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+          <span style={{ fontSize: "26px" }}>🧪</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#e0eaf8", letterSpacing: "1px", lineHeight: 1 }}>¿CÓMO FUNCIONA LA QUÍMICA?</div>
+          </div>
+          <button onClick={onClose} style={{ width: "30px", height: "30px", borderRadius: "8px", border: `1px solid ${BORDER}`, background: "transparent", color: "#c0d8f0", cursor: "pointer", fontSize: "14px" }}>✕</button>
+        </div>
+ 
+        {row("🔗", "Cada jugador da de 0 a 3 de química", "Según los enlaces que comparta con el resto de tu once. Cuanto más en común, más química.")}
+        {row("🌍🏆👕", "Tres tipos de enlace", "Misma selección 🌍, misma liga 🏆 y mismo club 👕. El mismo club vale doble (es el enlace más fuerte).")}
+        {row("⚠️", "Fuera de posición", "Si colocas a un jugador en un hueco que no es el suyo, su química se queda como máximo en 1.")}
+        {row("🧮", "Química del equipo", "Es la suma de los 11 jugadores. El máximo posible son 33.")}
+        {row("🏅", "Puntuación final", "MEDIA (valoración media del once) + QUÍMICA del equipo. ¡Equilibra cracks y enlaces!")}
+ 
+        <div style={{ marginTop: "8px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", overflow: "hidden" }}>
+          <div style={{ padding: "8px 12px", display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>PUNTOS DE ENLACE</span>
+            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>QUÍMICA</span>
+          </div>
+          {tableRow("0 enlaces", 0, "#ff6b4a")}
+          {tableRow("1 – 2 enlaces", 1, "#ffd54f")}
+          {tableRow("3 – 4 enlaces", 2, "#34d399")}
+          {tableRow("5 o más", 3, GREEN)}
+          <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", padding: "8px 12px", lineHeight: 1.5, borderTop: `1px solid ${BORDER}` }}>
+            Club = 2 puntos por jugador (máx. 4) · Selección = 1 (máx. 3) · Liga = 1 (máx. 3)
+          </p>
+        </div>
+ 
+        <button onClick={onClose} style={{
+          width: "100%", marginTop: "16px", padding: "13px", border: "none", borderRadius: "10px",
+          background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628",
+          fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, letterSpacing: "2px", cursor: "pointer",
+        }}>¡ENTENDIDO!</button>
+      </div>
+    </div>
+  );
+}
+
 // Avatar con foto y fallback a bandera
 function DraftFace({ p, size }) {
   const [err, setErr] = useState(false);
@@ -6274,8 +6370,9 @@ function DraftGame({ user, onBack }) {
   const [rankings, setRankings] = useState([]);
   const [loadingRank, setLoadingRank] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [viewing, setViewing] = useState(null); // ranking de quien estamos viendo su 11
-
+  const [viewing, setViewing] = useState(null);   // ranking de quien vemos su 11
+  const [showChem, setShowChem] = useState(false); // modal explicación química
+ 
   // Cargar jugadores
   useEffect(() => {
     fetch("/players.json")
@@ -6283,7 +6380,7 @@ function DraftGame({ user, onBack }) {
       .then(data => { setPlayers(data); setPhase("menu"); })
       .catch(() => setPhase("menu"));
   }, []);
-
+ 
   const loadRankings = async () => {
     setLoadingRank(true);
     const { data: scores } = await supabase.from("draft_scores").select("*").order("score", { ascending: false });
@@ -6308,18 +6405,22 @@ function DraftGame({ user, onBack }) {
     setLoadingRank(false);
   };
   useEffect(() => { if (phase === "menu") loadRankings(); }, [phase]);
-
+ 
   const current = picks.length;
   const slot = DRAFT_FORMATION[current] || DRAFT_FORMATION[0];
   const result = current === 11 ? draftScoreSquad(picks) : null;
-
+ 
+  // 🔴 Marcador provisional EN VIVO (se recalcula cada pick)
+  const liveScore = picks.length > 0 ? draftScoreSquad(picks) : null;
+  const elevenSoFar = picks.map(x => x.player);
+ 
   const start = () => {
     const u = new Set();
     setUsed(u); setPicks([]); setSaved(false);
     setCandidates(draftDraw(players, DRAFT_FORMATION[0].pos, u));
     setPhase("playing");
   };
-
+ 
   const pick = (p) => {
     const next = [...picks, { pos: slot.pos, player: p }];
     const u = new Set(used); u.add(p.id);
@@ -6327,7 +6428,7 @@ function DraftGame({ user, onBack }) {
     if (next.length === 11) { finish(next); return; }
     setCandidates(draftDraw(players, DRAFT_FORMATION[next.length].pos, u));
   };
-
+ 
   const finish = async (finalPicks) => {
     const r = draftScoreSquad(finalPicks);
     setPhase("result");
@@ -6336,8 +6437,31 @@ function DraftGame({ user, onBack }) {
     setSaved(true);
     loadRankings();
   };
-
-  // Modal: ver el once de otro jugador (se resuelve con players.json)
+ 
+  // Marcador reutilizable (provisional o final)
+  const Scoreboard = ({ media, quimica, total, provisional }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "12px 8px", marginBottom: "14px", position: "relative" }}>
+      {provisional && (
+        <span style={{ position: "absolute", top: "-8px", left: "12px", fontSize: "8px", letterSpacing: "2px", color: "#0a1628", background: "#ffd54f", padding: "2px 8px", borderRadius: "6px", fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
+          PROVISIONAL
+        </span>
+      )}
+      {[
+        { l: "MEDIA", v: media, c: "#e0eaf8" },
+        { l: "QUÍMICA", v: `${quimica}`, c: "#34d399", sub: "/33" },
+        { l: "TOTAL", v: total, c: GREEN, big: true },
+      ].map((s, i) => (
+        <div key={i} style={{ flex: 1, textAlign: "center", borderLeft: i ? `1px solid ${BORDER}` : "none" }}>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: s.big ? "40px" : "30px", color: s.c, lineHeight: 1 }}>
+            {s.v}{s.sub && <span style={{ fontSize: "14px", color: "#7ab8e0" }}>{s.sub}</span>}
+          </div>
+          <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginTop: "3px" }}>{s.l}</div>
+        </div>
+      ))}
+    </div>
+  );
+ 
+  // Modal: ver el once de otro jugador
   const squadModal = viewing ? (() => {
     const byId = {};
     players.forEach(p => { byId[p.id] = p; });
@@ -6355,21 +6479,13 @@ function DraftGame({ user, onBack }) {
             </div>
             <button onClick={() => setViewing(null)} style={{ width: "30px", height: "30px", borderRadius: "8px", border: `1px solid ${BORDER}`, background: "transparent", color: "#c0d8f0", cursor: "pointer", fontSize: "14px" }}>✕</button>
           </div>
-
           {vpicks.length === 0 ? (
             <p style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center", padding: "20px 0" }}>
               Esta marca se guardó antes de registrar las alineaciones, así que no hay equipo que mostrar.
             </p>
           ) : (
             <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "12px 8px", marginBottom: "12px" }}>
-                {[{ l: "MEDIA", v: vres ? vres.teamRating : "—", c: "#e0eaf8" }, { l: "QUÍMICA", v: vres ? vres.teamChem : "—", c: "#34d399" }, { l: "TOTAL", v: viewing.score, c: GREEN, big: true }].map((s, i) => (
-                  <div key={i} style={{ flex: 1, textAlign: "center", borderLeft: i ? `1px solid ${BORDER}` : "none" }}>
-                    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: s.big ? "38px" : "28px", color: s.c, lineHeight: 1 }}>{s.v}</div>
-                    <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginTop: "3px" }}>{s.l}</div>
-                  </div>
-                ))}
-              </div>
+              <Scoreboard media={vres ? vres.teamRating : "—"} quimica={vres ? vres.teamChem : "—"} total={viewing.score} />
               <DraftPitch picks={vpicks} current={-1} chems={vres ? vres.chems : null} />
             </>
           )}
@@ -6377,9 +6493,9 @@ function DraftGame({ user, onBack }) {
       </div>
     );
   })() : null;
-
+ 
   const medals = ["🥇", "🥈", "🥉"];
-
+ 
   // ---------- LOADING ----------
   if (phase === "loading") return (
     <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center", padding: "40px 0" }}>
@@ -6387,7 +6503,7 @@ function DraftGame({ user, onBack }) {
       <p style={{ color: "#c0d8f0", fontFamily: "'Inter', sans-serif", fontSize: "12px" }}>Cargando jugadores...</p>
     </div>
   );
-
+ 
   // ---------- MENU ----------
   if (phase === "menu") return (
     <>
@@ -6399,11 +6515,14 @@ function DraftGame({ user, onBack }) {
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
         <div style={{ fontSize: "48px", marginBottom: "12px" }}>🃏</div>
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>MUNDIAL DRAFT</div>
-        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8, marginBottom: "20px" }}>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8, marginBottom: "16px" }}>
           Monta tu once eligiendo entre 5 jugadores por posición.<br />
           Puntúas por <span style={{ color: GREEN }}>media</span> + <span style={{ color: "#34d399" }}>química</span> (selección · liga · club).
         </p>
-        <button onClick={start} disabled={players.length === 0} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+        <button onClick={start} disabled={players.length === 0} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "10px" }}>⚡ JUGAR</button>
+        <button onClick={() => setShowChem(true)} style={{ display: "block", margin: "0 auto", padding: "8px 16px", border: `1px solid ${BORDER}`, borderRadius: "8px", background: "transparent", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", fontSize: "11px", cursor: "pointer", letterSpacing: "1px" }}>
+          🧪 ¿Cómo funciona la química?
+        </button>
       </div>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "6px" }}>RANKING DRAFT</p>
       <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", marginBottom: "12px" }}>Toca a un jugador para ver su once 👁️</p>
@@ -6419,52 +6538,106 @@ function DraftGame({ user, onBack }) {
       ))}
     </div>
     {squadModal}
+    {showChem && <DraftChemInfo onClose={() => setShowChem(false)} />}
     </>
   );
-
+ 
   // ---------- PLAYING ----------
   if (phase === "playing") return (
+    <>
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
         <button onClick={() => setPhase("menu")} style={{ padding: "6px 12px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Salir</button>
-        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#c0d8f0" }}><span style={{ color: GREEN }}>{current + 1}</span> / 11</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button onClick={() => setShowChem(true)} style={{ width: "30px", height: "30px", borderRadius: "8px", border: `1px solid ${BORDER}`, background: "transparent", color: "#7ab8e0", cursor: "pointer", fontSize: "13px" }} title="Cómo funciona la química">ℹ️</button>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#c0d8f0" }}><span style={{ color: GREEN }}>{current + 1}</span> / 11</span>
+        </div>
       </div>
-
-      <DraftPitch picks={picks} current={current} />
-
+ 
+      {/* 🔴 Marcador provisional en vivo */}
+      {liveScore && (
+        <Scoreboard media={liveScore.teamRating} quimica={liveScore.teamChem} total={liveScore.total} provisional />
+      )}
+ 
+      {/* Campo con química EN VIVO */}
+      <DraftPitch picks={picks} current={current} chems={liveScore ? liveScore.chems : null} />
+ 
       <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>
         ELIGE TU {slot.label}
       </p>
-
+ 
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {candidates.map((p) => (
-          <button key={p.id} onClick={() => pick(p)} className="tappable" style={{
-            display: "flex", alignItems: "center", gap: "12px", width: "100%", textAlign: "left",
-            padding: "12px", borderRadius: "12px", border: `1px solid ${BORDER}`,
-            background: CARD, cursor: "pointer",
-          }}>
-            <div style={{ position: "relative", flexShrink: 0 }}>
-              <DraftFace p={p} size={52} />
-              <span style={{ position: "absolute", top: "-6px", left: "-6px", width: "24px", height: "24px", borderRadius: "50%", background: GREEN, color: "#0a1628", fontFamily: "'Bebas Neue', cursive", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #0a1628" }}>{p.rating}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eaf8", letterSpacing: "0.5px", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
-              <div style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {draftFlag(p.nation)} {p.nation} · {p.club || "—"}
+        {candidates.map((p) => {
+          const inPos = draftEligible(p, slot.pos);
+          // Química que tendría este jugador si lo eliges ahora
+          const wouldChem = draftPlayerChem(p, slot.pos, [...elevenSoFar, p]);
+          // Enlaces con tu once actual
+          const links = draftLinks(p, elevenSoFar);
+          // Cuánto subiría la química TOTAL del equipo (incluye el efecto sobre los ya colocados)
+          const deltaChem = picks.length > 0
+            ? draftScoreSquad([...picks, { pos: slot.pos, player: p }]).teamChem - liveScore.teamChem
+            : 0;
+ 
+          const linkChip = (icon, n, label) => n > 0 && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "9px", fontFamily: "'Inter', sans-serif", color: "#34d399", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: "5px", padding: "1px 5px" }} title={label}>
+              {icon} ×{n}
+            </span>
+          );
+ 
+          return (
+            <button key={p.id} onClick={() => pick(p)} className="tappable" style={{
+              display: "flex", alignItems: "center", gap: "12px", width: "100%", textAlign: "left",
+              padding: "12px", borderRadius: "12px",
+              border: `1px solid ${inPos ? BORDER : "rgba(255,107,74,0.3)"}`,
+              background: CARD, cursor: "pointer",
+            }}>
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <DraftFace p={p} size={52} />
+                <span style={{ position: "absolute", top: "-6px", left: "-6px", width: "24px", height: "24px", borderRadius: "50%", background: GREEN, color: "#0a1628", fontFamily: "'Bebas Neue', cursive", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #0a1628" }}>{p.rating}</span>
               </div>
-              <div style={{ display: "flex", gap: "4px", marginTop: "5px", flexWrap: "wrap" }}>
-                {p.positions.map(pos => (
-                  <span key={pos} style={{ fontSize: "9px", fontWeight: 700, padding: "1px 6px", borderRadius: "5px", background: "rgba(0,0,0,0.3)", color: "#7ab8e0", border: `1px solid ${BORDER}` }}>{pos}</span>
-                ))}
+ 
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eaf8", letterSpacing: "0.5px", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                <div style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "3px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {draftFlag(p.nation)} {p.nation} · {p.club || "—"}
+                </div>
+ 
+                {/* Posiciones + aviso fuera de sitio */}
+                <div style={{ display: "flex", gap: "4px", marginTop: "5px", flexWrap: "wrap", alignItems: "center" }}>
+                  {p.positions.map(pos => (
+                    <span key={pos} style={{ fontSize: "9px", fontWeight: 700, padding: "1px 6px", borderRadius: "5px", background: "rgba(0,0,0,0.3)", color: DRAFT_ELIG[slot.pos].includes(pos) ? GREEN : "#7ab8e0", border: `1px solid ${DRAFT_ELIG[slot.pos].includes(pos) ? "rgba(79,195,247,0.4)" : BORDER}` }}>{pos}</span>
+                  ))}
+                  {!inPos && <span style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "'Inter', sans-serif" }}>⚠ fuera de posición</span>}
+                </div>
+ 
+                {/* Enlaces con tu once */}
+                {(links.nation > 0 || links.league > 0 || links.club > 0) && (
+                  <div style={{ display: "flex", gap: "4px", marginTop: "6px", flexWrap: "wrap" }}>
+                    {linkChip("🌍", links.nation, "Misma selección")}
+                    {linkChip("🏆", links.league, "Misma liga")}
+                    {linkChip("👕", links.club, "Mismo club")}
+                  </div>
+                )}
               </div>
-            </div>
-          </button>
-        ))}
+ 
+              {/* Química que aportaría */}
+              <div style={{ flexShrink: 0, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", minWidth: "52px" }}>
+                <ChemDots value={wouldChem} size={8} />
+                <span style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", letterSpacing: "1px" }}>QUÍMICA</span>
+                {deltaChem > 0 && (
+                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#34d399", fontFamily: "'Inter', sans-serif" }}>+{deltaChem} equipo</span>
+                )}
+              </div>
+            </button>
+          );
+        })}
         {candidates.length === 0 && <p style={{ color: "#c0d8f0", fontFamily: "'Inter', sans-serif", fontSize: "12px" }}>Sin candidatos disponibles.</p>}
       </div>
     </div>
+    {showChem && <DraftChemInfo onClose={() => setShowChem(false)} />}
+    </>
   );
-
+ 
   // ---------- RESULT ----------
   const r = result;
   const myRank = rankings.findIndex(x => x.name === user.name && x.score === r.total) + 1;
@@ -6473,23 +6646,16 @@ function DraftGame({ user, onBack }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
         <button onClick={() => setPhase("menu")} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
-        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>TU PLANTILLA</p>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", flex: 1 }}>TU PLANTILLA</p>
+        <button onClick={() => setShowChem(true)} style={{ width: "30px", height: "30px", borderRadius: "8px", border: `1px solid ${BORDER}`, background: "transparent", color: "#7ab8e0", cursor: "pointer", fontSize: "13px" }} title="Cómo funciona la química">ℹ️</button>
       </div>
-
-      {/* Marcador */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "14px", padding: "14px 8px", marginBottom: "16px" }}>
-        {[{ l: "MEDIA", v: r.teamRating, c: "#e0eaf8" }, { l: "QUÍMICA", v: r.teamChem, c: "#34d399" }, { l: "TOTAL", v: r.total, c: GREEN, big: true }].map((s, i) => (
-          <div key={i} style={{ flex: 1, textAlign: "center", borderLeft: i ? `1px solid ${BORDER}` : "none" }}>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: s.big ? "44px" : "32px", color: s.c, lineHeight: 1 }}>{s.v}</div>
-            <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginTop: "3px" }}>{s.l}</div>
-          </div>
-        ))}
-      </div>
-
+ 
+      <Scoreboard media={r.teamRating} quimica={r.teamChem} total={r.total} />
+ 
       <DraftPitch picks={picks} current={-1} chems={r.chems} />
-
+ 
       <button onClick={start} className="tappable" style={{ width: "100%", padding: "13px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 JUGAR OTRA VEZ</button>
-
+ 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>RANKING DRAFT</p>
         {myRank > 0 && <span style={{ fontSize: "11px", color: GREEN, fontFamily: "'Inter', sans-serif" }}>Tu puesto #{myRank}</span>}
@@ -6509,6 +6675,7 @@ function DraftGame({ user, onBack }) {
       })}
     </div>
     {squadModal}
+    {showChem && <DraftChemInfo onClose={() => setShowChem(false)} />}
     </>
   );
 }
