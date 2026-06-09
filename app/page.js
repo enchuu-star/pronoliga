@@ -6575,19 +6575,6 @@ function DraftGame({ user, onBack }) {
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {candidates.map((p) => {
           const inPos = draftEligible(p, slot.pos);
-          // Química que tendría este jugador si lo eliges ahora
-          const wouldChem = draftPlayerChem(p, slot.pos, [...elevenSoFar, p]);
-          // Enlaces con tu once actual
-          const links = draftLinks(p, elevenSoFar);
-          // Cuánto subiría la química TOTAL del equipo (incluye el efecto sobre los ya colocados)
-          const deltaChem = picks.length > 0
-            ? draftScoreSquad([...picks, { pos: slot.pos, player: p }]).teamChem - liveScore.teamChem
-            : 0;
- 
-          const linkChip = (icon, n, label) => n > 0 && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "9px", fontFamily: "'Inter', sans-serif", color: "#34d399", background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", borderRadius: "5px", padding: "1px 5px" }} title={label}>
-              {icon} ×{n}
-            </span>
           );
  
           return (
@@ -6615,24 +6602,6 @@ function DraftGame({ user, onBack }) {
                   ))}
                   {!inPos && <span style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "'Inter', sans-serif" }}>⚠ fuera de posición</span>}
                 </div>
- 
-                {/* Enlaces con tu once */}
-                {(links.nation > 0 || links.league > 0 || links.club > 0) && (
-                  <div style={{ display: "flex", gap: "4px", marginTop: "6px", flexWrap: "wrap" }}>
-                    {linkChip("🌍", links.nation, "Misma selección")}
-                    {linkChip("🏆", links.league, "Misma liga")}
-                    {linkChip("👕", links.club, "Mismo club")}
-                  </div>
-                )}
-              </div>
- 
-              {/* Química que aportaría */}
-              <div style={{ flexShrink: 0, textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", minWidth: "52px" }}>
-                <ChemDots value={wouldChem} size={8} />
-                <span style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", letterSpacing: "1px" }}>QUÍMICA</span>
-                {deltaChem > 0 && (
-                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#34d399", fontFamily: "'Inter', sans-serif" }}>+{deltaChem} equipo</span>
-                )}
               </div>
             </button>
           );
