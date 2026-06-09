@@ -2885,7 +2885,6 @@ function ParticipantProgress() {
         .from("predictions")
         .select("user_id")
         .range(0, 99999);
-      console.log("PREDS CARGADOS:", preds?.length);   // 👈 temporal
       const result = (profiles || []).map(p => {
         const count = (preds || []).filter(x => x.user_id === p.id).length;
         const pct = Math.round((count / TOTAL_MATCHES) * 100);
