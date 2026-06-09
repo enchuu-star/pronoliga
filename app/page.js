@@ -1929,7 +1929,7 @@ function ResultsView({ matches }) {
 
   // Día por defecto: hoy si hay partidos, si no el más cercano hacia adelante,
   // y si todo es pasado, el último día.
-  //const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = new Date().toISOString().slice(0, 10);
   const defaultDay = days.includes(todayStr)
     ? todayStr
     : (days.find(d => d >= todayStr) || days[days.length - 1] || null);
@@ -4202,9 +4202,9 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
   const sent = predictions.length;
   const pct = Math.round((sent / TOTAL_MATCHES) * 100);
   // Partidos de hoy (solo cuando el Mundial ya ha arrancado)
-  const todayStr = new Date().toISOString().slice(0, 10);
+  //const todayStr = new Date().toISOString().slice(0, 10);
   const todayStr = "2026-06-11";
-  //const mundialStarted = todayStr >= "2026-06-11";
+  const mundialStarted = todayStr >= "2026-06-11";
   const todayMatches = matches
     .filter(m => m.match_date === todayStr)
     .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
