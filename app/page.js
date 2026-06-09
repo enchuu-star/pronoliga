@@ -1929,7 +1929,7 @@ function ResultsView({ matches }) {
 
   // Día por defecto: hoy si hay partidos, si no el más cercano hacia adelante,
   // y si todo es pasado, el último día.
-  const todayStr = new Date().toISOString().slice(0, 10);
+  //const todayStr = new Date().toISOString().slice(0, 10);
   const defaultDay = days.includes(todayStr)
     ? todayStr
     : (days.find(d => d >= todayStr) || days[days.length - 1] || null);
