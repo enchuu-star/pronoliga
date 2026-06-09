@@ -4198,7 +4198,7 @@ function PaymentsView({ user }) {
 // ============================================================
 // PANTALLA DE INICIO
 // ============================================================
-function HomeView({ user, matches, predictions, setView }) {
+function HomeView({ user, matches, predictions, setView, loadingData }) {
   const sent = predictions.length;
   const pct = Math.round((sent / TOTAL_MATCHES) * 100);
   // Partidos de hoy (solo cuando el Mundial ya ha arrancado)
@@ -4262,29 +4262,31 @@ function HomeView({ user, matches, predictions, setView }) {
     </button>
   );
 
+  const boteCard = payInfo ? (
+  <button onClick={() => setView("payments")} className="tappable" style={{
+    width: "100%", display: "flex", alignItems: "center", gap: "14px",
+    padding: "14px 16px", marginBottom: "20px", cursor: "pointer",
+    background: "linear-gradient(135deg, rgba(255,213,79,0.14), rgba(230,161,0,0.05))",
+    border: "1px solid rgba(255,213,79,0.4)", borderRadius: "14px",
+  }}>
+    <span style={{ fontSize: "32px", lineHeight: 1 }}>💰</span>
+    <div style={{ flex: 1, textAlign: "left" }}>
+      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#ffd54f", letterSpacing: "1px", lineHeight: 1 }}>
+        BOTE · {payInfo.pot}€
+      </div>
+      <div style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "3px" }}>
+        {payInfo.paid}/{payInfo.total} han pagado{payInfo.total - payInfo.paid > 0 ? ` · ${payInfo.total - payInfo.paid} morosos` : " · ¡completo! 🎉"}
+      </div>
+    </div>
+    <span style={{ fontSize: "20px", color: "#ffd54f" }}>→</span>
+  </button>
+) : null;
+
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       {/* Cuenta atrás (solo antes de empezar) */}
       {!mundialStarted && <CountdownBanner />}
-      {payInfo && (
-        <button onClick={() => setView("payments")} className="tappable" style={{
-          width: "100%", display: "flex", alignItems: "center", gap: "14px",
-          padding: "14px 16px", marginBottom: "20px", cursor: "pointer",
-          background: "linear-gradient(135deg, rgba(255,213,79,0.14), rgba(230,161,0,0.05))",
-          border: "1px solid rgba(255,213,79,0.4)", borderRadius: "14px",
-        }}>
-          <span style={{ fontSize: "32px", lineHeight: 1 }}>💰</span>
-          <div style={{ flex: 1, textAlign: "left" }}>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#ffd54f", letterSpacing: "1px", lineHeight: 1 }}>
-              BOTE · {payInfo.pot}€
-            </div>
-            <div style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "3px" }}>
-              {payInfo.paid}/{payInfo.total} han pagado{payInfo.total - payInfo.paid > 0 ? ` · ${payInfo.total - payInfo.paid} morosos` : " · ¡completo! 🎉"}
-            </div>
-          </div>
-          <span style={{ fontSize: "20px", color: "#ffd54f" }}>→</span>
-        </button>
-      )}
+      {!mundialStarted && boteCard}
       {/* Partidos de hoy */}
       {mundialStarted && (
         <div style={{ marginBottom: "20px" }}>
@@ -4292,7 +4294,9 @@ function HomeView({ user, matches, predictions, setView }) {
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: GREEN, boxShadow: `0 0 8px ${GREEN}`, animation: "pulse 1.5s infinite" }} />
             <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>PARTIDOS DE HOY</p>
           </div>
-          {todayMatches.length > 0 ? (
+          {loadingData ? (
+            <SkeletonRows count={2} height={60} />
+          ) : todayMatches.length > 0 ? (
             todayMatches.map(m => {
               const ht = getTeam(m.home), at = getTeam(m.away);
               const hasResult = m.result_home !== null && m.result_away !== null;
@@ -4389,11 +4393,13 @@ function HomeView({ user, matches, predictions, setView }) {
         {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
       </div>
 
-      {/* Progreso de participantes (sustituye al Top Ranking) */}
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
-        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>PROGRESO DE PARTICIPANTES</p>
-        <ParticipantProgress />
-      </div>
+      {/* Antes del Mundial: progreso. Al empezar: el bote ocupa su sitio */}
+      {mundialStarted ? boteCard : (
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+          <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>PROGRESO DE PARTICIPANTES</p>
+          <ParticipantProgress />
+        </div>
+      )}
     </div>
   );
 }
@@ -6867,6 +6873,7 @@ export default function Home() {
   const [loadingSession, setLoadingSession] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showEmojiTip, setShowEmojiTip] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
   // PWA — registrar service worker
   useEffect(() => {
@@ -6967,6 +6974,7 @@ export default function Home() {
       const { data: p } = await supabase.from("predictions").select("*").eq("user_id", user.id);
       setPredictions(p || []);
     }
+    setLoadingData(false);
   };
 
   const handleLogin = async (u) => {
@@ -7001,7 +7009,7 @@ export default function Home() {
           <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
           
           <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
-            {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} />}
+            {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} loadingData={loadingData} />}
             {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
             {view === "results" && <ResultsView matches={matches} />}
             {view === "community" && <CommunityView matches={matches} user={user} />}
