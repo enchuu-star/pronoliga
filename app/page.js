@@ -2881,7 +2881,10 @@ function ParticipantProgress() {
   useEffect(() => {
     (async () => {
       const { data: profiles } = await supabase.from("profiles").select("*").eq("role", "user");
-      const { data: preds } = await supabase.from("predictions").select("user_id");
+      const { data: preds } = await supabase
+        .from("predictions")
+        .select("user_id")
+        .range(0, 99999);   // 👈 fuerza traer hasta 100.000 filas
       const result = (profiles || []).map(p => {
         const count = (preds || []).filter(x => x.user_id === p.id).length;
         const pct = Math.round((count / TOTAL_MATCHES) * 100);
