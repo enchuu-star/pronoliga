@@ -2177,7 +2177,7 @@ function CommunityView({ matches, user }) {
       }}>
         <span style={{ fontSize: "12px", color: isMe ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1, fontWeight: isMe ? 700 : 400, display: "flex", alignItems: "center", gap: "4px" }}>
           {isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
-          {getName(pred.user_id)}{isMe ? " (tú)" : ""}
+          {getName(pred.user_id)}
         </span>
         <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>
           {pred.predicted_home}-{pred.predicted_away}
@@ -2827,7 +2827,7 @@ function RankingView({ matches, user }) {
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                     marginBottom: "6px",
                   }}>
-                    {u.name?.split(" ")[0]}{isMe ? " (tú)" : ""}
+                    {u.name?.split(" ")[0]}
                   </div>
 
                   {/* 👇 Movimiento (sube/baja) */}
@@ -2880,7 +2880,7 @@ function RankingView({ matches, user }) {
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <span style={{ fontSize: "18px" }}>{u.emoji || "⚽"}</span>
                 <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: isMe ? GREEN : "#e0eaf8", fontWeight: isMe ? 700 : 400 }}>
-                  {u.name}{isMe ? " (tú)" : ""}
+                  {u.name}
                 </span>
               </div>
               <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "2px" }}>
