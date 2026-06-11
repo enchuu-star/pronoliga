@@ -2825,7 +2825,13 @@ function RankingHistory({ ranking, user }) {
             })}
         </div>
 
-        <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif
+        <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", marginTop: "8px", textAlign: "center" }}>
+          Cada punto es una foto del ranking · arriba = mejor posición
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ============================================================
 // RANKING
