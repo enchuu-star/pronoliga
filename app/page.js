@@ -3104,12 +3104,6 @@ function AdminView({ matches, onDataChange }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "16px" }}>PANEL DE ADMINISTRACIÓN</p>
 
-      {/* PROGRESO DE PARTICIPANTES */}
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
-        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>PROGRESO DE PARTICIPANTES</p>
-        <ParticipantProgress />
-      </div>
-
       {/* Ultima conexion */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>REGISTRO DE ACTIVIDAD</p>
