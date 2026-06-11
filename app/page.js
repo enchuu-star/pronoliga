@@ -2678,6 +2678,156 @@ function MoveIndicator({ move, size = 10 }) {
 }
 
 // ============================================================
+// HISTÓRICO DE POSICIONES (Top 5 + tú) — una línea por jugador,
+// un punto por cada foto del ranking (antes de cada partido)
+// ============================================================
+function RankingHistory({ ranking, user }) {
+  const [snapshots, setSnapshots] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("ranking_history")
+        .select("user_id, position, snapshot_at")
+        .order("snapshot_at", { ascending: true });
+      const bySnap = {};
+      (data || []).forEach(r => {
+        if (!bySnap[r.snapshot_at]) bySnap[r.snapshot_at] = {};
+        bySnap[r.snapshot_at][r.user_id] = r.position;
+      });
+      const snaps = Object.entries(bySnap)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([at, positions]) => ({ at, positions }));
+      setSnapshots(snaps);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ marginTop: "20px" }}>
+        <div className="skeleton" style={{ width: "40%", height: "10px", marginBottom: "12px" }} />
+        <div className="skeleton" style={{ width: "100%", height: "200px", borderRadius: "12px" }} />
+      </div>
+    );
+  }
+
+  // Jugadores a seguir: Top 5 actual + tú
+  const top5 = ranking.slice(0, 5).map(u => u.id);
+  const trackedIds = [...new Set([...top5, user.id])];
+
+  // Datos por jugador (nombre/emoji/posición actual desde el ranking en vivo)
+  const meta = {};
+  ranking.forEach((u, i) => { meta[u.id] = { name: u.name, emoji: u.emoji || "⚽", curPos: i + 1 }; });
+
+  const n = snapshots.length;
+
+  if (n < 2) {
+    return (
+      <div style={{ marginTop: "20px" }}>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>
+          EVOLUCIÓN DEL RANKING
+        </p>
+        <div style={{ background: CARD, border: `1px dashed ${BORDER}`, borderRadius: "12px", padding: "28px 20px", textAlign: "center" }}>
+          <div style={{ fontSize: "32px", marginBottom: "8px" }}>📈</div>
+          <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6 }}>
+            Aún no hay suficientes fotos del ranking.<br/>La evolución aparecerá tras los primeros partidos.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Máxima posición observada (para escalar el eje Y)
+  let maxPos = ranking.length || 1;
+  snapshots.forEach(s => Object.values(s.positions).forEach(p => { if (p > maxPos) maxPos = p; }));
+
+  // Paleta para las líneas
+  const COLORS = ["#4fc3f7", "#34d399", "#ffd54f", "#ff6b4a", "#c084fc", "#f472b6", "#60a5fa", "#fb923c"];
+  const colorFor = (id) => {
+    if (id === user.id) return GREEN;
+    const idx = trackedIds.filter(t => t !== user.id).indexOf(id);
+    return COLORS[idx % COLORS.length];
+  };
+
+  // Geometría SVG
+  const W = 340, H = 200;
+  const pad = { l: 26, r: 12, t: 12, b: 22 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+  const x = (i) => pad.l + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const y = (pos) => pad.t + (maxPos === 1 ? plotH / 2 : ((pos - 1) / (maxPos - 1)) * plotH);
+
+  // Series por jugador (solo snapshots donde tiene posición)
+  const series = trackedIds.map(id => {
+    const pts = [];
+    snapshots.forEach((s, i) => {
+      if (s.positions[id] != null) pts.push({ x: x(i), y: y(s.positions[id]), pos: s.positions[id] });
+    });
+    return { id, pts, color: colorFor(id), isMe: id === user.id };
+  }).filter(s => s.pts.length > 0);
+
+  // Etiquetas eje Y (posiciones)
+  const yTicks = [];
+  for (let p = 1; p <= maxPos; p++) yTicks.push(p);
+
+  return (
+    <div style={{ marginTop: "20px" }}>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>
+        EVOLUCIÓN DEL RANKING · TOP 5 + TÚ
+      </p>
+
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "14px 10px 10px" }}>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", overflow: "visible" }}>
+          {/* Gridlines + números de posición */}
+          {yTicks.map(p => (
+            <g key={p}>
+              <line x1={pad.l} y1={y(p)} x2={W - pad.r} y2={y(p)} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+              <text x={pad.l - 6} y={y(p) + 3} textAnchor="end" fontSize="8" fill="#7ab8e0" fontFamily="monospace">{p}</text>
+            </g>
+          ))}
+
+          {/* Líneas por jugador */}
+          {series.map(s => (
+            <g key={s.id}>
+              <polyline
+                points={s.pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}
+                fill="none" stroke={s.color}
+                strokeWidth={s.isMe ? 3 : 1.6}
+                strokeLinejoin="round" strokeLinecap="round"
+                opacity={s.isMe ? 1 : 0.85}
+              />
+              {s.pts.map((p, i) => (
+                <circle key={i} cx={p.x} cy={p.y} r={s.isMe ? 3 : 2.2} fill={s.color} />
+              ))}
+            </g>
+          ))}
+        </svg>
+
+        {/* Leyenda */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${BORDER}` }}>
+          {series
+            .slice()
+            .sort((a, b) => (meta[a.id]?.curPos || 99) - (meta[b.id]?.curPos || 99))
+            .map(s => {
+              const m = meta[s.id] || {};
+              return (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                  <span style={{ width: "12px", height: "3px", borderRadius: "2px", background: s.color, display: "inline-block" }} />
+                  <span style={{ fontSize: "11px" }}>{m.emoji}</span>
+                  <span style={{ fontSize: "11px", color: s.isMe ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", fontWeight: s.isMe ? 700 : 400 }}>
+                    {m.name?.split(" ")[0]}
+                  </span>
+                  <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Bebas Neue', monospace" }}>#{m.curPos}</span>
+                </div>
+              );
+            })}
+        </div>
+
+        <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif
+
+// ============================================================
 // RANKING
 // ============================================================
 function RankingView({ matches, user }) {
@@ -2902,6 +3052,7 @@ function RankingView({ matches, user }) {
           <span style={{ color: GREEN }}>+5</span> exacto · <span style={{ color: "#4fc3f7" }}>+3</span> ganador + diferencia · <span style={{ color: "#ffd54f" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
         </p>
       </div>
+      <RankingHistory ranking={ranking} user={user} />
     </div>
   );
 }
