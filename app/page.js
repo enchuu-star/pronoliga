@@ -1295,6 +1295,21 @@ function MatchChat({ match, user }) {
 
   return (
     <div style={{ marginTop: "10px" }}>
+      {/* ✉️ Indicador de no leídos en la esquina de la tarjeta del partido */}
+      {!open && unread > 0 && (
+        <div style={{
+          position: "absolute", top: "8px", right: "8px", zIndex: 6,
+          display: "flex", alignItems: "center", gap: "4px",
+          background: "#cc2222", color: "white",
+          borderRadius: "12px", padding: "3px 9px",
+          fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.45)",
+          animation: "popIn 0.3s ease",
+        }}>
+          <span style={{ fontSize: "12px" }}>✉️</span>
+          +{unread > 99 ? "99" : unread}
+        </div>
+      )}
       {/* Botón toggle con badge de no leídos */}
       <button
         onClick={() => setOpen(o => !o)}
@@ -1861,43 +1876,53 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
 // ============================================================
 // MARCADOR TIPO ESTADIO (banderas grandes + resultado central)
 // ============================================================
-function StadiumScore({ match, played }) {
+function StadiumScore({ match, played, compact }) {
   const ht = getTeam(match.home), at = getTeam(match.away);
   const hasResult = match.result_home !== null && match.result_away !== null;
   const homeWin = hasResult && match.result_home > match.result_away;
   const awayWin = hasResult && match.result_away > match.result_home;
 
+  // Tamaños (compacto para "Todos los pronósticos")
+  const flagSz    = compact ? "30px" : "40px";
+  const nameSz     = compact ? "11px" : "13px";
+  const scoreSz    = compact ? "28px" : "38px";
+  const colonSz    = compact ? "15px" : "20px";
+  const vsSz       = compact ? "18px" : "22px";
+  const centerMin  = compact ? "76px" : "92px";
+  const padCont    = compact ? "10px 8px" : "14px 10px";
+  const scorePad   = compact ? "5px 11px" : "6px 14px";
+
   return (
     <div style={{
       display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
-      padding: "14px 10px",
+      padding: padCont,
       background: "radial-gradient(120% 140% at 50% 0%, rgba(79,195,247,0.10), rgba(10,22,40,0) 70%)",
     }}>
       {/* Local */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "5px", opacity: hasResult && !homeWin && !awayWin ? 0.85 : 1 }}>
-        <span style={{ fontSize: "40px", lineHeight: 1, filter: awayWin ? "grayscale(0.5)" : "none" }}>{ht.flag}</span>
-        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "13px", letterSpacing: "1px", color: homeWin ? GREEN : "#c0d8f0", textAlign: "center", lineHeight: 1.1 }}>{match.home}</span>
+        <span style={{ fontSize: flagSz, lineHeight: 1, filter: awayWin ? "grayscale(0.5)" : "none" }}>{ht.flag}</span>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: nameSz, letterSpacing: "1px", color: homeWin ? GREEN : "#c0d8f0", textAlign: "center", lineHeight: 1.1 }}>{match.home}</span>
       </div>
 
       {/* Marcador central */}
-      <div style={{ flexShrink: 0, textAlign: "center", minWidth: "92px" }}>
+      <div style={{ flexShrink: 0, textAlign: "center", minWidth: centerMin }}>
         {hasResult ? (
           <div style={{
             display: "inline-flex", alignItems: "center", gap: "8px",
-            padding: "6px 14px", borderRadius: "10px",
+            padding: scorePad, borderRadius: "10px",
             background: "rgba(0,0,0,0.35)", border: `1px solid ${BORDER}`,
             boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 14px rgba(0,0,0,0.3)",
           }}>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "38px", lineHeight: 1, color: homeWin ? GREEN : "#e0eaf8" }}>{match.result_home}</span>
-            <span style={{ color: "#7ab8e0", fontSize: "20px" }}>:</span>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "38px", lineHeight: 1, color: awayWin ? GREEN : "#e0eaf8" }}>{match.result_away}</span>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: scoreSz, lineHeight: 1, color: homeWin ? GREEN : "#e0eaf8" }}>{match.result_home}</span>
+            <span style={{ color: "#7ab8e0", fontSize: colonSz }}>:</span>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: scoreSz, lineHeight: 1, color: awayWin ? GREEN : "#e0eaf8" }}>{match.result_away}</span>
           </div>
         ) : (
           <div style={{
-            display: "inline-block", padding: "8px 14px", borderRadius: "10px",
+            display: "inline-block", padding: scorePad, borderRadius: "10px",
             background: "rgba(0,0,0,0.25)", border: `1px solid ${BORDER}`,
           }}>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", letterSpacing: "3px", color: "#7ab8e0" }}>VS</span>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: vsSz, letterSpacing: "3px", color: "#7ab8e0" }}>VS</span>
           </div>
         )}
         <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", marginTop: "5px", letterSpacing: "1px" }}>
@@ -1910,8 +1935,8 @@ function StadiumScore({ match, played }) {
 
       {/* Visitante */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "5px", opacity: hasResult && !homeWin && !awayWin ? 0.85 : 1 }}>
-        <span style={{ fontSize: "40px", lineHeight: 1, filter: homeWin ? "grayscale(0.5)" : "none" }}>{at.flag}</span>
-        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "13px", letterSpacing: "1px", color: awayWin ? GREEN : "#c0d8f0", textAlign: "center", lineHeight: 1.1 }}>{match.away}</span>
+        <span style={{ fontSize: flagSz, lineHeight: 1, filter: homeWin ? "grayscale(0.5)" : "none" }}>{at.flag}</span>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: nameSz, letterSpacing: "1px", color: awayWin ? GREEN : "#c0d8f0", textAlign: "center", lineHeight: 1.1 }}>{match.away}</span>
       </div>
     </div>
   );
@@ -2140,21 +2165,31 @@ function CommunityView({ matches, user }) {
   visitante.sort(sortByName);
   // ---------------------------------------
 
-  const predRow = (pred) => (
-    <div key={pred.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: "6px", marginBottom: "3px" }}>
-      <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1 }}>
-        {getName(pred.user_id)}
-      </span>
-      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>
-        {pred.predicted_home}-{pred.predicted_away}
-      </span>
-      {pred.points !== null && pred.points !== undefined && (
-        <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>
-          {pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}
+  const predRow = (pred) => {
+    const isMe = pred.user_id === user.id;
+    return (
+      <div key={pred.id} style={{
+        display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px",
+        background: isMe ? GREEN_DIM : "rgba(255,255,255,0.02)",
+        border: isMe ? "1px solid rgba(79,195,247,0.3)" : "1px solid transparent",
+        borderLeft: isMe ? `3px solid ${GREEN}` : "3px solid transparent",
+        borderRadius: "6px", marginBottom: "3px",
+      }}>
+        <span style={{ fontSize: "12px", color: isMe ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1, fontWeight: isMe ? 700 : 400, display: "flex", alignItems: "center", gap: "4px" }}>
+          {isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
+          {getName(pred.user_id)}{isMe ? " (tú)" : ""}
         </span>
-      )}
-    </div>
-  );
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>
+          {pred.predicted_home}-{pred.predicted_away}
+        </span>
+        {pred.points !== null && pred.points !== undefined && (
+          <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: pred.points === 5 ? GREEN_DIM : pred.points === 3 ? "rgba(79,195,247,0.08)" : pred.points === 1 ? "rgba(255,193,7,0.1)" : "rgba(255,82,82,0.08)", color: pred.points === 5 ? GREEN : pred.points === 3 ? "#4fc3f7" : pred.points === 1 ? "#ffd54f" : "#cc2222" }}>
+            {pred.points === 5 ? "🎯 +5" : pred.points === 3 ? "📏 +3" : pred.points === 1 ? "✓ +1" : "✗ +0"}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const bloque = (icono, titulo, lista, accent) => {
     if (lista.length === 0) return null;
@@ -2172,9 +2207,9 @@ function CommunityView({ matches, user }) {
   };
 
   return (
-    <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
+    <div key={m.id} style={{ position: "relative", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
       <div style={{ margin: "-12px -12px 8px", borderBottom: `1px solid ${BORDER}` }}>
-        <StadiumScore match={m} />
+        <StadiumScore match={m} compact />
       </div>
       {matchPreds.length === 0 ? (
         <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha enviado pronóstico</p>
@@ -4306,33 +4341,33 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
               const awayWin = hasResult && m.result_away > m.result_home;
               return (
                 <button key={m.id} onClick={() => setView("results")} className="tappable" style={{
-                  display: "flex", alignItems: "center", gap: "8px", width: "100%",
-                  padding: "8px 12px", marginBottom: "5px",
-                  background: CARD, border: `1px solid ${BORDER}`, borderRadius: "9px",
+                  display: "flex", alignItems: "center", gap: "10px", width: "100%",
+                  padding: "11px 14px", marginBottom: "6px",
+                  background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px",
                   cursor: "pointer", opacity: hasResult ? 1 : 0.85,
                 }}>
                   {/* Local */}
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px", overflow: "hidden" }}>
-                    <span style={{ fontSize: "11px", color: homeWin ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.home}</span>
-                    <span style={{ fontSize: "20px", lineHeight: 1, flexShrink: 0 }}>{ht.flag}</span>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "7px", overflow: "hidden" }}>
+                    <span style={{ fontSize: "13px", color: homeWin ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.home}</span>
+                    <span style={{ fontSize: "26px", lineHeight: 1, flexShrink: 0 }}>{ht.flag}</span>
                   </div>
                   {/* Centro: resultado o hora */}
-                  <div style={{ flexShrink: 0, minWidth: "52px", textAlign: "center" }}>
+                  <div style={{ flexShrink: 0, minWidth: "62px", textAlign: "center" }}>
                     {hasResult ? (
-                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#e0eaf8", letterSpacing: "1px" }}>
+                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#e0eaf8", letterSpacing: "1px" }}>
                         <span style={{ color: homeWin ? GREEN : "#e0eaf8" }}>{m.result_home}</span>
                         <span style={{ color: "#7ab8e0", margin: "0 2px" }}>-</span>
                         <span style={{ color: awayWin ? GREEN : "#e0eaf8" }}>{m.result_away}</span>
                       </span>
                     ) : (
-                      <span style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>{m.match_time || "--:--"}h</span>
+                      <span style={{ fontSize: "12px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>{m.match_time || "--:--"}h</span>
                     )}
-                    <div style={{ fontSize: "7px", color: GREEN, fontFamily: "'Inter', sans-serif", marginTop: "2px", whiteSpace: "nowrap" }}>📺 {tvFor(m)}</div>
+                    <div style={{ fontSize: "8px", color: GREEN, fontFamily: "'Inter', sans-serif", marginTop: "3px", whiteSpace: "nowrap" }}>📺 {tvFor(m)}</div>
                   </div>
                   {/* Visitante */}
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
-                    <span style={{ fontSize: "20px", lineHeight: 1, flexShrink: 0 }}>{at.flag}</span>
-                    <span style={{ fontSize: "11px", color: awayWin ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.away}</span>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "7px", overflow: "hidden" }}>
+                    <span style={{ fontSize: "26px", lineHeight: 1, flexShrink: 0 }}>{at.flag}</span>
+                    <span style={{ fontSize: "13px", color: awayWin ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.away}</span>
                   </div>
                 </button>
               );
@@ -4354,23 +4389,23 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
       {/* Tu posición */}
       {mundialStarted && myRank && (
         <button onClick={() => setView("ranking")} className="tappable" style={{
-          width: "100%", display: "flex", alignItems: "center", gap: "14px",
-          padding: "16px", marginBottom: "20px", cursor: "pointer",
+          width: "100%", display: "flex", alignItems: "center", gap: "12px",
+          padding: "12px 14px", marginBottom: "16px", cursor: "pointer",
           background: `linear-gradient(135deg, rgba(79,195,247,0.14), rgba(0,119,204,0.06))`,
-          border: `1px solid ${GREEN}`, borderRadius: "14px",
+          border: `1px solid ${GREEN}`, borderRadius: "12px",
         }}>
           <div style={{ textAlign: "center", flexShrink: 0 }}>
-            <div style={{ fontSize: "9px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>VAS</div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "44px", color: GREEN, lineHeight: 1 }}>
-              {myRank.position}<span style={{ fontSize: "20px" }}>º</span>
+            <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>VAS</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "32px", color: GREEN, lineHeight: 1 }}>
+              {myRank.position}<span style={{ fontSize: "15px" }}>º</span>
             </div>
           </div>
           <div style={{ flex: 1, textAlign: "left" }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: "#e0eaf8", lineHeight: 1 }}>{myRank.total}</span>
-              <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>puntos</span>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "5px" }}>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#e0eaf8", lineHeight: 1 }}>{myRank.total}</span>
+              <span style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>puntos</span>
             </div>
-            <div style={{ fontSize: "11px", color: "#a8d4f0", fontFamily: "'Inter', sans-serif", marginTop: "4px", lineHeight: 1.4 }}>
+            <div style={{ fontSize: "10px", color: "#a8d4f0", fontFamily: "'Inter', sans-serif", marginTop: "3px", lineHeight: 1.4 }}>
               {myRank.position === 1
                 ? "🥇 ¡Lideras la porra!"
                 : myRank.toNext === 0
@@ -4378,7 +4413,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
                   : `Te faltan ${myRank.toNext} pts para el ${myRank.position - 1}º`}
             </div>
           </div>
-          <span style={{ fontSize: "20px", color: GREEN, flexShrink: 0 }}>→</span>
+          <span style={{ fontSize: "16px", color: GREEN, flexShrink: 0 }}>→</span>
         </button>
       )}
 
