@@ -3231,7 +3231,8 @@ function AdminView({ matches, onDataChange }) {
     onDataChange();
   };
 
-  const handleResult = async () => {
+  
+const handleResult = async () => {
     if (hr === "" || ar === "") return;
     const rh = parseInt(hr), ra = parseInt(ar);
 
@@ -3246,12 +3247,17 @@ function AdminView({ matches, onDataChange }) {
       manual_override: true,
       result_updated_at: new Date().toISOString(),
     }).eq("id", sel);
-    const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999).eq("match_id", sel);
-    for (const pred of (preds || [])) await supabase.from("predictions").update({ points: calcPoints(pred, rh, ra) }).eq("id", pred.id);
+
+    // Recalcula los puntos de TODAS las predicciones de este partido en el servidor
+    // (salta RLS y no puede deduplicar por marcador).
+    const { error } = await supabase.rpc("recalc_match_points", {
+      p_match_id: sel, p_rh: rh, p_ra: ra,
+    });
+    if (error) console.error("recalc error", error);
+
     setSaved(true); setSel(null); setHr(""); setAr(""); onDataChange();
     setTimeout(() => setSaved(false), 3000);
   };
-
   const toggleStatus = async m => {
     await supabase.from("matches").update({ status: m.status === "open" ? "closed" : "open" }).eq("id", m.id);
     onDataChange();
