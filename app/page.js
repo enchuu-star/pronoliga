@@ -5462,7 +5462,7 @@ function SlotGame({ user, onBack }) {
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
         <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
-        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>TRAGAPERRAS MUNDIAL</p>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}> MUNDIAL</p>
       </div>
 
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "14px", padding: "20px", marginBottom: "16px", textAlign: "center" }}>
@@ -7199,7 +7199,7 @@ function SieteCeroGame({ user, onBack }) {
     { nombre: "Lucía", emoji: "🔥", wins: 5, gd: 7, gf: 11, champion: false },
   ]);
 
-  // Ruleta de tragaperras: parpadea selecciones al azar y frena hasta caer en una.
+  // Ruleta de : parpadea selecciones al azar y frena hasta caer en una.
   const drawTeam = () => {
     if (spinRef.current) clearTimeout(spinRef.current);
     const final = SC_SQUADS[Math.floor(Math.random() * SC_SQUADS.length)];
@@ -7462,7 +7462,7 @@ function SCDraft({ slots, placed, drawn, turn, rerolls, almanaque, spinning, ree
   );
 }
 
-/* --------------------------- RULETA (TRAGAPERRAS) ------------------------- */
+/* --------------------------- RULETA () ------------------------- */
 function SCReel({ team }) {
   if (!team) return null;
   const idx = SC_SQUADS.findIndex((s) => s.id === team.id);
@@ -7814,11 +7814,7 @@ function GamesView({ user }) {
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>MUNDIAL DRAFT</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 · 1 jugador</div>
         </button>
-        //<button onClick={() => setGame("sietecero")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
-          //<div style={{ fontSize: "34px", marginBottom: "8px" }}>🏆</div>
-          //<div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>SIETE CERO</div>
-          //<div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 histórico · 1 jugador</div>
-        //</button>
+
       </div>
     </div>
   );
