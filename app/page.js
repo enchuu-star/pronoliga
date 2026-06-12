@@ -6983,6 +6983,11 @@ const scSquadOrdered = (squad) => {
   };
   return [...players].sort((a, b) => rank(a) - rank(b) || (b.r || 0) - (a.r || 0));
 };
+// Ordena una lista de jugadores por posición (POR → laterales → central → medios → delanteros)
+const scByPosition = (players) => {
+  const rank = (p) => { const i = SC_XI_ORDER.indexOf(p.pos); return i === -1 ? 99 : i; };
+  return [...players].sort((a, b) => rank(a) - rank(b) || (b.r || 0) - (a.r || 0));
+};
 // Ranking por "lo más lejos que llegó": campeón → ronda alcanzada → victorias → DG → GF
 const SC_REACH_RANK = { "Grupos 1": 0, "Grupos 2": 1, "Grupos 3": 2, "Octavos": 3, "Cuartos": 4, "Semis": 5, "Final": 6 };
 const scBoardKey = (e) => [e.champion ? 1 : 0, SC_REACH_RANK[e.ronda] ?? 0, e.wins || 0, e.gd || 0, e.gf || 0];
@@ -7208,6 +7213,7 @@ function SieteCeroGame({ user, onBack }) {
   const [campaign, setCampaign] = useState(null);
   const [matchIndex, setMatchIndex] = useState(0); // partido en curso en la fase 'match'
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const savingRef = useRef(false); // evita guardar dos veces la misma partida
 
   // leaderboard
@@ -7244,7 +7250,7 @@ function SieteCeroGame({ user, onBack }) {
   };
 
   const startGame = () => {
-    setPlaced({}); setTurn(0); setCampaign(null); setSaved(false);
+    setPlaced({}); setTurn(0); setCampaign(null); setSaved(false); setSaveError(null);
     savingRef.current = false;
     setRerolls(3);
     setPhase("draft");
@@ -7298,10 +7304,11 @@ function SieteCeroGame({ user, onBack }) {
     if (!campaign || savingRef.current) return;
     savingRef.current = true;
     setSaved(true);
+    setSaveError(null);
     const row = {
       nombre: name || currentUser?.nombre || "Anónimo",
       emoji: currentUser?.emoji || "⚽",
-      wins: campaign.wins, gf: campaign.gf, gc: campaign.gc, gd: campaign.gd,
+      wins: campaign.wins, gf: campaign.gf, gc: campaign.gc, // ⚠️ sin gd: es columna generada (gf-gc)
       champion: campaign.champion, ronda: campaign.reached,
       squad: {
         f: formationKey,
@@ -7313,9 +7320,9 @@ function SieteCeroGame({ user, onBack }) {
     };
     if (supabase && currentUser?.id) {
       const { error } = await supabase.from("siete_cero_scores").insert({ user_id: currentUser.id, ...row });
-      if (error) console.error("siete_cero saveScore:", error.message);
+      if (error) { console.error("siete_cero saveScore:", error.message); setSaveError(error.message); }
     } else {
-      setMemBoard((b) => [...b, { ...row, user_id: currentUser?.id || row.nombre }]);
+      setMemBoard((b) => [...b, { ...row, gd: campaign.gd, user_id: currentUser?.id || row.nombre }]);
     }
     await loadBoard();
   };
@@ -7379,7 +7386,7 @@ function SieteCeroGame({ user, onBack }) {
       {phase === "result" && campaign && (
         <SCResult
           campaign={campaign} placed={placed} formationKey={formationKey}
-          onReplay={startGame}
+          onReplay={startGame} saveError={saveError}
           board={board} meId={currentUser?.id} onView={setViewing}
         />
       )}
@@ -7484,7 +7491,7 @@ function SCDraft({ slots, placed, drawn, turn, rerolls, almanaque, spinning, ree
 
           <div style={{ fontSize: 11.5, color: SC_MUT, marginBottom: 8 }}>Toca un jugador para encajarlo en un hueco libre.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {drawn.players.map((p, i) => {
+            {scByPosition(drawn.players).map((p, i) => {
               const slotK = scBestSlotFor(p, slots, placed);
               const ok = !!slotK;
               return (
@@ -7695,7 +7702,7 @@ function SCLiveMatch({ match, index, total, xi, cumWins, onNext }) {
 }
 
 /* -------------------------------- RESULT ---------------------------------- */
-function SCResult({ campaign, placed, formationKey, onReplay, board, meId, onView }) {
+function SCResult({ campaign, placed, formationKey, onReplay, board, meId, onView, saveError }) {
   const { matches, gf, gc, gd, wins, champion, reached, power } = campaign;
   const overall = scTeamStrength(placed);
   return (
@@ -7732,10 +7739,17 @@ function SCResult({ campaign, placed, formationKey, onReplay, board, meId, onVie
         ))}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: SC_PANEL, border: `1px solid ${SC_LINE}`, marginBottom: 16 }}>
-        <span style={{ color: SC_ACCENT, fontSize: 13 }}>✓</span>
-        <span style={{ fontSize: 12.5, color: SC_MUT }}>Tu marca se ha guardado en el ranking</span>
-      </div>
+      {saveError ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: "rgba(239,83,80,.1)", border: `1px solid ${SC_RED}`, marginBottom: 16 }}>
+          <span style={{ color: SC_RED, fontSize: 13 }}>⚠</span>
+          <span style={{ fontSize: 12, color: SC_TXT }}>No se pudo guardar: {saveError}</span>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: SC_PANEL, border: `1px solid ${SC_LINE}`, marginBottom: 16 }}>
+          <span style={{ color: SC_ACCENT, fontSize: 13 }}>✓</span>
+          <span style={{ fontSize: 12.5, color: SC_MUT }}>Tu marca se ha guardado en el ranking</span>
+        </div>
+      )}
 
       <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800 }}>🏆 Ranking · quién llegó más lejos</h3>
       <p style={{ color: SC_MUT, fontSize: 11.5, margin: "0 0 10px" }}>Toca a un jugador para ver su once 👁️</p>
@@ -7900,6 +7914,8 @@ function scBtn(kind, full) {
   if (kind === "disabled") return { ...base, background: SC_PANEL2, color: SC_MUT, cursor: "not-allowed", border: `1px solid ${SC_LINE}`, opacity: 0.6 };
   return base;
 }
+
+
 // ============================================================
 // VISTA JUEGOS
 // ============================================================
