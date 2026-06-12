@@ -7208,6 +7208,7 @@ function SieteCeroGame({ user, onBack }) {
   const [campaign, setCampaign] = useState(null);
   const [matchIndex, setMatchIndex] = useState(0); // partido en curso en la fase 'match'
   const [saved, setSaved] = useState(false);
+  const savingRef = useRef(false); // evita guardar dos veces la misma partida
 
   // leaderboard
   const [board, setBoard] = useState(null);
@@ -7244,6 +7245,7 @@ function SieteCeroGame({ user, onBack }) {
 
   const startGame = () => {
     setPlaced({}); setTurn(0); setCampaign(null); setSaved(false);
+    savingRef.current = false;
     setRerolls(3);
     setPhase("draft");
     drawTeam();
@@ -7277,22 +7279,24 @@ function SieteCeroGame({ user, onBack }) {
         .from("siete_cero_scores")
         .select("user_id,nombre,emoji,wins,gf,gc,gd,champion,ronda,squad")
         .limit(500);
-      if (!error) {
-        // mejor partida por usuario (la que más lejos llegó)
-        const best = {};
-        (data || []).forEach((r) => {
-          const cur = best[r.user_id];
-          if (!cur || scCmpKey(scBoardKey(r), scBoardKey(cur)) < 0) best[r.user_id] = r;
-        });
-        setBoard(Object.values(best).sort((a, b) => scCmpKey(scBoardKey(a), scBoardKey(b))));
-      }
+      if (error) { console.error("siete_cero loadBoard:", error.message); return; }
+      // mejor partida por usuario (la que más lejos llegó); en empate, la que tenga alineación
+      const best = {};
+      (data || []).forEach((r) => {
+        const cur = best[r.user_id];
+        if (!cur) { best[r.user_id] = r; return; }
+        const cmp = scCmpKey(scBoardKey(r), scBoardKey(cur));
+        if (cmp < 0 || (cmp === 0 && scSquadFormation(r.squad) && !scSquadFormation(cur.squad))) best[r.user_id] = r;
+      });
+      setBoard(Object.values(best).sort((a, b) => scCmpKey(scBoardKey(a), scBoardKey(b))));
     } else {
       setBoard([...memBoard].sort((a, b) => scCmpKey(scBoardKey(a), scBoardKey(b))));
     }
   };
 
   const saveScore = async () => {
-    if (!campaign || saved) return;
+    if (!campaign || savingRef.current) return;
+    savingRef.current = true;
     setSaved(true);
     const row = {
       nombre: name || currentUser?.nombre || "Anónimo",
@@ -7308,7 +7312,8 @@ function SieteCeroGame({ user, onBack }) {
       },
     };
     if (supabase && currentUser?.id) {
-      await supabase.from("siete_cero_scores").insert({ user_id: currentUser.id, ...row });
+      const { error } = await supabase.from("siete_cero_scores").insert({ user_id: currentUser.id, ...row });
+      if (error) console.error("siete_cero saveScore:", error.message);
     } else {
       setMemBoard((b) => [...b, { ...row, user_id: currentUser?.id || row.nombre }]);
     }
@@ -7374,7 +7379,8 @@ function SieteCeroGame({ user, onBack }) {
       {phase === "result" && campaign && (
         <SCResult
           campaign={campaign} placed={placed} formationKey={formationKey}
-          onReplay={startGame} onBoard={() => setPhase("board")}
+          onReplay={startGame}
+          board={board} meId={currentUser?.id} onView={setViewing}
         />
       )}
 
@@ -7400,9 +7406,6 @@ function SCHeader({ phase, onBoard, onHome, onBack }) {
           <span style={{ fontSize: 12, color: SC_MUT, fontWeight: 600 }}>SIETE CERO</span>
         </button>
       </div>
-      {phase !== "board" && (
-        <button onClick={onBoard} style={scBtn("ghost")}>🏆 Ranking</button>
-      )}
     </div>
   );
 }
@@ -7692,9 +7695,8 @@ function SCLiveMatch({ match, index, total, xi, cumWins, onNext }) {
 }
 
 /* -------------------------------- RESULT ---------------------------------- */
-function SCResult({ campaign, placed, formationKey, onReplay, onBoard }) {
+function SCResult({ campaign, placed, formationKey, onReplay, board, meId, onView }) {
   const { matches, gf, gc, gd, wins, champion, reached, power } = campaign;
-  const slots = SC_FORMATIONS[formationKey];
   const overall = scTeamStrength(placed);
   return (
     <div style={{ padding: 18 }}>
@@ -7730,12 +7732,16 @@ function SCResult({ campaign, placed, formationKey, onReplay, onBoard }) {
         ))}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: SC_PANEL, border: `1px solid ${SC_LINE}`, marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: SC_PANEL, border: `1px solid ${SC_LINE}`, marginBottom: 16 }}>
         <span style={{ color: SC_ACCENT, fontSize: 13 }}>✓</span>
-        <span style={{ fontSize: 12.5, color: SC_MUT }}>Marca guardada en el ranking automáticamente</span>
+        <span style={{ fontSize: 12.5, color: SC_MUT }}>Tu marca se ha guardado en el ranking</span>
       </div>
-      <button onClick={onBoard} style={scBtn("primary", true)}>Ver ranking 🏆</button>
-      <button onClick={onReplay} style={{ ...scBtn("ghost", true), marginTop: 8 }}>Jugar otra vez 🎲</button>
+
+      <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800 }}>🏆 Ranking · quién llegó más lejos</h3>
+      <p style={{ color: SC_MUT, fontSize: 11.5, margin: "0 0 10px" }}>Toca a un jugador para ver su once 👁️</p>
+      <SCRankingList board={board} meId={meId} onView={onView} />
+
+      <button onClick={onReplay} style={scBtn("primary", true)}>Jugar otra vez 🎲</button>
     </div>
   );
 }
