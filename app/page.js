@@ -6961,13 +6961,13 @@ const scTeamStrength = (xi) => {
 };
 
 const SC_OPP_POOL = {
-  "Grupos 1": [["🇨🇻", "Cabo Verde", 74], ["🇵🇦", "Panamá", 73], ["🇺🇿", "Uzbekistán", 75]],
-  "Grupos 2": [["🇶🇦", "Qatar", 76], ["🇸🇦", "Arabia Saudí", 77], ["🇨🇦", "Canadá", 78]],
-  "Grupos 3": [["🇯🇵", "Japón", 81], ["🇰🇷", "Corea", 80], ["🇲🇦", "Marruecos", 82]],
-  "Octavos": [["🇲🇽", "México", 81], ["🇺🇸", "EE. UU.", 80], ["🇸🇳", "Senegal", 82]],
-  "Cuartos": [["🇨🇭", "Suiza", 83], ["🇳🇱", "P. Bajos", 85], ["🇵🇹", "Portugal", 86]],
-  "Semis": [["🇭🇷", "Croacia", 85], ["🇧🇪", "Bélgica", 86], ["🏴", "Inglaterra", 87]],
-  "Final": [["🇧🇷", "Brasil", 88], ["🇫🇷", "Francia", 89], ["🇦🇷", "Argentina", 90]],
+  "Grupos 1": [["🇨🇻", "Cabo Verde", 78], ["🇵🇦", "Panamá", 77], ["🇺🇿", "Uzbekistán", 79]],
+  "Grupos 2": [["🇶🇦", "Qatar", 80], ["🇸🇦", "Arabia Saudí", 81], ["🇨🇦", "Canadá", 82]],
+  "Grupos 3": [["🇯🇵", "Japón", 84], ["🇰🇷", "Corea", 83], ["🇲🇦", "Marruecos", 85]],
+  "Octavos": [["🇲🇽", "México", 84], ["🇺🇸", "EE. UU.", 84], ["🇸🇳", "Senegal", 85]],
+  "Cuartos": [["🇨🇭", "Suiza", 86], ["🇳🇱", "P. Bajos", 87], ["🇵🇹", "Portugal", 88]],
+  "Semis": [["🇭🇷", "Croacia", 88], ["🇧🇪", "Bélgica", 89], ["🏴", "Inglaterra", 90]],
+  "Final": [["🇧🇷", "Brasil", 91], ["🇫🇷", "Francia", 92], ["🇦🇷", "Argentina", 93]],
 };
 const SC_ROUNDS = ["Grupos 1", "Grupos 2", "Grupos 3", "Octavos", "Cuartos", "Semis", "Final"];
 const SC_KO_FROM = 3; // a partir de Octavos, perder = eliminado
@@ -7020,8 +7020,11 @@ const scPPoisson = (k, l) => (Math.exp(-l) * Math.pow(l, k)) / scFactorial(k);
 function scFactorial(n) { let f = 1; for (let i = 2; i <= n; i++) f *= i; return f; }
 
 const scLambdasFor = (diff) => ({
-  you: Math.max(0.22, 1.35 + diff * 0.09),
-  opp: Math.max(0.2, 1.35 - diff * 0.09),
+  // base: con igualdad (diff=0) el rival está ligeramente por delante, así que
+  // hay que ser claramente mejor para imponerse. El coeficiente alto hace que
+  // cada punto de diferencia de nivel pese mucho.
+  you: Math.max(0.16, 1.22 + diff * 0.12),
+  opp: Math.max(0.28, 1.50 - diff * 0.12),
 });
 
 // Prob. de ganar el partido (incluye penaltis en eliminatorias)
@@ -7240,8 +7243,7 @@ function SieteCeroGame({ user, onBack }) {
       setMatchIndex(0);
       setPhase("match");
     } else {
-      setRerolls(3);   // nueva tirada: rerolls al máximo
-      drawTeam();
+      drawTeam();   // los rerolls NO se reponen: son 3 para toda la partida
     }
   };
 
@@ -7428,7 +7430,7 @@ function SCDraft({ slots, placed, drawn, turn, rerolls, almanaque, spinning, ree
               </div>
             </div>
             <button onClick={onReroll} disabled={rerolls === 0} style={scBtn(rerolls ? "ghost" : "disabled")}>
-              🔄 Reroll · {rerolls}
+              🔄 Cambiar · {rerolls} {rerolls === 1 ? "restante" : "restantes"}
             </button>
           </div>
 
@@ -7617,16 +7619,6 @@ function SCLiveMatch({ match, index, total, xi, cumWins, onNext }) {
             <div style={{ fontSize: 12, fontWeight: 800, marginTop: 2 }}>{name}</div>
           </div>
         </div>
-
-        {/* barra de probabilidad (modelo oficial: media + equilibrio + posición) */}
-        <div style={{ marginTop: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: SC_MUT, marginBottom: 4 }}>
-            <span>Prob. de ganar</span><span style={{ color: SC_ACCENT, fontWeight: 800 }}>{pWin}%</span>
-          </div>
-          <div style={{ height: 7, borderRadius: 4, background: "#0b0f14", overflow: "hidden" }}>
-            <div style={{ width: `${pWin}%`, height: "100%", background: `linear-gradient(90deg,${SC_ACCENT_DARK},${SC_ACCENT})` }} />
-          </div>
-        </div>
       </div>
 
       {/* feed de acciones */}
@@ -7686,7 +7678,6 @@ function SCResult({ campaign, placed, formationKey, saved, onSave, onReplay, onB
           }}>
             <span style={{ fontSize: 12, color: SC_MUT, width: 70 }}>{SC_ROUND_SHORT[m.round]}</span>
             <span style={{ fontSize: 13, flex: 1 }}>{m.flag} {m.name}</span>
-            <span style={{ fontSize: 11, color: SC_MUT, width: 38, textAlign: "right" }}>{m.pWin}%</span>
             <span style={{ fontSize: 14, fontWeight: 800, color: scOutcomeColor(m.outcome), width: 56, textAlign: "right" }}>
               {m.yg}-{m.og}{m.pens ? " (p)" : ""}
             </span>
