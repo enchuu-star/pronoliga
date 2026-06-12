@@ -7155,314 +7155,6 @@ const scSimulateCampaign = (xi) => {
   return { matches, gf, gc, gd: gf - gc, wins, champion, reached, eliminated, power: Math.round(power) };
 };
 
-// ============================================================
-// SIETE CERO (7-0) — modo draft de selecciones históricas
-// Pega TODO este bloque en app/page.js JUSTO ANTES de "function GamesView(...)".
-// Requiere: sieteCeroSquads.json en /public  ·  tabla siete_cero_scores en Supabase.
-// Usa el supabase global y los hooks ya importados arriba (useState/useEffect/useRef).
-// ============================================================
-/* ============================================================================
-   SIETE-CERO  ·  modo de juego estilo "Sete a Zero" para Porra Vallau
-   ----------------------------------------------------------------------------
-   Bucle: cada turno se sortea una SELECCIÓN HISTÓRICA. Eliges 1 jugador y se
-   coloca en un hueco compatible de tu formación. 11 turnos -> once cerrado ->
-   el motor simula 3 grupos + 4 eliminatorias. Ganas los 7 => cierras el 7-0.
-
-   USO EN TU APP (ya integrado): se renderiza desde GamesView como
-     <SieteCeroGame user={user} onBack={() => setGame(null)} />
-   Usa el supabase global y carga las plantillas desde /sieteCeroSquads.json
-   ========================================================================== */
-
-const SC_ACCENT = "#4fc3f7";          // tu azul (GREEN)
-const SC_ACCENT_DARK = "#2b8fc0";
-const SC_GOLD = "#ffce54";
-const SC_RED = "#ef5350";
-const SC_BG = "#0d1117";
-const SC_PANEL = "#161b22";
-const SC_PANEL2 = "#1f2630";
-const SC_LINE = "#2a323d";
-const SC_TXT = "#e6edf3";
-const SC_MUT = "#8b98a6";
-
-/* ----------------------------- DATASET (54 SELECCIONES) ------------------- */
-/* 54 plantillas históricas (Brasil 70 → 2026). pos = principal, alt = comodín.*/
-/* También disponible como sieteCeroSquads.json si prefieres importarlo aparte.*/
-let SC_SQUADS = [];
-
-/* ------------------------------ FORMACIONES ------------------------------- */
-/* x/y en % sobre un campo vertical (ataque arriba). accepts = posiciones ok.  */
-const SC_FORMATIONS = {
-  "4-3-3": [
-    { k: "GK", accepts: ["GK"], x: 50, y: 90 },
-    { k: "RB", accepts: ["RB", "CB"], x: 84, y: 72 },
-    { k: "CBd", accepts: ["CB"], x: 62, y: 78 },
-    { k: "CBi", accepts: ["CB"], x: 38, y: 78 },
-    { k: "LB", accepts: ["LB", "CB"], x: 16, y: 72 },
-    { k: "MCd", accepts: ["CDM", "CM"], x: 68, y: 52 },
-    { k: "MC", accepts: ["CM", "CDM", "CAM"], x: 50, y: 56 },
-    { k: "MCi", accepts: ["CM", "CAM"], x: 32, y: 52 },
-    { k: "ED", accepts: ["RW", "RM", "CAM", "ST"], x: 82, y: 26 },
-    { k: "DC", accepts: ["ST", "CAM"], x: 50, y: 18 },
-    { k: "EI", accepts: ["LW", "LM", "CAM", "ST"], x: 18, y: 26 },
-  ],
-  "4-4-2": [
-    { k: "GK", accepts: ["GK"], x: 50, y: 90 },
-    { k: "RB", accepts: ["RB", "CB"], x: 84, y: 72 },
-    { k: "CBd", accepts: ["CB"], x: 62, y: 78 },
-    { k: "CBi", accepts: ["CB"], x: 38, y: 78 },
-    { k: "LB", accepts: ["LB", "CB"], x: 16, y: 72 },
-    { k: "MD", accepts: ["RM", "RW", "CM"], x: 82, y: 48 },
-    { k: "MCd", accepts: ["CM", "CDM"], x: 60, y: 52 },
-    { k: "MCi", accepts: ["CM", "CAM", "CDM"], x: 40, y: 52 },
-    { k: "MI", accepts: ["LM", "LW", "CM"], x: 18, y: 48 },
-    { k: "DCd", accepts: ["ST", "CAM"], x: 62, y: 20 },
-    { k: "DCi", accepts: ["ST", "CAM"], x: 38, y: 20 },
-  ],
-  "4-2-3-1": [
-    { k: "GK", accepts: ["GK"], x: 50, y: 90 },
-    { k: "RB", accepts: ["RB", "CB"], x: 84, y: 72 },
-    { k: "CBd", accepts: ["CB"], x: 62, y: 78 },
-    { k: "CBi", accepts: ["CB"], x: 38, y: 78 },
-    { k: "LB", accepts: ["LB", "CB"], x: 16, y: 72 },
-    { k: "MCDd", accepts: ["CDM", "CM"], x: 62, y: 58 },
-    { k: "MCDi", accepts: ["CDM", "CM"], x: 38, y: 58 },
-    { k: "MP", accepts: ["CAM", "CM"], x: 50, y: 40 },
-    { k: "ED", accepts: ["RW", "RM", "ST"], x: 82, y: 32 },
-    { k: "EI", accepts: ["LW", "LM", "ST"], x: 18, y: 32 },
-    { k: "DC", accepts: ["ST", "CAM"], x: 50, y: 16 },
-  ],
-};
-
-const SC_POS_LABEL = {
-  GK: "POR", RB: "LD", CB: "DFC", LB: "LI", CDM: "MCD",
-  CM: "MC", CAM: "MP", RM: "MD", LM: "MI", RW: "ED", LW: "EI", ST: "DC",
-};
-
-/* ------------------------------- HELPERS ---------------------------------- */
-const scFits = (player, slot) => {
-  const opts = [player.pos, ...(player.alt || [])];
-  return opts.some((p) => slot.accepts.includes(p));
-};
-
-const scBestSlotFor = (player, slots, placed) => {
-  // hueco abierto compatible; prioriza match exacto de pos principal
-  const open = slots.filter((s) => !placed[s.k] && scFits(player, s));
-  if (!open.length) return null;
-  const exact = open.find((s) => s.accepts[0] === player.pos);
-  return (exact || open[0]).k;
-};
-
-const scPoisson = (lambda) => {
-  const L = Math.exp(-lambda);
-  let k = 0, p = 1;
-  do { k++; p *= Math.random(); } while (p > L);
-  return k - 1;
-};
-
-const scTeamStrength = (xi) => {
-  const vals = Object.values(xi).filter(Boolean);
-  if (!vals.length) return 70;
-  return Math.round(vals.reduce((a, p) => a + p.r, 0) / vals.length);
-};
-
-const SC_OPP_POOL = {
-  "Grupos 1": [["🇨🇻", "Cabo Verde", 78], ["🇵🇦", "Panamá", 77], ["🇺🇿", "Uzbekistán", 79]],
-  "Grupos 2": [["🇶🇦", "Qatar", 80], ["🇸🇦", "Arabia Saudí", 81], ["🇨🇦", "Canadá", 82]],
-  "Grupos 3": [["🇯🇵", "Japón", 84], ["🇰🇷", "Corea", 83], ["🇲🇦", "Marruecos", 85]],
-  "Octavos": [["🇲🇽", "México", 84], ["🇺🇸", "EE. UU.", 84], ["🇸🇳", "Senegal", 85]],
-  "Cuartos": [["🇨🇭", "Suiza", 86], ["🇳🇱", "P. Bajos", 87], ["🇵🇹", "Portugal", 88]],
-  "Semis": [["🇭🇷", "Croacia", 88], ["🇧🇪", "Bélgica", 89], ["🏴", "Inglaterra", 90]],
-  "Final": [["🇧🇷", "Brasil", 91], ["🇫🇷", "Francia", 92], ["🇦🇷", "Argentina", 93]],
-};
-const SC_ROUNDS = ["Grupos 1", "Grupos 2", "Grupos 3", "Octavos", "Cuartos", "Semis", "Final"];
-const SC_KO_FROM = 3; // a partir de Octavos, perder = eliminado
-
-// nombres mostrados de cada ronda
-const SC_ROUND_LABEL = {
-  "Grupos 1": "Fase de grupos · Jornada 1",
-  "Grupos 2": "Fase de grupos · Jornada 2",
-  "Grupos 3": "Fase de grupos · Jornada 3",
-  "Octavos": "Octavos de final",
-  "Cuartos": "Cuartos de final",
-  "Semis": "Semifinal",
-  "Final": "Final",
-};
-const SC_ROUND_SHORT = {
-  "Grupos 1": "Grupos J1", "Grupos 2": "Grupos J2", "Grupos 3": "Grupos J3",
-  "Octavos": "Octavos", "Cuartos": "Cuartos", "Semis": "Semis", "Final": "Final",
-};
-
-/* --- Modelo de fuerza (réplica fiel del oficial: media + equilibrio + posición) ---
-   El wiki de Sete a Zero indica que el resultado se calcula por la calidad global
-   de la plantilla, el equilibrio de la formación y la fuerza por posición, con el
-   portero decidiendo los partidos ajustados (media <85 sufre en octavos). El
-   marcador exacto es cerrado; esto lo reproduce con esos mismos factores.        */
-const SC_LINE_OF = (pos) =>
-  pos === "GK" ? "GK"
-  : ["RB", "CB", "LB"].includes(pos) ? "DEF"
-  : ["CDM", "CM", "CAM", "RM", "LM"].includes(pos) ? "MID"
-  : "ATT";
-
-const scPowerOf = (xi) => {
-  const vals = Object.values(xi).filter(Boolean);
-  if (!vals.length) return 70;
-  const mean = vals.reduce((a, p) => a + p.r, 0) / vals.length;
-  // fuerza por línea
-  const byLine = { GK: [], DEF: [], MID: [], ATT: [] };
-  vals.forEach((p) => byLine[SC_LINE_OF(p.pos)].push(p.r));
-  const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : mean);
-  const gk = avg(byLine.GK), def = avg(byLine.DEF), mid = avg(byLine.MID), att = avg(byLine.ATT);
-  // equilibrio: penaliza la línea más floja respecto a la media
-  const weakest = Math.min(def, mid, att);
-  const balancePenalty = Math.max(0, mean - weakest) * 0.12;
-  // portero: pesa en los ajustados; bonus/malus según se aleje de la media
-  const gkFactor = (gk - mean) * 0.18;
-  return mean + gkFactor - balancePenalty;
-};
-
-// pmf de Poisson para derivar probabilidades coherentes con los goles simulados
-const scPPoisson = (k, l) => (Math.exp(-l) * Math.pow(l, k)) / scFactorial(k);
-function scFactorial(n) { let f = 1; for (let i = 2; i <= n; i++) f *= i; return f; }
-
-const scLambdasFor = (diff) => ({
-  // base: con igualdad (diff=0) el rival está ligeramente por delante, así que
-  // hay que ser claramente mejor para imponerse. El coeficiente alto hace que
-  // cada punto de diferencia de nivel pese mucho.
-  you: Math.max(0.16, 1.22 + diff * 0.12),
-  opp: Math.max(0.28, 1.50 - diff * 0.12),
-});
-
-// Prob. de ganar el partido (incluye penaltis en eliminatorias)
-const scWinProbability = (diff, isKO) => {
-  const { you, opp } = scLambdasFor(diff);
-  let pWin = 0, pDraw = 0, pLoss = 0;
-  for (let a = 0; a <= 9; a++) {
-    for (let b = 0; b <= 9; b++) {
-      const p = scPPoisson(a, you) * scPPoisson(b, opp);
-      if (a > b) pWin += p; else if (a < b) pLoss += p; else pDraw += p;
-    }
-  }
-  if (isKO) {
-    const penEdge = Math.min(0.85, Math.max(0.15, 0.5 + diff * 0.02));
-    pWin += pDraw * penEdge; pLoss += pDraw * (1 - penEdge); pDraw = 0;
-  }
-  return Math.round(pWin * 100);
-};
-
-/* ---------------------- Narración inventada del partido -------------------- */
-const scPick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-// Goleadores rivales: si el país rival tiene plantilla en el dataset, usamos un
-// jugador real de ese país; si no, no nombramos a nadie.
-const SC_NATION_ALIAS = { "P. Bajos": "Países Bajos", "Corea": "Corea del Sur" };
-let SC_NATION_ATTACKERS = null;
-const scBuildNationAttackers = () => {
-  const m = {};
-  SC_SQUADS.forEach((s) => {
-    const atk = s.players.filter((p) => ["ATT", "MID"].includes(SC_LINE_OF(p.pos)));
-    (m[s.team] = m[s.team] || []).push(...atk.map((p) => p.name));
-  });
-  Object.keys(m).forEach((k) => (m[k] = [...new Set(m[k])]));
-  return m;
-};
-const scOppScorer = (oppName) => {
-  if (!SC_NATION_ATTACKERS) SC_NATION_ATTACKERS = scBuildNationAttackers();
-  const pool = SC_NATION_ATTACKERS[SC_NATION_ALIAS[oppName] || oppName];
-  return pool && pool.length ? scPick(pool) : null;
-};
-
-const scBuildMatchEvents = (xi, yg, og, oppName) => {
-  const players = Object.values(xi).filter(Boolean);
-  const att = players.filter((p) => ["ATT", "MID"].includes(SC_LINE_OF(p.pos)));
-  const gk = players.find((p) => p.pos === "GK");
-  const def = players.filter((p) => SC_LINE_OF(p.pos) === "DEF");
-  const mine = (pref) => (pref.length ? scPick(pref) : scPick(players));
-
-  // minutos de gol repartidos
-  const minutes = (n) => {
-    const set = new Set();
-    while (set.size < n) set.add(1 + Math.floor(Math.random() * 92));
-    return [...set];
-  };
-  const evts = [];
-  minutes(yg).forEach((m) => {
-    const sc = mine(att);
-    evts.push({ min: m, side: "you", type: "goal", who: sc.name,
-      text: `¡GOOOL! ${sc.name} ${scPick(["define cruzado", "remata de cabeza", "fusila desde el área", "la clava al ángulo", "marca de penalti", "aprovecha el rechace"])}.` });
-  });
-  minutes(og).forEach((m) => {
-    const sc = scOppScorer(oppName);
-    evts.push({ min: m, side: "opp", type: "goal", who: sc,
-      text: sc
-        ? `Gol de ${oppName}. ${sc} ${scPick(["bate al portero", "define en el área", "remata a placer", "marca tras un rechace"])}.`
-        : `Gol de ${oppName} ${scPick(["tras un contragolpe", "en un córner", "con un disparo lejano", "en boca de gol"])}.` });
-  });
-
-  // eventos de relleno (ocasiones, paradas, palos, tarjetas)
-  const fillers = 5 + Math.floor(Math.random() * 4);
-  const usedMin = new Set(evts.map((e) => e.min));
-  for (let i = 0; i < fillers; i++) {
-    let m; do { m = 1 + Math.floor(Math.random() * 92); } while (usedMin.has(m));
-    usedMin.add(m);
-    const roll = Math.random();
-    if (roll < 0.28 && gk) {
-      evts.push({ min: m, side: "you", type: "save",
-        text: `🧤 ${scPick(["Paradón", "Gran intervención", "Mano salvadora"])} de ${gk.name} ${scPick(["abajo a su palo", "en el mano a mano", "desviando a córner"])}.` });
-    } else if (roll < 0.5) {
-      const w = mine(att);
-      evts.push({ min: m, side: "you", type: "chance",
-        text: `⚡ ${scPick(["Clarísima", "Ocasión enorme", "Aviso"])}: ${w.name} ${scPick(["estrella el balón en el palo", "se topa con el meta", "manda el remate alto por poco"])}.` });
-    } else if (roll < 0.72) {
-      evts.push({ min: m, side: "opp", type: "chance",
-        text: `😬 ${oppName} perdona: ${scPick(["un disparo se estrella en el larguero", "un remate se va fuera solo ante el portero", "obligan a despejar sobre la línea"])}.` });
-    } else if (roll < 0.86) {
-      const d = mine(def.length ? def : players);
-      evts.push({ min: m, side: "you", type: "tackle",
-        text: `🛡️ Entradón de ${d.name} para cortar un contragolpe peligroso.` });
-    } else {
-      evts.push({ min: m, side: "opp", type: "card",
-        text: `🟨 Amarilla a ${oppName} por una falta dura.` });
-    }
-  }
-  evts.sort((a, b) => a.min - b.min);
-  return evts;
-};
-
-const scSimulateCampaign = (xi) => {
-  const power = scPowerOf(xi);
-  const matches = [];
-  let gf = 0, gc = 0, wins = 0, eliminated = false, reached = "";
-  for (let i = 0; i < SC_ROUNDS.length; i++) {
-    const round = SC_ROUNDS[i];
-    const [flag, name, oppR] = scPick(SC_OPP_POOL[round]);
-    const diff = power - oppR;
-    const isKO = i >= SC_KO_FROM;
-    const { you, opp } = scLambdasFor(diff);
-    let yg = scPoisson(you);
-    let og = scPoisson(opp);
-    let pens = null;
-    if (isKO && yg === og) {
-      const meWins = Math.random() < Math.min(0.85, Math.max(0.15, 0.5 + diff * 0.02));
-      pens = meWins ? "gana" : "pierde";
-    }
-    let outcome;
-    if (yg > og) outcome = "W";
-    else if (yg < og) outcome = "L";
-    else outcome = pens === "gana" ? "W" : pens === "pierde" ? "L" : "D";
-
-    const events = scBuildMatchEvents(xi, yg, og, name);
-    const pWin = scWinProbability(diff, isKO);
-
-    gf += yg; gc += og;
-    if (outcome === "W") wins++;
-    matches.push({ round, flag, name, oppR, yg, og, outcome, pens, events, pWin, isKO });
-    reached = round;
-    if (isKO && outcome !== "W") { eliminated = true; break; }
-  }
-  const champion = wins === 7;
-  return { matches, gf, gc, gd: gf - gc, wins, champion, reached, eliminated, power: Math.round(power) };
-};
-
 /* =============================== COMPONENTE =============================== */
 function SieteCeroGame({ user, onBack }) {
   const currentUser = user ? { id: user.id, nombre: user.name, emoji: user.emoji } : null;
@@ -7548,7 +7240,8 @@ function SieteCeroGame({ user, onBack }) {
       setMatchIndex(0);
       setPhase("match");
     } else {
-      drawTeam();   // los rerolls NO se reponen: son 3 para toda la partida
+      setRerolls(3);   // nueva tirada: rerolls al máximo
+      drawTeam();
     }
   };
 
@@ -7735,7 +7428,7 @@ function SCDraft({ slots, placed, drawn, turn, rerolls, almanaque, spinning, ree
               </div>
             </div>
             <button onClick={onReroll} disabled={rerolls === 0} style={scBtn(rerolls ? "ghost" : "disabled")}>
-              🔄 Cambiar · {rerolls} {rerolls === 1 ? "restante" : "restantes"}
+              🔄 Reroll · {rerolls}
             </button>
           </div>
 
@@ -7924,6 +7617,16 @@ function SCLiveMatch({ match, index, total, xi, cumWins, onNext }) {
             <div style={{ fontSize: 12, fontWeight: 800, marginTop: 2 }}>{name}</div>
           </div>
         </div>
+
+        {/* barra de probabilidad (modelo oficial: media + equilibrio + posición) */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: SC_MUT, marginBottom: 4 }}>
+            <span>Prob. de ganar</span><span style={{ color: SC_ACCENT, fontWeight: 800 }}>{pWin}%</span>
+          </div>
+          <div style={{ height: 7, borderRadius: 4, background: "#0b0f14", overflow: "hidden" }}>
+            <div style={{ width: `${pWin}%`, height: "100%", background: `linear-gradient(90deg,${SC_ACCENT_DARK},${SC_ACCENT})` }} />
+          </div>
+        </div>
       </div>
 
       {/* feed de acciones */}
@@ -7983,6 +7686,7 @@ function SCResult({ campaign, placed, formationKey, saved, onSave, onReplay, onB
           }}>
             <span style={{ fontSize: 12, color: SC_MUT, width: 70 }}>{SC_ROUND_SHORT[m.round]}</span>
             <span style={{ fontSize: 13, flex: 1 }}>{m.flag} {m.name}</span>
+            <span style={{ fontSize: 11, color: SC_MUT, width: 38, textAlign: "right" }}>{m.pWin}%</span>
             <span style={{ fontSize: 14, fontWeight: 800, color: scOutcomeColor(m.outcome), width: 56, textAlign: "right" }}>
               {m.yg}-{m.og}{m.pens ? " (p)" : ""}
             </span>
