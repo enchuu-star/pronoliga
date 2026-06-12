@@ -6969,6 +6969,24 @@ const SC_OPP_POOL = {
   "Semis": [["🇭🇷", "Croacia", 88], ["🇧🇪", "Bélgica", 89], ["🏴", "Inglaterra", 90]],
   "Final": [["🇧🇷", "Brasil", 91], ["🇫🇷", "Francia", 92], ["🇦🇷", "Argentina", 93]],
 };
+
+// Orden de la alineación (portero → laterales → central → medios → delanteros)
+const SC_XI_ORDER = ["GK", "LB", "RB", "CB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "ST", "CF"];
+const SC_POS_ES = { GK: "POR", LB: "LI", RB: "LD", CB: "DFC", CDM: "MCD", CM: "MC", CAM: "MCO", LM: "MI", RM: "MD", LW: "EI", RW: "ED", ST: "DC", CF: "SD" };
+const scSquadPlayers = (squad) => Array.isArray(squad) ? squad : (squad && Array.isArray(squad.p) ? squad.p : []);
+const scSquadFormation = (squad) => (squad && !Array.isArray(squad) ? squad.f : null);
+const scSquadOrdered = (squad) => {
+  const players = scSquadPlayers(squad);
+  const rank = (s) => {
+    const i = SC_XI_ORDER.indexOf(s.slotPos || s.pos);
+    return i === -1 ? 99 : i;
+  };
+  return [...players].sort((a, b) => rank(a) - rank(b) || (b.r || 0) - (a.r || 0));
+};
+// Ranking por "lo más lejos que llegó": campeón → ronda alcanzada → victorias → DG → GF
+const SC_REACH_RANK = { "Grupos 1": 0, "Grupos 2": 1, "Grupos 3": 2, "Octavos": 3, "Cuartos": 4, "Semis": 5, "Final": 6 };
+const scBoardKey = (e) => [e.champion ? 1 : 0, SC_REACH_RANK[e.ronda] ?? 0, e.wins || 0, e.gd || 0, e.gf || 0];
+const scCmpKey = (a, b) => { for (let i = 0; i < a.length; i++) { if (a[i] !== b[i]) return b[i] - a[i]; } return 0; };
 const SC_ROUNDS = ["Grupos 1", "Grupos 2", "Grupos 3", "Octavos", "Cuartos", "Semis", "Final"];
 const SC_KO_FROM = 3; // a partir de Octavos, perder = eliminado
 
@@ -7193,13 +7211,14 @@ function SieteCeroGame({ user, onBack }) {
 
   // leaderboard
   const [board, setBoard] = useState(null);
+  const [viewing, setViewing] = useState(null); // entrada cuyo once estamos viendo
   const [memBoard, setMemBoard] = useState([
-    { nombre: "Vallau", emoji: "🐐", wins: 7, gd: 14, gf: 16, champion: true },
-    { nombre: "Iker", emoji: "🧤", wins: 6, gd: 9, gf: 12, champion: false },
-    { nombre: "Lucía", emoji: "🔥", wins: 5, gd: 7, gf: 11, champion: false },
+    { nombre: "Vallau", emoji: "🐐", wins: 7, gd: 14, gf: 16, champion: true, ronda: "Final", squad: null },
+    { nombre: "Iker", emoji: "🧤", wins: 6, gd: 9, gf: 12, champion: false, ronda: "Semis", squad: null },
+    { nombre: "Lucía", emoji: "🔥", wins: 5, gd: 7, gf: 11, champion: false, ronda: "Cuartos", squad: null },
   ]);
 
-  // Ruleta de : parpadea selecciones al azar y frena hasta caer en una.
+  // Ruleta de tragaperras: parpadea selecciones al azar y frena hasta caer en una.
   const drawTeam = () => {
     if (spinRef.current) clearTimeout(spinRef.current);
     const final = SC_SQUADS[Math.floor(Math.random() * SC_SQUADS.length)];
@@ -7256,37 +7275,54 @@ function SieteCeroGame({ user, onBack }) {
     if (supabase) {
       const { data, error } = await supabase
         .from("siete_cero_scores")
-        .select("nombre,emoji,wins,gf,gc,gd,champion")
-        .order("wins", { ascending: false })
-        .order("gd", { ascending: false })
-        .order("gf", { ascending: false })
-        .limit(50);
-      if (!error) setBoard(data || []);
+        .select("user_id,nombre,emoji,wins,gf,gc,gd,champion,ronda,squad")
+        .limit(500);
+      if (!error) {
+        // mejor partida por usuario (la que más lejos llegó)
+        const best = {};
+        (data || []).forEach((r) => {
+          const cur = best[r.user_id];
+          if (!cur || scCmpKey(scBoardKey(r), scBoardKey(cur)) < 0) best[r.user_id] = r;
+        });
+        setBoard(Object.values(best).sort((a, b) => scCmpKey(scBoardKey(a), scBoardKey(b))));
+      }
     } else {
-      setBoard([...memBoard].sort((a, b) => b.wins - a.wins || b.gd - a.gd || b.gf - a.gf));
+      setBoard([...memBoard].sort((a, b) => scCmpKey(scBoardKey(a), scBoardKey(b))));
     }
   };
 
   const saveScore = async () => {
     if (!campaign || saved) return;
+    setSaved(true);
     const row = {
       nombre: name || currentUser?.nombre || "Anónimo",
       emoji: currentUser?.emoji || "⚽",
       wins: campaign.wins, gf: campaign.gf, gc: campaign.gc, gd: campaign.gd,
       champion: campaign.champion, ronda: campaign.reached,
-      squad: Object.values(placed).map((p) => ({ name: p.name, r: p.r, team: p._team, year: p._year })),
+      squad: {
+        f: formationKey,
+        p: slots.map((s) => {
+          const pl = placed[s.k];
+          return pl ? { k: s.k, slotPos: s.accepts[0], pos: pl.pos, name: pl.name, r: pl.r, flag: pl._flag, team: pl._team, year: pl._year } : null;
+        }).filter(Boolean),
+      },
     };
     if (supabase && currentUser?.id) {
       await supabase.from("siete_cero_scores").insert({ user_id: currentUser.id, ...row });
     } else {
-      setMemBoard((b) => [...b, { ...row }]);
+      setMemBoard((b) => [...b, { ...row, user_id: currentUser?.id || row.nombre }]);
     }
-    setSaved(true);
     await loadBoard();
-    setPhase("board");
   };
 
-  useEffect(() => { if (phase === "board") loadBoard(); /* eslint-disable-next-line */ }, [phase]);
+  // Guarda tu marca automáticamente al terminar la partida (sin botón).
+  useEffect(() => {
+    if (phase === "result" && campaign && !saved) saveScore();
+    /* eslint-disable-next-line */
+  }, [phase, campaign]);
+
+  // El ranking se carga al entrar al juego (intro) y al abrir el board.
+  useEffect(() => { if (phase === "intro" || phase === "board") loadBoard(); /* eslint-disable-next-line */ }, [phase]);
 
   /* ------------------------------- RENDER -------------------------------- */
   if (!ready) {
@@ -7307,6 +7343,7 @@ function SieteCeroGame({ user, onBack }) {
           almanaque={almanaque} setAlmanaque={setAlmanaque}
           name={name} setName={setName} hasUser={!!currentUser}
           onStart={startGame}
+          board={board} meId={currentUser?.id} onView={setViewing}
         />
       )}
 
@@ -7337,13 +7374,15 @@ function SieteCeroGame({ user, onBack }) {
       {phase === "result" && campaign && (
         <SCResult
           campaign={campaign} placed={placed} formationKey={formationKey}
-          saved={saved} onSave={saveScore} onReplay={startGame} onBoard={() => setPhase("board")}
+          onReplay={startGame} onBoard={() => setPhase("board")}
         />
       )}
 
       {phase === "board" && (
-        <SCBoard board={board} onReplay={startGame} />
+        <SCBoard board={board} meId={currentUser?.id} onView={setViewing} onReplay={startGame} />
       )}
+
+      {viewing && <SCSquadModal entry={viewing} onClose={() => setViewing(null)} />}
     </div>
   );
 }
@@ -7369,7 +7408,7 @@ function SCHeader({ phase, onBoard, onHome, onBack }) {
 }
 
 /* -------------------------------- INTRO ----------------------------------- */
-function SCIntro({ formationKey, setFormationKey, almanaque, setAlmanaque, name, setName, hasUser, onStart }) {
+function SCIntro({ formationKey, setFormationKey, almanaque, setAlmanaque, name, setName, hasUser, onStart, board, meId, onView }) {
   return (
     <div style={{ padding: 18 }}>
       <h2 style={{ margin: "4px 0 2px", fontSize: 22, fontWeight: 800 }}>Arma tu once. Cierra el 7-0.</h2>
@@ -7401,6 +7440,12 @@ function SCIntro({ formationKey, setFormationKey, almanaque, setAlmanaque, name,
       )}
 
       <button onClick={onStart} style={scBtn("primary", true)}>Tirar 🎲 · empezar draft</button>
+
+      <div style={{ marginTop: 22 }}>
+        <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 800 }}>🏆 Ranking · quién llegó más lejos</h3>
+        <p style={{ color: SC_MUT, fontSize: 11.5, margin: "0 0 10px" }}>Toca a un jugador para ver su once 👁️</p>
+        <SCRankingList board={board} meId={meId} onView={onView} />
+      </div>
     </div>
   );
 }
@@ -7462,7 +7507,7 @@ function SCDraft({ slots, placed, drawn, turn, rerolls, almanaque, spinning, ree
   );
 }
 
-/* --------------------------- RULETA () ------------------------- */
+/* --------------------------- RULETA (TRAGAPERRAS) ------------------------- */
 function SCReel({ team }) {
   if (!team) return null;
   const idx = SC_SQUADS.findIndex((s) => s.id === team.id);
@@ -7647,7 +7692,7 @@ function SCLiveMatch({ match, index, total, xi, cumWins, onNext }) {
 }
 
 /* -------------------------------- RESULT ---------------------------------- */
-function SCResult({ campaign, placed, formationKey, saved, onSave, onReplay, onBoard }) {
+function SCResult({ campaign, placed, formationKey, onReplay, onBoard }) {
   const { matches, gf, gc, gd, wins, champion, reached, power } = campaign;
   const slots = SC_FORMATIONS[formationKey];
   const overall = scTeamStrength(placed);
@@ -7685,45 +7730,129 @@ function SCResult({ campaign, placed, formationKey, saved, onSave, onReplay, onB
         ))}
       </div>
 
-      {!saved ? (
-        <button onClick={onSave} style={scBtn("primary", true)}>Guardar en el ranking 🏆</button>
-      ) : (
-        <button onClick={onBoard} style={scBtn("primary", true)}>Ver ranking</button>
-      )}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, background: SC_PANEL, border: `1px solid ${SC_LINE}`, marginBottom: 10 }}>
+        <span style={{ color: SC_ACCENT, fontSize: 13 }}>✓</span>
+        <span style={{ fontSize: 12.5, color: SC_MUT }}>Marca guardada en el ranking automáticamente</span>
+      </div>
+      <button onClick={onBoard} style={scBtn("primary", true)}>Ver ranking 🏆</button>
       <button onClick={onReplay} style={{ ...scBtn("ghost", true), marginTop: 8 }}>Jugar otra vez 🎲</button>
     </div>
   );
 }
 
 /* -------------------------------- BOARD ----------------------------------- */
-function SCBoard({ board, onReplay }) {
+function SCBoard({ board, meId, onView, onReplay }) {
   return (
     <div style={{ padding: 18 }}>
-      <h2 style={{ margin: "0 0 14px", fontSize: 20, fontWeight: 800 }}>🏆 Ranking 7-0</h2>
-      {!board ? (
-        <div style={{ color: SC_MUT, padding: 20, textAlign: "center" }}>Cargando…</div>
-      ) : board.length === 0 ? (
-        <div style={{ color: SC_MUT, padding: 20, textAlign: "center" }}>Aún nadie ha jugado. Sé el primero.</div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
-          {board.map((e, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-              borderRadius: 10, background: SC_PANEL,
-              border: `1px solid ${i === 0 ? SC_GOLD : SC_LINE}`,
-            }}>
-              <span style={{ width: 24, fontWeight: 800, color: i === 0 ? SC_GOLD : SC_MUT }}>{i + 1}</span>
-              <span style={{ fontSize: 18 }}>{e.emoji || "⚽"}</span>
-              <span style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>
-                {e.nombre} {e.champion && <span style={{ color: SC_GOLD }}>· 7-0</span>}
-              </span>
-              <span style={{ fontSize: 13, color: SC_ACCENT, fontWeight: 800 }}>{e.wins} V</span>
-              <span style={{ fontSize: 12, color: SC_MUT, width: 48, textAlign: "right" }}>DG {e.gd >= 0 ? "+" : ""}{e.gd}</span>
+      <h2 style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 800 }}>🏆 Ranking · quién llegó más lejos</h2>
+      <p style={{ color: SC_MUT, fontSize: 11.5, margin: "0 0 12px" }}>Toca a un jugador para ver su once 👁️</p>
+      <SCRankingList board={board} meId={meId} onView={onView} />
+      <button onClick={onReplay} style={{ ...scBtn("primary", true), marginTop: 8 }}>Jugar 🎲</button>
+    </div>
+  );
+}
+
+/* Lista de ranking reutilizable (intro y board). Filas tocables si hay plantilla. */
+function SCRankingList({ board, meId, onView }) {
+  if (!board) return <div style={{ color: SC_MUT, padding: 16, textAlign: "center" }}>Cargando…</div>;
+  if (board.length === 0) return <div style={{ color: SC_MUT, padding: 16, textAlign: "center" }}>Aún nadie ha jugado. Sé el primero.</div>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+      {board.map((e, i) => {
+        const isMe = meId && e.user_id === meId;
+        const hasSquad = scSquadPlayers(e.squad).length > 0;
+        const reachLabel = e.champion ? "🏆 Campeón 7-0" : `Llegó a ${SC_ROUND_LABEL[e.ronda] || e.ronda || "—"}`;
+        return (
+          <button key={e.user_id || i} onClick={() => hasSquad && onView(e)} disabled={!hasSquad} style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", textAlign: "left",
+            borderRadius: 10, background: isMe ? "rgba(79,195,247,.12)" : SC_PANEL,
+            border: `1px solid ${i === 0 ? SC_GOLD : isMe ? SC_ACCENT : SC_LINE}`,
+            cursor: hasSquad ? "pointer" : "default", color: SC_TXT, width: "100%",
+          }}>
+            <span style={{ width: 22, fontWeight: 800, color: i === 0 ? SC_GOLD : SC_MUT }}>{i + 1}</span>
+            <span style={{ fontSize: 18 }}>{e.emoji || "⚽"}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {e.nombre}{isMe ? " (tú)" : ""}
+              </div>
+              <div style={{ fontSize: 11, color: e.champion ? SC_GOLD : SC_MUT }}>{reachLabel}</div>
             </div>
-          ))}
+            {hasSquad && <span style={{ fontSize: 13, color: SC_MUT }}>👁️</span>}
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 13, color: SC_ACCENT, fontWeight: 800 }}>{e.wins} V</div>
+              <div style={{ fontSize: 11, color: SC_MUT }}>DG {e.gd >= 0 ? "+" : ""}{e.gd}</div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* Modal: once de un jugador, sobre el campo + lista ordenada por posición. */
+function SCSquadModal({ entry, onClose }) {
+  const players = scSquadOrdered(entry.squad);
+  const fKey = scSquadFormation(entry.squad);
+  const slots = fKey && SC_FORMATIONS[fKey] ? SC_FORMATIONS[fKey] : null;
+  // reconstruye el mapa hueco->jugador que espera SCPitch (necesita _flag)
+  const placed = slots
+    ? scSquadPlayers(entry.squad).reduce((acc, pl) => {
+        if (pl.k) acc[pl.k] = { ...pl, _flag: pl.flag };
+        return acc;
+      }, {})
+    : null;
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, zIndex: 260, background: "rgba(5,12,24,.85)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        width: "100%", maxWidth: 420, maxHeight: "90vh", overflowY: "auto",
+        background: "linear-gradient(160deg,#102339,#0a1628)", border: `2px solid ${SC_ACCENT}`,
+        borderRadius: 16, padding: 18,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 26 }}>{entry.emoji || "⚽"}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 18, lineHeight: 1 }}>{entry.nombre}</div>
+            <div style={{ fontSize: 11.5, color: entry.champion ? SC_GOLD : SC_MUT, marginTop: 2 }}>
+              {entry.champion ? "🏆 Campeón invicto · 7-0" : `Llegó a ${SC_ROUND_LABEL[entry.ronda] || entry.ronda || "—"}`} · {entry.wins} V · DG {entry.gd >= 0 ? "+" : ""}{entry.gd}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${SC_LINE}`, background: "transparent", color: SC_MUT, cursor: "pointer", fontSize: 14 }}>✕</button>
         </div>
-      )}
-      <button onClick={onReplay} style={scBtn("primary", true)}>Jugar 🎲</button>
+
+        {players.length === 0 ? (
+          <p style={{ fontSize: 12.5, color: SC_MUT, textAlign: "center", padding: "20px 0" }}>
+            Esta marca se guardó antes de registrar las alineaciones, así que no hay once que mostrar.
+          </p>
+        ) : (
+          <>
+            {slots && placed && (
+              <div style={{ marginBottom: 12 }}>
+                <SCPitch slots={slots} placed={placed} />
+              </div>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {players.map((p, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9, background: SC_PANEL, border: `1px solid ${SC_LINE}` }}>
+                  <span style={{ width: 34, fontSize: 10, fontWeight: 800, color: SC_ACCENT, textAlign: "center" }}>
+                    {SC_POS_ES[p.slotPos || p.pos] || p.pos}
+                  </span>
+                  <span style={{ fontSize: 16 }}>{p.flag || "🏳️"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                    <div style={{ fontSize: 10.5, color: SC_MUT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {p.team}{p.year ? ` · ${p.year}` : ""}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 17, fontWeight: 900, color: scRatingColor(p.r), minWidth: 26, textAlign: "right" }}>{p.r}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -7765,7 +7894,6 @@ function scBtn(kind, full) {
   if (kind === "disabled") return { ...base, background: SC_PANEL2, color: SC_MUT, cursor: "not-allowed", border: `1px solid ${SC_LINE}`, opacity: 0.6 };
   return base;
 }
-
 // ============================================================
 // VISTA JUEGOS
 // ============================================================
@@ -7814,7 +7942,11 @@ function GamesView({ user }) {
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>MUNDIAL DRAFT</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 · 1 jugador</div>
         </button>
-
+        <button onClick={() => setGame("sietecero")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
+          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🏆</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>SIETE CERO</div>
+          <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 histórico · 1 jugador</div>
+        </button>
       </div>
     </div>
   );
