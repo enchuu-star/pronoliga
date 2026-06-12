@@ -6966,7 +6966,7 @@ const SC_OPP_POOL = {
   "Grupos 3": [["🇯🇵", "Japón", 84], ["🇰🇷", "Corea", 83], ["🇲🇦", "Marruecos", 85]],
   "Octavos": [["🇲🇽", "México", 84], ["🇺🇸", "EE. UU.", 84], ["🇸🇳", "Senegal", 85]],
   "Cuartos": [["🇨🇭", "Suiza", 86], ["🇳🇱", "P. Bajos", 87], ["🇵🇹", "Portugal", 88]],
-  "Semis": [["🇭🇷", "Croacia", 88], ["🇧🇪", "Bélgica", 89], ["🏴", "Inglaterra", 90]],
+  "Semis": [["🇭🇷", "Croacia", 88], ["🇧🇪", "Bélgica", 89], ["🇬🇧", "Inglaterra", 90]],
   "Final": [["🇧🇷", "Brasil", 91], ["🇫🇷", "Francia", 92], ["🇦🇷", "Argentina", 93]],
 };
 
