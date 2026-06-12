@@ -1,0 +1,5013 @@
+[
+ {
+  "id": "bra-1970",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 1970,
+  "players": [
+   {
+    "n": 10,
+    "name": "Pelé",
+    "pos": "ST",
+    "r": 95,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 4,
+    "name": "C. Alberto",
+    "pos": "RB",
+    "r": 91
+   },
+   {
+    "n": 7,
+    "name": "Jairzinho",
+    "pos": "RW",
+    "r": 91
+   },
+   {
+    "n": 8,
+    "name": "Gerson",
+    "pos": "CM",
+    "r": 90
+   },
+   {
+    "n": 11,
+    "name": "Rivellino",
+    "pos": "CM",
+    "r": 90,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "Tostão",
+    "pos": "ST",
+    "r": 88
+   },
+   {
+    "n": 5,
+    "name": "Clodoaldo",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 2,
+    "name": "Piazza",
+    "pos": "CB",
+    "r": 85,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Félix",
+    "pos": "GK",
+    "r": 82
+   },
+   {
+    "n": 3,
+    "name": "Brito",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 20,
+    "name": "Edu",
+    "pos": "LW",
+    "r": 81,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 16,
+    "name": "Everaldo",
+    "pos": "LB",
+    "r": 80
+   },
+   {
+    "n": 19,
+    "name": "Paulo César",
+    "pos": "LW",
+    "r": 80
+   },
+   {
+    "n": 17,
+    "name": "Roberto",
+    "pos": "ST",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "bra-2002",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 2002,
+  "players": [
+   {
+    "n": 9,
+    "name": "Ronaldo",
+    "pos": "ST",
+    "r": 95
+   },
+   {
+    "n": 2,
+    "name": "Cafu",
+    "pos": "RB",
+    "r": 92
+   },
+   {
+    "n": 6,
+    "name": "Roberto Carlos",
+    "pos": "LB",
+    "r": 92
+   },
+   {
+    "n": 10,
+    "name": "Rivaldo",
+    "pos": "CM",
+    "r": 92,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Ronaldinho",
+    "pos": "CM",
+    "r": 89,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 3,
+    "name": "Lúcio",
+    "pos": "CB",
+    "r": 87
+   },
+   {
+    "n": 1,
+    "name": "Marcos",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 5,
+    "name": "Gilberto Silva",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 4,
+    "name": "Roque Júnior",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 14,
+    "name": "Edmilson",
+    "pos": "CB",
+    "r": 84,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Juninho",
+    "pos": "CM",
+    "r": 83,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 12,
+    "name": "Dida",
+    "pos": "GK",
+    "r": 82
+   },
+   {
+    "n": 15,
+    "name": "Kléberson",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 7,
+    "name": "Ricardinho",
+    "pos": "CM",
+    "r": 79
+   },
+   {
+    "n": 21,
+    "name": "Luizão",
+    "pos": "ST",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "bra-2026",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 2026,
+  "players": [
+   {
+    "n": 7,
+    "name": "Vinícius Jr.",
+    "pos": "LW",
+    "r": 92,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Alisson",
+    "pos": "GK",
+    "r": 90
+   },
+   {
+    "n": 4,
+    "name": "Marquinhos",
+    "pos": "CB",
+    "r": 89
+   },
+   {
+    "n": 5,
+    "name": "Casemiro",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 3,
+    "name": "Militão",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 8,
+    "name": "Bruno Guimarães",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 11,
+    "name": "Raphinha",
+    "pos": "RW",
+    "r": 86,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 14,
+    "name": "Bremer",
+    "pos": "CB",
+    "r": 85
+   },
+   {
+    "n": 16,
+    "name": "Rodrygo",
+    "pos": "RW",
+    "r": 85,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "Endrick",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 10,
+    "name": "Lucas Paquetá",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 12,
+    "name": "Bento",
+    "pos": "GK",
+    "r": 82
+   },
+   {
+    "n": 2,
+    "name": "Danilo",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 15,
+    "name": "André",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 6,
+    "name": "Wendell",
+    "pos": "LB",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "arg-1986",
+  "team": "Argentina",
+  "flag": "🇦🇷",
+  "year": 1986,
+  "players": [
+   {
+    "n": 10,
+    "name": "Maradona",
+    "pos": "CM",
+    "r": 96,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 14,
+    "name": "Burruchaga",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 19,
+    "name": "Brown",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 11,
+    "name": "Valdano",
+    "pos": "ST",
+    "r": 86,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 18,
+    "name": "Ruggeri",
+    "pos": "CB",
+    "r": 85
+   },
+   {
+    "n": 6,
+    "name": "Batista",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 7,
+    "name": "Olarticoechea",
+    "pos": "LB",
+    "r": 81
+   },
+   {
+    "n": 12,
+    "name": "Giusti",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 8,
+    "name": "Borghi",
+    "pos": "CM",
+    "r": 81,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 18,
+    "name": "Pumpido",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 5,
+    "name": "Enrique",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 9,
+    "name": "Cuciuffo",
+    "pos": "RB",
+    "r": 79,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 16,
+    "name": "Tapia",
+    "pos": "CM",
+    "r": 76
+   }
+  ]
+ },
+ {
+  "id": "arg-1998",
+  "team": "Argentina",
+  "flag": "🇦🇷",
+  "year": 1998,
+  "players": [
+   {
+    "n": 9,
+    "name": "Batistuta",
+    "pos": "ST",
+    "r": 92
+   },
+   {
+    "n": 22,
+    "name": "Zanetti",
+    "pos": "RB",
+    "r": 89,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Verón",
+    "pos": "CM",
+    "r": 89
+   },
+   {
+    "n": 4,
+    "name": "Ayala",
+    "pos": "CB",
+    "r": 88
+   },
+   {
+    "n": 10,
+    "name": "Ortega",
+    "pos": "CM",
+    "r": 87,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 21,
+    "name": "Simeone",
+    "pos": "CM",
+    "r": 85
+   },
+   {
+    "n": 7,
+    "name": "Claudio López",
+    "pos": "LW",
+    "r": 84,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Roa",
+    "pos": "GK",
+    "r": 83
+   },
+   {
+    "n": 6,
+    "name": "Sensini",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 3,
+    "name": "Chamot",
+    "pos": "LB",
+    "r": 82,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Almeyda",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 12,
+    "name": "Burgos",
+    "pos": "GK",
+    "r": 78
+   },
+   {
+    "n": 20,
+    "name": "Pineda",
+    "pos": "CM",
+    "r": 76
+   }
+  ]
+ },
+ {
+  "id": "arg-2022",
+  "team": "Argentina",
+  "flag": "🇦🇷",
+  "year": 2022,
+  "players": [
+   {
+    "n": 10,
+    "name": "Messi",
+    "pos": "RW",
+    "r": 95,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 23,
+    "name": "E. Martínez",
+    "pos": "GK",
+    "r": 89
+   },
+   {
+    "n": 22,
+    "name": "Lautaro Martínez",
+    "pos": "ST",
+    "r": 87
+   },
+   {
+    "n": 13,
+    "name": "Romero",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 7,
+    "name": "De Paul",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 24,
+    "name": "Enzo Fernández",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 9,
+    "name": "Julián Álvarez",
+    "pos": "ST",
+    "r": 86,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 19,
+    "name": "Otamendi",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 20,
+    "name": "Mac Allister",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 21,
+    "name": "Dybala",
+    "pos": "CM",
+    "r": 84,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Acuña",
+    "pos": "LB",
+    "r": 82
+   },
+   {
+    "n": 5,
+    "name": "Paredes",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 26,
+    "name": "Molina",
+    "pos": "RB",
+    "r": 81
+   },
+   {
+    "n": 12,
+    "name": "Armani",
+    "pos": "GK",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "ita-2006",
+  "team": "Italia",
+  "flag": "🇮🇹",
+  "year": 2006,
+  "players": [
+   {
+    "n": 1,
+    "name": "Buffon",
+    "pos": "GK",
+    "r": 94
+   },
+   {
+    "n": 5,
+    "name": "Cannavaro",
+    "pos": "CB",
+    "r": 92
+   },
+   {
+    "n": 21,
+    "name": "Pirlo",
+    "pos": "CM",
+    "r": 91
+   },
+   {
+    "n": 10,
+    "name": "Totti",
+    "pos": "CM",
+    "r": 90,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Del Piero",
+    "pos": "ST",
+    "r": 89,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 19,
+    "name": "Zambrotta",
+    "pos": "RB",
+    "r": 88,
+    "alt": [
+     "LB"
+    ]
+   },
+   {
+    "n": 23,
+    "name": "Materazzi",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 8,
+    "name": "Gattuso",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 3,
+    "name": "Grosso",
+    "pos": "LB",
+    "r": 84
+   },
+   {
+    "n": 16,
+    "name": "Camoranesi",
+    "pos": "RM",
+    "r": 84,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "Toni",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 20,
+    "name": "Perrotta",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 11,
+    "name": "Gilardino",
+    "pos": "ST",
+    "r": 81
+   },
+   {
+    "n": 12,
+    "name": "Peruzzi",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 2,
+    "name": "Zaccardo",
+    "pos": "CB",
+    "r": 79,
+    "alt": [
+     "RB"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "ger-1974",
+  "team": "Alemania",
+  "flag": "🇩🇪",
+  "year": 1974,
+  "players": [
+   {
+    "n": 4,
+    "name": "Beckenbauer",
+    "pos": "CB",
+    "r": 95,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 13,
+    "name": "Müller",
+    "pos": "ST",
+    "r": 94
+   },
+   {
+    "n": 1,
+    "name": "Maier",
+    "pos": "GK",
+    "r": 89
+   },
+   {
+    "n": 8,
+    "name": "Overath",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 3,
+    "name": "Breitner",
+    "pos": "LB",
+    "r": 87,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Vogts",
+    "pos": "RB",
+    "r": 86,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 6,
+    "name": "Hoeneß",
+    "pos": "CM",
+    "r": 85,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 16,
+    "name": "Bonhof",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 11,
+    "name": "Grabowski",
+    "pos": "RW",
+    "r": 84,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Schwarzenbeck",
+    "pos": "CB",
+    "r": 83
+   },
+   {
+    "n": 17,
+    "name": "Hölzenbein",
+    "pos": "LW",
+    "r": 83,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 10,
+    "name": "Wimmer",
+    "pos": "CM",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "ger-2002",
+  "team": "Alemania",
+  "flag": "🇩🇪",
+  "year": 2002,
+  "players": [
+   {
+    "n": 1,
+    "name": "Kahn",
+    "pos": "GK",
+    "r": 95
+   },
+   {
+    "n": 3,
+    "name": "Schneider",
+    "pos": "RM",
+    "r": 84,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Hamann",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 11,
+    "name": "Klose",
+    "pos": "ST",
+    "r": 84,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 12,
+    "name": "Lehmann",
+    "pos": "GK",
+    "r": 81
+   },
+   {
+    "n": 21,
+    "name": "Metzelder",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 17,
+    "name": "Frings",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 16,
+    "name": "Linke",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 2,
+    "name": "Ziege",
+    "pos": "LB",
+    "r": 80
+   },
+   {
+    "n": 5,
+    "name": "Ramelow",
+    "pos": "CM",
+    "r": 80,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 22,
+    "name": "Rehmer",
+    "pos": "RB",
+    "r": 78
+   },
+   {
+    "n": 7,
+    "name": "Neuville",
+    "pos": "ST",
+    "r": 78,
+    "alt": [
+     "LW",
+     "RW"
+    ]
+   },
+   {
+    "n": 20,
+    "name": "Bierhoff",
+    "pos": "ST",
+    "r": 76
+   },
+   {
+    "n": 14,
+    "name": "Asamoah",
+    "pos": "ST",
+    "r": 74,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "Jancker",
+    "pos": "ST",
+    "r": 74
+   }
+  ]
+ },
+ {
+  "id": "ger-2014",
+  "team": "Alemania",
+  "flag": "🇩🇪",
+  "year": 2014,
+  "players": [
+   {
+    "n": 1,
+    "name": "Neuer",
+    "pos": "GK",
+    "r": 94
+   },
+   {
+    "n": 16,
+    "name": "Lahm",
+    "pos": "RB",
+    "r": 91,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Kroos",
+    "pos": "CM",
+    "r": 91
+   },
+   {
+    "n": 13,
+    "name": "Müller",
+    "pos": "RW",
+    "r": 90,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Hummels",
+    "pos": "CB",
+    "r": 89
+   },
+   {
+    "n": 7,
+    "name": "Schweinsteiger",
+    "pos": "CM",
+    "r": 89
+   },
+   {
+    "n": 17,
+    "name": "Boateng",
+    "pos": "CB",
+    "r": 87
+   },
+   {
+    "n": 19,
+    "name": "Götze",
+    "pos": "CM",
+    "r": 86,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 6,
+    "name": "Khedira",
+    "pos": "CM",
+    "r": 85
+   },
+   {
+    "n": 11,
+    "name": "Klose",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 10,
+    "name": "Podolski",
+    "pos": "LW",
+    "r": 83,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 14,
+    "name": "Schürrle",
+    "pos": "LW",
+    "r": 83,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 4,
+    "name": "Höwedes",
+    "pos": "LB",
+    "r": 82,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 12,
+    "name": "Zieler",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 18,
+    "name": "Kramer",
+    "pos": "CM",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "fra-1998",
+  "team": "Francia",
+  "flag": "🇫🇷",
+  "year": 1998,
+  "players": [
+   {
+    "n": 10,
+    "name": "Zidane",
+    "pos": "CM",
+    "r": 94
+   },
+   {
+    "n": 15,
+    "name": "Thuram",
+    "pos": "RB",
+    "r": 91,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Desailly",
+    "pos": "CB",
+    "r": 91
+   },
+   {
+    "n": 16,
+    "name": "Barthez",
+    "pos": "GK",
+    "r": 88
+   },
+   {
+    "n": 5,
+    "name": "Blanc",
+    "pos": "CB",
+    "r": 88
+   },
+   {
+    "n": 3,
+    "name": "Lizarazu",
+    "pos": "LB",
+    "r": 87
+   },
+   {
+    "n": 7,
+    "name": "Deschamps",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 6,
+    "name": "Djorkaeff",
+    "pos": "CM",
+    "r": 86,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 12,
+    "name": "Henry",
+    "pos": "LW",
+    "r": 86,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 14,
+    "name": "Petit",
+    "pos": "CM",
+    "r": 85
+   },
+   {
+    "n": 20,
+    "name": "Trezeguet",
+    "pos": "ST",
+    "r": 82
+   },
+   {
+    "n": 17,
+    "name": "Karembeu",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 1,
+    "name": "Lama",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 9,
+    "name": "Guivarc'h",
+    "pos": "ST",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "esp-2010",
+  "team": "España",
+  "flag": "🇪🇸",
+  "year": 2010,
+  "players": [
+   {
+    "n": 1,
+    "name": "Casillas",
+    "pos": "GK",
+    "r": 93
+   },
+   {
+    "n": 8,
+    "name": "Xavi",
+    "pos": "CM",
+    "r": 92
+   },
+   {
+    "n": 6,
+    "name": "Iniesta",
+    "pos": "CM",
+    "r": 92,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 15,
+    "name": "Sergio Ramos",
+    "pos": "RB",
+    "r": 90,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Puyol",
+    "pos": "CB",
+    "r": 90
+   },
+   {
+    "n": 7,
+    "name": "Villa",
+    "pos": "ST",
+    "r": 90,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 3,
+    "name": "Piqué",
+    "pos": "CB",
+    "r": 89
+   },
+   {
+    "n": 14,
+    "name": "Xabi Alonso",
+    "pos": "CM",
+    "r": 89
+   },
+   {
+    "n": 16,
+    "name": "Busquets",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 9,
+    "name": "Torres",
+    "pos": "ST",
+    "r": 86
+   },
+   {
+    "n": 23,
+    "name": "Reina",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 22,
+    "name": "Pedro",
+    "pos": "RW",
+    "r": 84,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Capdevila",
+    "pos": "LB",
+    "r": 83
+   },
+   {
+    "n": 17,
+    "name": "Llorente",
+    "pos": "ST",
+    "r": 81
+   }
+  ]
+ },
+ {
+  "id": "ned-1974",
+  "team": "Países Bajos",
+  "flag": "🇳🇱",
+  "year": 1974,
+  "players": [
+   {
+    "n": 14,
+    "name": "Cruyff",
+    "pos": "ST",
+    "r": 95,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Neeskens",
+    "pos": "CM",
+    "r": 90
+   },
+   {
+    "n": 2,
+    "name": "Krol",
+    "pos": "LB",
+    "r": 88,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "van Hanegem",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 16,
+    "name": "Rensenbrink",
+    "pos": "LW",
+    "r": 85
+   },
+   {
+    "n": 12,
+    "name": "Haan",
+    "pos": "CB",
+    "r": 84,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 15,
+    "name": "Rep",
+    "pos": "RW",
+    "r": 84
+   },
+   {
+    "n": 17,
+    "name": "Suurbier",
+    "pos": "RB",
+    "r": 83
+   },
+   {
+    "n": 4,
+    "name": "Rijsbergen",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 6,
+    "name": "Jansen",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 11,
+    "name": "R. van de Kerkhof",
+    "pos": "RM",
+    "r": 81,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Jongbloed",
+    "pos": "GK",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "por-2026",
+  "team": "Portugal",
+  "flag": "🇵🇹",
+  "year": 2026,
+  "players": [
+   {
+    "n": 7,
+    "name": "Cristiano Ronaldo",
+    "pos": "ST",
+    "r": 90
+   },
+   {
+    "n": 3,
+    "name": "Rúben Dias",
+    "pos": "CB",
+    "r": 89
+   },
+   {
+    "n": 10,
+    "name": "Bernardo Silva",
+    "pos": "CM",
+    "r": 88,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Bruno Fernandes",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 22,
+    "name": "Diogo Costa",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 23,
+    "name": "Vitinha",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 17,
+    "name": "Rafael Leão",
+    "pos": "LW",
+    "r": 86
+   },
+   {
+    "n": 19,
+    "name": "Nuno Mendes",
+    "pos": "LB",
+    "r": 85
+   },
+   {
+    "n": 21,
+    "name": "Diogo Jota",
+    "pos": "LW",
+    "r": 85,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Diogo Dalot",
+    "pos": "RB",
+    "r": 83
+   },
+   {
+    "n": 4,
+    "name": "Pepe",
+    "pos": "CB",
+    "r": 83
+   },
+   {
+    "n": 18,
+    "name": "Rúben Neves",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 11,
+    "name": "João Félix",
+    "pos": "ST",
+    "r": 83,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 12,
+    "name": "Rui Patrício",
+    "pos": "GK",
+    "r": 81
+   }
+  ]
+ },
+ {
+  "id": "eng-2026",
+  "team": "Inglaterra",
+  "flag": "🏴",
+  "year": 2026,
+  "players": [
+   {
+    "n": 22,
+    "name": "Bellingham",
+    "pos": "CM",
+    "r": 92
+   },
+   {
+    "n": 9,
+    "name": "Kane",
+    "pos": "ST",
+    "r": 89
+   },
+   {
+    "n": 4,
+    "name": "Declan Rice",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 11,
+    "name": "Foden",
+    "pos": "CM",
+    "r": 88,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Saka",
+    "pos": "RW",
+    "r": 87
+   },
+   {
+    "n": 1,
+    "name": "Pickford",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 5,
+    "name": "Stones",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 14,
+    "name": "Walker",
+    "pos": "RB",
+    "r": 86,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 17,
+    "name": "Rashford",
+    "pos": "LW",
+    "r": 84,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 20,
+    "name": "Grealish",
+    "pos": "LW",
+    "r": 84,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Trippier",
+    "pos": "RB",
+    "r": 83
+   },
+   {
+    "n": 23,
+    "name": "Ramsdale",
+    "pos": "GK",
+    "r": 81
+   },
+   {
+    "n": 12,
+    "name": "Lewis",
+    "pos": "LB",
+    "r": 80
+   },
+   {
+    "n": 6,
+    "name": "Maguire",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 8,
+    "name": "Henderson",
+    "pos": "CM",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "uru-2010",
+  "team": "Uruguay",
+  "flag": "🇺🇾",
+  "year": 2010,
+  "players": [
+   {
+    "n": 9,
+    "name": "Luis Suárez",
+    "pos": "ST",
+    "r": 90
+   },
+   {
+    "n": 3,
+    "name": "Diego Godín",
+    "pos": "CB",
+    "r": 89
+   },
+   {
+    "n": 7,
+    "name": "Diego Forlán",
+    "pos": "ST",
+    "r": 88,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 21,
+    "name": "Edinson Cavani",
+    "pos": "ST",
+    "r": 86,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Muslera",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 19,
+    "name": "Diego Lugano",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 22,
+    "name": "Maxi Pereira",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 17,
+    "name": "Egidio Arévalo Ríos",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 11,
+    "name": "Álvaro Pereira",
+    "pos": "LM",
+    "r": 82,
+    "alt": [
+     "LB"
+    ]
+   },
+   {
+    "n": 4,
+    "name": "Jorge Fucile",
+    "pos": "LB",
+    "r": 80,
+    "alt": [
+     "RB"
+    ]
+   },
+   {
+    "n": 6,
+    "name": "Mauricio Pereyra",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 13,
+    "name": "Sebastián Eguren",
+    "pos": "CM",
+    "r": 78
+   },
+   {
+    "n": 12,
+    "name": "Castillo",
+    "pos": "GK",
+    "r": 76
+   }
+  ]
+ },
+ {
+  "id": "bra-1958",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 1958,
+  "players": [
+   {
+    "n": 7,
+    "name": "Garrincha",
+    "pos": "RW",
+    "r": 94
+   },
+   {
+    "n": 10,
+    "name": "Pelé",
+    "pos": "ST",
+    "r": 92,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 3,
+    "name": "Nilton Santos",
+    "pos": "LB",
+    "r": 90
+   },
+   {
+    "n": 8,
+    "name": "Didi",
+    "pos": "CM",
+    "r": 90
+   },
+   {
+    "n": 2,
+    "name": "Djalma Santos",
+    "pos": "RB",
+    "r": 88
+   },
+   {
+    "n": 4,
+    "name": "Bellini",
+    "pos": "CB",
+    "r": 87
+   },
+   {
+    "n": 1,
+    "name": "Gilmar",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 9,
+    "name": "Vavá",
+    "pos": "ST",
+    "r": 86
+   },
+   {
+    "n": 11,
+    "name": "Zagallo",
+    "pos": "LW",
+    "r": 86,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Orlando",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 6,
+    "name": "Zito",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 17,
+    "name": "Mazzola",
+    "pos": "ST",
+    "r": 82,
+    "alt": [
+     "CM"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "bra-1994",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 1994,
+  "players": [
+   {
+    "n": 11,
+    "name": "Romário",
+    "pos": "ST",
+    "r": 93
+   },
+   {
+    "n": 7,
+    "name": "Bebeto",
+    "pos": "ST",
+    "r": 89,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Taffarel",
+    "pos": "GK",
+    "r": 88
+   },
+   {
+    "n": 3,
+    "name": "Aldair",
+    "pos": "CB",
+    "r": 87
+   },
+   {
+    "n": 8,
+    "name": "Dunga",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 5,
+    "name": "Mauro Silva",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 15,
+    "name": "Cafu",
+    "pos": "RB",
+    "r": 85,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Jorginho",
+    "pos": "RB",
+    "r": 84
+   },
+   {
+    "n": 4,
+    "name": "Márcio Santos",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 6,
+    "name": "Branco",
+    "pos": "LB",
+    "r": 84
+   },
+   {
+    "n": 18,
+    "name": "Zinho",
+    "pos": "CM",
+    "r": 82,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 17,
+    "name": "Müller",
+    "pos": "RW",
+    "r": 81,
+    "alt": [
+     "ST"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "bra-2018",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 2018,
+  "players": [
+   {
+    "n": 10,
+    "name": "Neymar",
+    "pos": "LW",
+    "r": 92,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Alisson",
+    "pos": "GK",
+    "r": 89
+   },
+   {
+    "n": 6,
+    "name": "Marcelo",
+    "pos": "LB",
+    "r": 88
+   },
+   {
+    "n": 3,
+    "name": "Thiago Silva",
+    "pos": "CB",
+    "r": 87
+   },
+   {
+    "n": 11,
+    "name": "Coutinho",
+    "pos": "CM",
+    "r": 87,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Casemiro",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 4,
+    "name": "Miranda",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 9,
+    "name": "Gabriel Jesus",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 7,
+    "name": "Douglas Costa",
+    "pos": "RW",
+    "r": 84,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 19,
+    "name": "Willian",
+    "pos": "RW",
+    "r": 83,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Danilo",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 15,
+    "name": "Paulinho",
+    "pos": "CM",
+    "r": 81
+   }
+  ]
+ },
+ {
+  "id": "bra-2022",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 2022,
+  "players": [
+   {
+    "n": 1,
+    "name": "Alisson",
+    "pos": "GK",
+    "r": 90
+   },
+   {
+    "n": 10,
+    "name": "Neymar",
+    "pos": "LW",
+    "r": 90,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 20,
+    "name": "Vinícius Jr.",
+    "pos": "LW",
+    "r": 89,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 4,
+    "name": "Marquinhos",
+    "pos": "CB",
+    "r": 88
+   },
+   {
+    "n": 5,
+    "name": "Casemiro",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 3,
+    "name": "Thiago Silva",
+    "pos": "CB",
+    "r": 85
+   },
+   {
+    "n": 7,
+    "name": "Lucas Paquetá",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 9,
+    "name": "Richarlison",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 21,
+    "name": "Rodrygo",
+    "pos": "RW",
+    "r": 84,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Danilo",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 6,
+    "name": "Alex Sandro",
+    "pos": "LB",
+    "r": 82
+   },
+   {
+    "n": 19,
+    "name": "Antony",
+    "pos": "RW",
+    "r": 82
+   },
+   {
+    "n": 8,
+    "name": "Fred",
+    "pos": "CM",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "arg-1978",
+  "team": "Argentina",
+  "flag": "🇦🇷",
+  "year": 1978,
+  "players": [
+   {
+    "n": 12,
+    "name": "Kempes",
+    "pos": "ST",
+    "r": 91,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Fillol",
+    "pos": "GK",
+    "r": 89
+   },
+   {
+    "n": 4,
+    "name": "Passarella",
+    "pos": "CB",
+    "r": 89
+   },
+   {
+    "n": 16,
+    "name": "Ardiles",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 9,
+    "name": "Luque",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 19,
+    "name": "Galván",
+    "pos": "CB",
+    "r": 83
+   },
+   {
+    "n": 7,
+    "name": "Bertoni",
+    "pos": "RW",
+    "r": 83
+   },
+   {
+    "n": 8,
+    "name": "Gallego",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 14,
+    "name": "Houseman",
+    "pos": "LW",
+    "r": 82
+   },
+   {
+    "n": 2,
+    "name": "Olguín",
+    "pos": "RB",
+    "r": 81
+   },
+   {
+    "n": 6,
+    "name": "Tarantini",
+    "pos": "LB",
+    "r": 80
+   },
+   {
+    "n": 10,
+    "name": "Valencia",
+    "pos": "CM",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "arg-2014",
+  "team": "Argentina",
+  "flag": "🇦🇷",
+  "year": 2014,
+  "players": [
+   {
+    "n": 10,
+    "name": "Messi",
+    "pos": "RW",
+    "r": 95,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 14,
+    "name": "Mascherano",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 7,
+    "name": "Di María",
+    "pos": "CM",
+    "r": 88,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "Higuaín",
+    "pos": "ST",
+    "r": 86
+   },
+   {
+    "n": 1,
+    "name": "Romero",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 4,
+    "name": "Zabaleta",
+    "pos": "RB",
+    "r": 84
+   },
+   {
+    "n": 2,
+    "name": "Garay",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 5,
+    "name": "Biglia",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 19,
+    "name": "Banega",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 11,
+    "name": "Lavezzi",
+    "pos": "LW",
+    "r": 82,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 16,
+    "name": "Rojo",
+    "pos": "LB",
+    "r": 81
+   },
+   {
+    "n": 18,
+    "name": "Palacio",
+    "pos": "ST",
+    "r": 81
+   },
+   {
+    "n": 17,
+    "name": "Federico Fernández",
+    "pos": "CB",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "arg-2018",
+  "team": "Argentina",
+  "flag": "🇦🇷",
+  "year": 2018,
+  "players": [
+   {
+    "n": 10,
+    "name": "Messi",
+    "pos": "RW",
+    "r": 95,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Di María",
+    "pos": "CM",
+    "r": 86,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 17,
+    "name": "Otamendi",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 14,
+    "name": "Mascherano",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 9,
+    "name": "Higuaín",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 8,
+    "name": "Acuña",
+    "pos": "LB",
+    "r": 81
+   },
+   {
+    "n": 7,
+    "name": "Banega",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 12,
+    "name": "Armani",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 16,
+    "name": "Rojo",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 5,
+    "name": "Pérez",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 22,
+    "name": "Pavón",
+    "pos": "RW",
+    "r": 79
+   },
+   {
+    "n": 2,
+    "name": "Mercado",
+    "pos": "RB",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "ita-1982",
+  "team": "Italia",
+  "flag": "🇮🇹",
+  "year": 1982,
+  "players": [
+   {
+    "n": 1,
+    "name": "Zoff",
+    "pos": "GK",
+    "r": 92
+   },
+   {
+    "n": 20,
+    "name": "Rossi",
+    "pos": "ST",
+    "r": 90
+   },
+   {
+    "n": 6,
+    "name": "Scirea",
+    "pos": "CB",
+    "r": 89
+   },
+   {
+    "n": 2,
+    "name": "Gentile",
+    "pos": "CB",
+    "r": 87
+   },
+   {
+    "n": 13,
+    "name": "Tardelli",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 8,
+    "name": "Antognoni",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 16,
+    "name": "Conti",
+    "pos": "RW",
+    "r": 86,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Cabrini",
+    "pos": "LB",
+    "r": 85
+   },
+   {
+    "n": 18,
+    "name": "Graziani",
+    "pos": "ST",
+    "r": 83
+   },
+   {
+    "n": 5,
+    "name": "Collovati",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 11,
+    "name": "Altobelli",
+    "pos": "ST",
+    "r": 82
+   },
+   {
+    "n": 9,
+    "name": "Causio",
+    "pos": "CM",
+    "r": 82,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 14,
+    "name": "Oriali",
+    "pos": "CM",
+    "r": 81
+   }
+  ]
+ },
+ {
+  "id": "ita-1990",
+  "team": "Italia",
+  "flag": "🇮🇹",
+  "year": 1990,
+  "players": [
+   {
+    "n": 6,
+    "name": "Baresi",
+    "pos": "CB",
+    "r": 91
+   },
+   {
+    "n": 15,
+    "name": "R. Baggio",
+    "pos": "CM",
+    "r": 90,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 19,
+    "name": "Schillaci",
+    "pos": "ST",
+    "r": 89
+   },
+   {
+    "n": 3,
+    "name": "Maldini",
+    "pos": "LB",
+    "r": 88
+   },
+   {
+    "n": 1,
+    "name": "Zenga",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 9,
+    "name": "Vialli",
+    "pos": "ST",
+    "r": 85
+   },
+   {
+    "n": 7,
+    "name": "Bergomi",
+    "pos": "RB",
+    "r": 84,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 10,
+    "name": "Giannini",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 11,
+    "name": "Donadoni",
+    "pos": "CM",
+    "r": 84,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Ferri",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 14,
+    "name": "Berti",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 13,
+    "name": "De Napoli",
+    "pos": "CM",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "ita-1994",
+  "team": "Italia",
+  "flag": "🇮🇹",
+  "year": 1994,
+  "players": [
+   {
+    "n": 10,
+    "name": "R. Baggio",
+    "pos": "CM",
+    "r": 92,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 6,
+    "name": "Baresi",
+    "pos": "CB",
+    "r": 91
+   },
+   {
+    "n": 3,
+    "name": "Maldini",
+    "pos": "LB",
+    "r": 91
+   },
+   {
+    "n": 1,
+    "name": "Pagliuca",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 5,
+    "name": "Costacurta",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 4,
+    "name": "Donadoni",
+    "pos": "CM",
+    "r": 84,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "Signori",
+    "pos": "LW",
+    "r": 84,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 18,
+    "name": "Albertini",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 13,
+    "name": "Dino Baggio",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 14,
+    "name": "Berti",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 11,
+    "name": "Massaro",
+    "pos": "ST",
+    "r": 80
+   },
+   {
+    "n": 2,
+    "name": "Mussi",
+    "pos": "RB",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "ger-1990",
+  "team": "Alemania",
+  "flag": "🇩🇪",
+  "year": 1990,
+  "players": [
+   {
+    "n": 10,
+    "name": "Matthäus",
+    "pos": "CM",
+    "r": 92
+   },
+   {
+    "n": 18,
+    "name": "Klinsmann",
+    "pos": "ST",
+    "r": 90
+   },
+   {
+    "n": 1,
+    "name": "Illgner",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 3,
+    "name": "Brehme",
+    "pos": "LB",
+    "r": 86
+   },
+   {
+    "n": 9,
+    "name": "Völler",
+    "pos": "ST",
+    "r": 86
+   },
+   {
+    "n": 4,
+    "name": "Kohler",
+    "pos": "CB",
+    "r": 85
+   },
+   {
+    "n": 6,
+    "name": "Buchwald",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 2,
+    "name": "Augenthaler",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 8,
+    "name": "Häßler",
+    "pos": "RM",
+    "r": 83,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Möller",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 17,
+    "name": "Riedle",
+    "pos": "ST",
+    "r": 82
+   },
+   {
+    "n": 5,
+    "name": "Berthold",
+    "pos": "RB",
+    "r": 81,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 14,
+    "name": "Thon",
+    "pos": "CM",
+    "r": 81
+   }
+  ]
+ },
+ {
+  "id": "ger-2006",
+  "team": "Alemania",
+  "flag": "🇩🇪",
+  "year": 2006,
+  "players": [
+   {
+    "n": 13,
+    "name": "Ballack",
+    "pos": "CM",
+    "r": 89
+   },
+   {
+    "n": 11,
+    "name": "Klose",
+    "pos": "ST",
+    "r": 87
+   },
+   {
+    "n": 16,
+    "name": "Lahm",
+    "pos": "LB",
+    "r": 86,
+    "alt": [
+     "RB"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Schweinsteiger",
+    "pos": "CM",
+    "r": 85
+   },
+   {
+    "n": 1,
+    "name": "Lehmann",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 20,
+    "name": "Podolski",
+    "pos": "LW",
+    "r": 84,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Frings",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 21,
+    "name": "Metzelder",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 17,
+    "name": "Mertesacker",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 3,
+    "name": "Friedrich",
+    "pos": "RB",
+    "r": 80,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Kehl",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 9,
+    "name": "Neuville",
+    "pos": "ST",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "ger-2010",
+  "team": "Alemania",
+  "flag": "🇩🇪",
+  "year": 2010,
+  "players": [
+   {
+    "n": 16,
+    "name": "Lahm",
+    "pos": "RB",
+    "r": 88
+   },
+   {
+    "n": 7,
+    "name": "Schweinsteiger",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 1,
+    "name": "Neuer",
+    "pos": "GK",
+    "r": 87
+   },
+   {
+    "n": 13,
+    "name": "Müller",
+    "pos": "RW",
+    "r": 87,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Özil",
+    "pos": "CM",
+    "r": 86,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Klose",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 6,
+    "name": "Khedira",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 10,
+    "name": "Podolski",
+    "pos": "LW",
+    "r": 83,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 17,
+    "name": "Mertesacker",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 14,
+    "name": "Badstuber",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 3,
+    "name": "Friedrich",
+    "pos": "LB",
+    "r": 78
+   },
+   {
+    "n": 9,
+    "name": "Cacau",
+    "pos": "ST",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "fra-2018",
+  "team": "Francia",
+  "flag": "🇫🇷",
+  "year": 2018,
+  "players": [
+   {
+    "n": 10,
+    "name": "Mbappé",
+    "pos": "RW",
+    "r": 91,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Griezmann",
+    "pos": "ST",
+    "r": 89,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Lloris",
+    "pos": "GK",
+    "r": 88
+   },
+   {
+    "n": 13,
+    "name": "Kanté",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 6,
+    "name": "Pogba",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 4,
+    "name": "Varane",
+    "pos": "CB",
+    "r": 87
+   },
+   {
+    "n": 5,
+    "name": "Umtiti",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 21,
+    "name": "Hernández",
+    "pos": "LB",
+    "r": 84
+   },
+   {
+    "n": 9,
+    "name": "Giroud",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 2,
+    "name": "Pavard",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 14,
+    "name": "Matuidi",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 11,
+    "name": "Dembélé",
+    "pos": "RW",
+    "r": 82,
+    "alt": [
+     "LW"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "fra-2022",
+  "team": "Francia",
+  "flag": "🇫🇷",
+  "year": 2022,
+  "players": [
+   {
+    "n": 10,
+    "name": "Mbappé",
+    "pos": "RW",
+    "r": 95,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Griezmann",
+    "pos": "CM",
+    "r": 88,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Lloris",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 4,
+    "name": "Varane",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 2,
+    "name": "Koundé",
+    "pos": "RB",
+    "r": 84
+   },
+   {
+    "n": 22,
+    "name": "Hernández",
+    "pos": "LB",
+    "r": 84
+   },
+   {
+    "n": 13,
+    "name": "Tchouaméni",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 9,
+    "name": "Giroud",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 11,
+    "name": "Dembélé",
+    "pos": "RW",
+    "r": 84,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 18,
+    "name": "Upamecano",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 14,
+    "name": "Rabiot",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 25,
+    "name": "Camavinga",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 12,
+    "name": "Kolo Muani",
+    "pos": "ST",
+    "r": 82,
+    "alt": [
+     "RW"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "esp-2022",
+  "team": "España",
+  "flag": "🇪🇸",
+  "year": 2022,
+  "players": [
+   {
+    "n": 16,
+    "name": "Rodri",
+    "pos": "CM",
+    "r": 89
+   },
+   {
+    "n": 26,
+    "name": "Pedri",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 23,
+    "name": "Unai Simón",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 24,
+    "name": "Aymeric Laporte",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 18,
+    "name": "Jordi Alba",
+    "pos": "LB",
+    "r": 84
+   },
+   {
+    "n": 5,
+    "name": "Busquets",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 9,
+    "name": "Gavi",
+    "pos": "CM",
+    "r": 84,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 21,
+    "name": "Olmo",
+    "pos": "CM",
+    "r": 84,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Azpilicueta",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 8,
+    "name": "Koke",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 7,
+    "name": "Asensio",
+    "pos": "RW",
+    "r": 82,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Ferran Torres",
+    "pos": "LW",
+    "r": 82,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 12,
+    "name": "Eric García",
+    "pos": "CB",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "ned-1998",
+  "team": "Países Bajos",
+  "flag": "🇳🇱",
+  "year": 1998,
+  "players": [
+   {
+    "n": 9,
+    "name": "Bergkamp",
+    "pos": "ST",
+    "r": 92,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "van der Sar",
+    "pos": "GK",
+    "r": 88
+   },
+   {
+    "n": 10,
+    "name": "Kluivert",
+    "pos": "ST",
+    "r": 88
+   },
+   {
+    "n": 4,
+    "name": "Stam",
+    "pos": "CB",
+    "r": 87
+   },
+   {
+    "n": 8,
+    "name": "Davids",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 16,
+    "name": "Overmars",
+    "pos": "LW",
+    "r": 86
+   },
+   {
+    "n": 5,
+    "name": "Frank de Boer",
+    "pos": "CB",
+    "r": 85
+   },
+   {
+    "n": 7,
+    "name": "Cocu",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 12,
+    "name": "Reiziger",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 21,
+    "name": "Zenden",
+    "pos": "LW",
+    "r": 82,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 18,
+    "name": "Ronald de Boer",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 2,
+    "name": "Numan",
+    "pos": "LB",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "ned-2010",
+  "team": "Países Bajos",
+  "flag": "🇳🇱",
+  "year": 2010,
+  "players": [
+   {
+    "n": 11,
+    "name": "Robben",
+    "pos": "RW",
+    "r": 92
+   },
+   {
+    "n": 10,
+    "name": "Sneijder",
+    "pos": "CM",
+    "r": 91
+   },
+   {
+    "n": 9,
+    "name": "van Persie",
+    "pos": "ST",
+    "r": 87
+   },
+   {
+    "n": 7,
+    "name": "van der Vaart",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 6,
+    "name": "van Bommel",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 4,
+    "name": "Heitinga",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 5,
+    "name": "van Bronckhorst",
+    "pos": "LB",
+    "r": 82
+   },
+   {
+    "n": 17,
+    "name": "Kuyt",
+    "pos": "LW",
+    "r": 82,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Stekelenburg",
+    "pos": "GK",
+    "r": 81
+   },
+   {
+    "n": 2,
+    "name": "van der Wiel",
+    "pos": "RB",
+    "r": 81
+   },
+   {
+    "n": 3,
+    "name": "Mathijsen",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 8,
+    "name": "De Jong",
+    "pos": "CM",
+    "r": 81
+   }
+  ]
+ },
+ {
+  "id": "eng-1966",
+  "team": "Inglaterra",
+  "flag": "🏴",
+  "year": 1966,
+  "players": [
+   {
+    "n": 6,
+    "name": "Moore",
+    "pos": "CB",
+    "r": 92
+   },
+   {
+    "n": 1,
+    "name": "Banks",
+    "pos": "GK",
+    "r": 91
+   },
+   {
+    "n": 9,
+    "name": "B. Charlton",
+    "pos": "CM",
+    "r": 90
+   },
+   {
+    "n": 7,
+    "name": "Hurst",
+    "pos": "ST",
+    "r": 88
+   },
+   {
+    "n": 8,
+    "name": "Greaves",
+    "pos": "ST",
+    "r": 87
+   },
+   {
+    "n": 5,
+    "name": "J. Charlton",
+    "pos": "CB",
+    "r": 85
+   },
+   {
+    "n": 2,
+    "name": "Cohen",
+    "pos": "RB",
+    "r": 84
+   },
+   {
+    "n": 21,
+    "name": "Ball",
+    "pos": "RM",
+    "r": 84,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 20,
+    "name": "Peters",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 3,
+    "name": "Wilson",
+    "pos": "LB",
+    "r": 83
+   },
+   {
+    "n": 10,
+    "name": "Hunt",
+    "pos": "ST",
+    "r": 83
+   },
+   {
+    "n": 16,
+    "name": "Stiles",
+    "pos": "CM",
+    "r": 82
+   }
+  ]
+ },
+ {
+  "id": "bra-1982",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 1982,
+  "players": [
+   {
+    "n": 10,
+    "name": "Zico",
+    "pos": "CM",
+    "r": 93,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Sócrates",
+    "pos": "CM",
+    "r": 92
+   },
+   {
+    "n": 5,
+    "name": "Falcão",
+    "pos": "CM",
+    "r": 91
+   },
+   {
+    "n": 6,
+    "name": "Júnior",
+    "pos": "LB",
+    "r": 88
+   },
+   {
+    "n": 2,
+    "name": "Leandro",
+    "pos": "RB",
+    "r": 86
+   },
+   {
+    "n": 3,
+    "name": "Oscar",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 11,
+    "name": "Éder",
+    "pos": "LW",
+    "r": 86
+   },
+   {
+    "n": 7,
+    "name": "Cerezo",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 1,
+    "name": "Waldir Peres",
+    "pos": "GK",
+    "r": 82
+   },
+   {
+    "n": 4,
+    "name": "Luizinho",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 9,
+    "name": "Serginho",
+    "pos": "ST",
+    "r": 81
+   },
+   {
+    "n": 18,
+    "name": "Paulo Isidoro",
+    "pos": "RM",
+    "r": 80,
+    "alt": [
+     "RW"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "bra-1998",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 1998,
+  "players": [
+   {
+    "n": 9,
+    "name": "Ronaldo",
+    "pos": "ST",
+    "r": 94
+   },
+   {
+    "n": 6,
+    "name": "Roberto Carlos",
+    "pos": "LB",
+    "r": 91
+   },
+   {
+    "n": 10,
+    "name": "Rivaldo",
+    "pos": "CM",
+    "r": 90,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Cafu",
+    "pos": "RB",
+    "r": 89
+   },
+   {
+    "n": 1,
+    "name": "Taffarel",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 4,
+    "name": "Aldair",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 8,
+    "name": "Dunga",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 20,
+    "name": "Bebeto",
+    "pos": "ST",
+    "r": 86,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 18,
+    "name": "Leonardo",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 5,
+    "name": "César Sampaio",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 21,
+    "name": "Denílson",
+    "pos": "LW",
+    "r": 82
+   },
+   {
+    "n": 3,
+    "name": "Júnior Baiano",
+    "pos": "CB",
+    "r": 81
+   }
+  ]
+ },
+ {
+  "id": "bra-2014",
+  "team": "Brasil",
+  "flag": "🇧🇷",
+  "year": 2014,
+  "players": [
+   {
+    "n": 10,
+    "name": "Neymar",
+    "pos": "LW",
+    "r": 91,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 3,
+    "name": "Thiago Silva",
+    "pos": "CB",
+    "r": 88
+   },
+   {
+    "n": 6,
+    "name": "Marcelo",
+    "pos": "LB",
+    "r": 87
+   },
+   {
+    "n": 2,
+    "name": "Dani Alves",
+    "pos": "RB",
+    "r": 86
+   },
+   {
+    "n": 12,
+    "name": "Julio César",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 4,
+    "name": "David Luiz",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 11,
+    "name": "Oscar",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 19,
+    "name": "Willian",
+    "pos": "CM",
+    "r": 83,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 17,
+    "name": "Luiz Gustavo",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 8,
+    "name": "Paulinho",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 9,
+    "name": "Fred",
+    "pos": "ST",
+    "r": 81
+   },
+   {
+    "n": 23,
+    "name": "Jefferson",
+    "pos": "GK",
+    "r": 79
+   },
+   {
+    "n": 21,
+    "name": "Jô",
+    "pos": "ST",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "arg-1990",
+  "team": "Argentina",
+  "flag": "🇦🇷",
+  "year": 1990,
+  "players": [
+   {
+    "n": 10,
+    "name": "Maradona",
+    "pos": "CM",
+    "r": 94,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Caniggia",
+    "pos": "LW",
+    "r": 86,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 18,
+    "name": "Goycochea",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 21,
+    "name": "Burruchaga",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 4,
+    "name": "Sensini",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 14,
+    "name": "Giusti",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 12,
+    "name": "Pumpido",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 13,
+    "name": "Simón",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 5,
+    "name": "Basualdo",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 17,
+    "name": "Troglio",
+    "pos": "CM",
+    "r": 79
+   },
+   {
+    "n": 9,
+    "name": "Cuciuffo",
+    "pos": "RB",
+    "r": 78,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 19,
+    "name": "Lorenzo",
+    "pos": "LB",
+    "r": 78
+   },
+   {
+    "n": 8,
+    "name": "Calderón",
+    "pos": "RM",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "ita-1970",
+  "team": "Italia",
+  "flag": "🇮🇹",
+  "year": 1970,
+  "players": [
+   {
+    "n": 11,
+    "name": "Riva",
+    "pos": "ST",
+    "r": 91
+   },
+   {
+    "n": 3,
+    "name": "Facchetti",
+    "pos": "LB",
+    "r": 90
+   },
+   {
+    "n": 21,
+    "name": "Rivera",
+    "pos": "CM",
+    "r": 89
+   },
+   {
+    "n": 10,
+    "name": "Mazzola",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 1,
+    "name": "Albertosi",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 2,
+    "name": "Burgnich",
+    "pos": "RB",
+    "r": 84
+   },
+   {
+    "n": 9,
+    "name": "Boninsegna",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 4,
+    "name": "Cera",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 8,
+    "name": "De Sisti",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 5,
+    "name": "Rosato",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 6,
+    "name": "Bertini",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 16,
+    "name": "Domenghini",
+    "pos": "LW",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "ger-1954",
+  "team": "Alemania",
+  "flag": "🇩🇪",
+  "year": 1954,
+  "players": [
+   {
+    "n": 9,
+    "name": "F. Walter",
+    "pos": "CM",
+    "r": 90
+   },
+   {
+    "n": 7,
+    "name": "Rahn",
+    "pos": "RW",
+    "r": 87,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Turek",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 10,
+    "name": "O. Walter",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 13,
+    "name": "Morlock",
+    "pos": "CM",
+    "r": 83,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 4,
+    "name": "Eckel",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 11,
+    "name": "Schäfer",
+    "pos": "LW",
+    "r": 82
+   },
+   {
+    "n": 3,
+    "name": "Liebrich",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 6,
+    "name": "Posipal",
+    "pos": "RB",
+    "r": 80
+   },
+   {
+    "n": 2,
+    "name": "Kohlmeyer",
+    "pos": "LB",
+    "r": 80
+   },
+   {
+    "n": 5,
+    "name": "Mai",
+    "pos": "CB",
+    "r": 78
+   },
+   {
+    "n": 14,
+    "name": "Pfaff",
+    "pos": "CM",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "fra-1958",
+  "team": "Francia",
+  "flag": "🇫🇷",
+  "year": 1958,
+  "players": [
+   {
+    "n": 13,
+    "name": "Fontaine",
+    "pos": "ST",
+    "r": 95
+   },
+   {
+    "n": 10,
+    "name": "Kopa",
+    "pos": "CM",
+    "r": 90,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Piantoni",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 5,
+    "name": "Jonquet",
+    "pos": "CB",
+    "r": 83
+   },
+   {
+    "n": 7,
+    "name": "Wisnieski",
+    "pos": "RM",
+    "r": 81,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Abbes",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 2,
+    "name": "Kaelbel",
+    "pos": "RB",
+    "r": 80
+   },
+   {
+    "n": 4,
+    "name": "Penverne",
+    "pos": "LB",
+    "r": 80,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 12,
+    "name": "Vincent",
+    "pos": "LW",
+    "r": 80
+   },
+   {
+    "n": 6,
+    "name": "Marcel",
+    "pos": "CM",
+    "r": 79
+   },
+   {
+    "n": 3,
+    "name": "Lerond",
+    "pos": "CB",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "fra-1982",
+  "team": "Francia",
+  "flag": "🇫🇷",
+  "year": 1982,
+  "players": [
+   {
+    "n": 10,
+    "name": "Platini",
+    "pos": "CM",
+    "r": 93
+   },
+   {
+    "n": 6,
+    "name": "Tigana",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 8,
+    "name": "Giresse",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 4,
+    "name": "Trésor",
+    "pos": "CB",
+    "r": 86
+   },
+   {
+    "n": 2,
+    "name": "Amoros",
+    "pos": "RB",
+    "r": 84
+   },
+   {
+    "n": 11,
+    "name": "Six",
+    "pos": "LW",
+    "r": 84
+   },
+   {
+    "n": 9,
+    "name": "Rocheteau",
+    "pos": "ST",
+    "r": 84,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 3,
+    "name": "Bossis",
+    "pos": "LB",
+    "r": 82
+   },
+   {
+    "n": 5,
+    "name": "Janvion",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 12,
+    "name": "Genghini",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 1,
+    "name": "Ettori",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 17,
+    "name": "Soler",
+    "pos": "ST",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "fra-2006",
+  "team": "Francia",
+  "flag": "🇫🇷",
+  "year": 2006,
+  "players": [
+   {
+    "n": 10,
+    "name": "Zidane",
+    "pos": "CM",
+    "r": 92
+   },
+   {
+    "n": 12,
+    "name": "Henry",
+    "pos": "ST",
+    "r": 90
+   },
+   {
+    "n": 15,
+    "name": "Thuram",
+    "pos": "CB",
+    "r": 88,
+    "alt": [
+     "RB"
+    ]
+   },
+   {
+    "n": 4,
+    "name": "Vieira",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 6,
+    "name": "Makelele",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 5,
+    "name": "Gallas",
+    "pos": "CB",
+    "r": 85
+   },
+   {
+    "n": 16,
+    "name": "Barthez",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 3,
+    "name": "Abidal",
+    "pos": "LB",
+    "r": 84
+   },
+   {
+    "n": 7,
+    "name": "Ribéry",
+    "pos": "LW",
+    "r": 84,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 19,
+    "name": "Sagnol",
+    "pos": "RB",
+    "r": 83
+   },
+   {
+    "n": 14,
+    "name": "Malouda",
+    "pos": "LW",
+    "r": 83,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 22,
+    "name": "Saha",
+    "pos": "ST",
+    "r": 82
+   }
+  ]
+ },
+ {
+  "id": "eng-1970",
+  "team": "Inglaterra",
+  "flag": "🏴",
+  "year": 1970,
+  "players": [
+   {
+    "n": 1,
+    "name": "Banks",
+    "pos": "GK",
+    "r": 92
+   },
+   {
+    "n": 6,
+    "name": "Moore",
+    "pos": "CB",
+    "r": 92
+   },
+   {
+    "n": 9,
+    "name": "B. Charlton",
+    "pos": "CM",
+    "r": 90
+   },
+   {
+    "n": 11,
+    "name": "Hurst",
+    "pos": "ST",
+    "r": 86
+   },
+   {
+    "n": 16,
+    "name": "Peters",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 18,
+    "name": "Ball",
+    "pos": "RM",
+    "r": 84,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 4,
+    "name": "Mullery",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 21,
+    "name": "Lee",
+    "pos": "RW",
+    "r": 83
+   },
+   {
+    "n": 2,
+    "name": "Newton",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 5,
+    "name": "Labone",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 3,
+    "name": "Cooper",
+    "pos": "LB",
+    "r": 82
+   },
+   {
+    "n": 22,
+    "name": "Bonetti",
+    "pos": "GK",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "ned-1978",
+  "team": "Países Bajos",
+  "flag": "🇳🇱",
+  "year": 1978,
+  "players": [
+   {
+    "n": 17,
+    "name": "Krol",
+    "pos": "LB",
+    "r": 89,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 13,
+    "name": "Neeskens",
+    "pos": "CM",
+    "r": 89
+   },
+   {
+    "n": 7,
+    "name": "Rensenbrink",
+    "pos": "LW",
+    "r": 87
+   },
+   {
+    "n": 8,
+    "name": "Haan",
+    "pos": "CM",
+    "r": 84,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "Rep",
+    "pos": "RW",
+    "r": 84
+   },
+   {
+    "n": 20,
+    "name": "Suurbier",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 2,
+    "name": "Brandts",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 6,
+    "name": "W. van de Kerkhof",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 11,
+    "name": "R. van de Kerkhof",
+    "pos": "RM",
+    "r": 81,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Jongbloed",
+    "pos": "GK",
+    "r": 80
+   },
+   {
+    "n": 3,
+    "name": "Poortvliet",
+    "pos": "LB",
+    "r": 80
+   },
+   {
+    "n": 14,
+    "name": "Nanninga",
+    "pos": "ST",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "por-2018",
+  "team": "Portugal",
+  "flag": "🇵🇹",
+  "year": 2018,
+  "players": [
+   {
+    "n": 7,
+    "name": "Cristiano Ronaldo",
+    "pos": "ST",
+    "r": 93
+   },
+   {
+    "n": 10,
+    "name": "Bernardo Silva",
+    "pos": "CM",
+    "r": 86,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Rui Patrício",
+    "pos": "GK",
+    "r": 84
+   },
+   {
+    "n": 5,
+    "name": "Raphaël Guerreiro",
+    "pos": "LB",
+    "r": 84
+   },
+   {
+    "n": 3,
+    "name": "Pepe",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 8,
+    "name": "João Moutinho",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 14,
+    "name": "William Carvalho",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 16,
+    "name": "Bruno Fernandes",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 17,
+    "name": "Guedes",
+    "pos": "LW",
+    "r": 82,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 21,
+    "name": "Cédric",
+    "pos": "RB",
+    "r": 81
+   },
+   {
+    "n": 18,
+    "name": "Gelson Martins",
+    "pos": "RW",
+    "r": 81
+   },
+   {
+    "n": 6,
+    "name": "José Fonte",
+    "pos": "CB",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "uru-1950",
+  "team": "Uruguay",
+  "flag": "🇺🇾",
+  "year": 1950,
+  "players": [
+   {
+    "n": 10,
+    "name": "Schiaffino",
+    "pos": "ST",
+    "r": 90,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Varela",
+    "pos": "CM",
+    "r": 88,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 7,
+    "name": "Ghiggia",
+    "pos": "RW",
+    "r": 87
+   },
+   {
+    "n": 6,
+    "name": "Andrade",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 1,
+    "name": "Máspoli",
+    "pos": "GK",
+    "r": 85
+   },
+   {
+    "n": 9,
+    "name": "Míguez",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 8,
+    "name": "Pérez",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 11,
+    "name": "Morán",
+    "pos": "LW",
+    "r": 82
+   },
+   {
+    "n": 2,
+    "name": "Gambetta",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 4,
+    "name": "Tejera",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 3,
+    "name": "González",
+    "pos": "LB",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "hun-1954",
+  "team": "Hungría",
+  "flag": "🇭🇺",
+  "year": 1954,
+  "players": [
+   {
+    "n": 10,
+    "name": "Puskás",
+    "pos": "ST",
+    "r": 95,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Kocsis",
+    "pos": "ST",
+    "r": 92
+   },
+   {
+    "n": 9,
+    "name": "Hidegkuti",
+    "pos": "CM",
+    "r": 90,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 1,
+    "name": "Grosics",
+    "pos": "GK",
+    "r": 88
+   },
+   {
+    "n": 5,
+    "name": "Bozsik",
+    "pos": "CM",
+    "r": 88
+   },
+   {
+    "n": 7,
+    "name": "Czibor",
+    "pos": "LW",
+    "r": 87
+   },
+   {
+    "n": 3,
+    "name": "Lóránt",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 2,
+    "name": "Buzánszky",
+    "pos": "RB",
+    "r": 81
+   },
+   {
+    "n": 6,
+    "name": "Zakariás",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 4,
+    "name": "Lantos",
+    "pos": "LB",
+    "r": 80
+   },
+   {
+    "n": 11,
+    "name": "Tóth",
+    "pos": "LW",
+    "r": 80
+   }
+  ]
+ },
+ {
+  "id": "kor-2002",
+  "team": "Corea del Sur",
+  "flag": "🇰🇷",
+  "year": 2002,
+  "players": [
+   {
+    "n": 21,
+    "name": "Park Ji-sung",
+    "pos": "CM",
+    "r": 86,
+    "alt": [
+     "RM"
+    ]
+   },
+   {
+    "n": 20,
+    "name": "Hong Myung-bo",
+    "pos": "CB",
+    "r": 84
+   },
+   {
+    "n": 1,
+    "name": "Lee Woon-jae",
+    "pos": "GK",
+    "r": 82
+   },
+   {
+    "n": 19,
+    "name": "Ahn Jung-hwan",
+    "pos": "ST",
+    "r": 82
+   },
+   {
+    "n": 17,
+    "name": "Lee Young-pyo",
+    "pos": "LB",
+    "r": 81
+   },
+   {
+    "n": 16,
+    "name": "Lee Chun-soo",
+    "pos": "LW",
+    "r": 81,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 4,
+    "name": "Choi Jin-cheul",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 6,
+    "name": "Yoo Sang-chul",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 18,
+    "name": "Hwang Sun-hong",
+    "pos": "ST",
+    "r": 80
+   },
+   {
+    "n": 8,
+    "name": "Choi Tae-uk",
+    "pos": "CM",
+    "r": 79
+   },
+   {
+    "n": 2,
+    "name": "Kim Tae-young",
+    "pos": "RB",
+    "r": 78,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Cha Du-ri",
+    "pos": "RW",
+    "r": 78
+   }
+  ]
+ },
+ {
+  "id": "mar-2022",
+  "team": "Marruecos",
+  "flag": "🇲🇦",
+  "year": 2022,
+  "players": [
+   {
+    "n": 2,
+    "name": "Hakimi",
+    "pos": "RB",
+    "r": 87
+   },
+   {
+    "n": 1,
+    "name": "Yassine Bounou",
+    "pos": "GK",
+    "r": 86
+   },
+   {
+    "n": 4,
+    "name": "Sofyan Amrabat",
+    "pos": "CM",
+    "r": 84
+   },
+   {
+    "n": 7,
+    "name": "Hakim Ziyech",
+    "pos": "RM",
+    "r": 84,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 19,
+    "name": "En-Nesyri",
+    "pos": "ST",
+    "r": 83
+   },
+   {
+    "n": 5,
+    "name": "Aguerd",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 6,
+    "name": "Mazraoui",
+    "pos": "LB",
+    "r": 82
+   },
+   {
+    "n": 17,
+    "name": "Sofiane Boufal",
+    "pos": "RM",
+    "r": 82,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 3,
+    "name": "Romain Saiss",
+    "pos": "CB",
+    "r": 81
+   },
+   {
+    "n": 8,
+    "name": "Ounahi",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 15,
+    "name": "Selim Amallah",
+    "pos": "CM",
+    "r": 79
+   },
+   {
+    "n": 14,
+    "name": "Aboukhlal",
+    "pos": "RW",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "cro-2018",
+  "team": "Croacia",
+  "flag": "🇭🇷",
+  "year": 2018,
+  "players": [
+   {
+    "n": 10,
+    "name": "Modrić",
+    "pos": "CM",
+    "r": 92
+   },
+   {
+    "n": 7,
+    "name": "Rakitić",
+    "pos": "CM",
+    "r": 87
+   },
+   {
+    "n": 17,
+    "name": "Mandžukić",
+    "pos": "ST",
+    "r": 87
+   },
+   {
+    "n": 4,
+    "name": "Perišić",
+    "pos": "LW",
+    "r": 86,
+    "alt": [
+     "LM"
+    ]
+   },
+   {
+    "n": 11,
+    "name": "Brozović",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 23,
+    "name": "Subašić",
+    "pos": "GK",
+    "r": 82
+   },
+   {
+    "n": 2,
+    "name": "Vrsaljko",
+    "pos": "RB",
+    "r": 82
+   },
+   {
+    "n": 6,
+    "name": "Lovren",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 18,
+    "name": "Rebić",
+    "pos": "RM",
+    "r": 82,
+    "alt": [
+     "LW"
+    ]
+   },
+   {
+    "n": 9,
+    "name": "Kramarić",
+    "pos": "ST",
+    "r": 81
+   },
+   {
+    "n": 21,
+    "name": "Vida",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 3,
+    "name": "Strinić",
+    "pos": "LB",
+    "r": 79
+   }
+  ]
+ },
+ {
+  "id": "eng-2018",
+  "team": "Inglaterra",
+  "flag": "🏴",
+  "year": 2018,
+  "players": [
+   {
+    "n": 9,
+    "name": "Kane",
+    "pos": "ST",
+    "r": 87
+   },
+   {
+    "n": 2,
+    "name": "Walker",
+    "pos": "RB",
+    "r": 84,
+    "alt": [
+     "CB"
+    ]
+   },
+   {
+    "n": 19,
+    "name": "Sterling",
+    "pos": "LW",
+    "r": 84,
+    "alt": [
+     "ST"
+    ]
+   },
+   {
+    "n": 20,
+    "name": "Alli",
+    "pos": "CM",
+    "r": 83
+   },
+   {
+    "n": 1,
+    "name": "Pickford",
+    "pos": "GK",
+    "r": 82
+   },
+   {
+    "n": 5,
+    "name": "Stones",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 6,
+    "name": "Maguire",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 8,
+    "name": "Henderson",
+    "pos": "CM",
+    "r": 81
+   },
+   {
+    "n": 17,
+    "name": "Trippier",
+    "pos": "RB",
+    "r": 81
+   },
+   {
+    "n": 7,
+    "name": "Lingard",
+    "pos": "CM",
+    "r": 80
+   },
+   {
+    "n": 3,
+    "name": "Rose",
+    "pos": "LB",
+    "r": 79
+   },
+   {
+    "n": 18,
+    "name": "Young",
+    "pos": "LB",
+    "r": 78,
+    "alt": [
+     "LM"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "por-1966",
+  "team": "Portugal",
+  "flag": "🇵🇹",
+  "year": 1966,
+  "players": [
+   {
+    "n": 9,
+    "name": "Eusébio",
+    "pos": "ST",
+    "r": 94,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 8,
+    "name": "Coluna",
+    "pos": "CM",
+    "r": 86
+   },
+   {
+    "n": 10,
+    "name": "Torres",
+    "pos": "ST",
+    "r": 84
+   },
+   {
+    "n": 11,
+    "name": "Simões",
+    "pos": "LW",
+    "r": 84
+   },
+   {
+    "n": 1,
+    "name": "Costa Pereira",
+    "pos": "GK",
+    "r": 82
+   },
+   {
+    "n": 4,
+    "name": "Vicente",
+    "pos": "CB",
+    "r": 82
+   },
+   {
+    "n": 6,
+    "name": "Graça",
+    "pos": "CM",
+    "r": 82
+   },
+   {
+    "n": 7,
+    "name": "Augusto",
+    "pos": "RM",
+    "r": 81,
+    "alt": [
+     "CM"
+    ]
+   },
+   {
+    "n": 5,
+    "name": "Baptista",
+    "pos": "CB",
+    "r": 80
+   },
+   {
+    "n": 14,
+    "name": "José Augusto",
+    "pos": "RM",
+    "r": 80,
+    "alt": [
+     "RW"
+    ]
+   },
+   {
+    "n": 2,
+    "name": "Festa",
+    "pos": "RB",
+    "r": 79
+   },
+   {
+    "n": 3,
+    "name": "Hilário",
+    "pos": "LB",
+    "r": 79
+   }
+  ]
+ }
+]
