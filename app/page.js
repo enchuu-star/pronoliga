@@ -6851,6 +6851,931 @@ function DraftGame({ user, onBack }) {
 }
 
 // ============================================================
+// SIETE CERO (7-0) — modo draft de selecciones históricas
+// Pega TODO este bloque en app/page.js JUSTO ANTES de "function GamesView(...)".
+// Requiere: sieteCeroSquads.json en /public  ·  tabla siete_cero_scores en Supabase.
+// Usa el supabase global y los hooks ya importados arriba (useState/useEffect/useRef).
+// ============================================================
+/* ============================================================================
+   SIETE-CERO  ·  modo de juego estilo "Sete a Zero" para Porra Vallau
+   ----------------------------------------------------------------------------
+   Bucle: cada turno se sortea una SELECCIÓN HISTÓRICA. Eliges 1 jugador y se
+   coloca en un hueco compatible de tu formación. 11 turnos -> once cerrado ->
+   el motor simula 3 grupos + 4 eliminatorias. Ganas los 7 => cierras el 7-0.
+
+   USO EN TU APP (ya integrado): se renderiza desde GamesView como
+     <SieteCeroGame user={user} onBack={() => setGame(null)} />
+   Usa el supabase global y carga las plantillas desde /sieteCeroSquads.json
+   ========================================================================== */
+
+const SC_ACCENT = "#4fc3f7";          // tu azul (GREEN)
+const SC_ACCENT_DARK = "#2b8fc0";
+const SC_GOLD = "#ffce54";
+const SC_RED = "#ef5350";
+const SC_BG = "#0d1117";
+const SC_PANEL = "#161b22";
+const SC_PANEL2 = "#1f2630";
+const SC_LINE = "#2a323d";
+const SC_TXT = "#e6edf3";
+const SC_MUT = "#8b98a6";
+
+/* ----------------------------- DATASET (54 SELECCIONES) ------------------- */
+/* 54 plantillas históricas (Brasil 70 → 2026). pos = principal, alt = comodín.*/
+/* También disponible como sieteCeroSquads.json si prefieres importarlo aparte.*/
+let SC_SQUADS = [];
+
+/* ------------------------------ FORMACIONES ------------------------------- */
+/* x/y en % sobre un campo vertical (ataque arriba). accepts = posiciones ok.  */
+const SC_FORMATIONS = {
+  "4-3-3": [
+    { k: "GK", accepts: ["GK"], x: 50, y: 90 },
+    { k: "RB", accepts: ["RB", "CB"], x: 84, y: 72 },
+    { k: "CBd", accepts: ["CB"], x: 62, y: 78 },
+    { k: "CBi", accepts: ["CB"], x: 38, y: 78 },
+    { k: "LB", accepts: ["LB", "CB"], x: 16, y: 72 },
+    { k: "MCd", accepts: ["CDM", "CM"], x: 68, y: 52 },
+    { k: "MC", accepts: ["CM", "CDM", "CAM"], x: 50, y: 56 },
+    { k: "MCi", accepts: ["CM", "CAM"], x: 32, y: 52 },
+    { k: "ED", accepts: ["RW", "RM", "CAM", "ST"], x: 82, y: 26 },
+    { k: "DC", accepts: ["ST", "CAM"], x: 50, y: 18 },
+    { k: "EI", accepts: ["LW", "LM", "CAM", "ST"], x: 18, y: 26 },
+  ],
+  "4-4-2": [
+    { k: "GK", accepts: ["GK"], x: 50, y: 90 },
+    { k: "RB", accepts: ["RB", "CB"], x: 84, y: 72 },
+    { k: "CBd", accepts: ["CB"], x: 62, y: 78 },
+    { k: "CBi", accepts: ["CB"], x: 38, y: 78 },
+    { k: "LB", accepts: ["LB", "CB"], x: 16, y: 72 },
+    { k: "MD", accepts: ["RM", "RW", "CM"], x: 82, y: 48 },
+    { k: "MCd", accepts: ["CM", "CDM"], x: 60, y: 52 },
+    { k: "MCi", accepts: ["CM", "CAM", "CDM"], x: 40, y: 52 },
+    { k: "MI", accepts: ["LM", "LW", "CM"], x: 18, y: 48 },
+    { k: "DCd", accepts: ["ST", "CAM"], x: 62, y: 20 },
+    { k: "DCi", accepts: ["ST", "CAM"], x: 38, y: 20 },
+  ],
+  "4-2-3-1": [
+    { k: "GK", accepts: ["GK"], x: 50, y: 90 },
+    { k: "RB", accepts: ["RB", "CB"], x: 84, y: 72 },
+    { k: "CBd", accepts: ["CB"], x: 62, y: 78 },
+    { k: "CBi", accepts: ["CB"], x: 38, y: 78 },
+    { k: "LB", accepts: ["LB", "CB"], x: 16, y: 72 },
+    { k: "MCDd", accepts: ["CDM", "CM"], x: 62, y: 58 },
+    { k: "MCDi", accepts: ["CDM", "CM"], x: 38, y: 58 },
+    { k: "MP", accepts: ["CAM", "CM"], x: 50, y: 40 },
+    { k: "ED", accepts: ["RW", "RM", "ST"], x: 82, y: 32 },
+    { k: "EI", accepts: ["LW", "LM", "ST"], x: 18, y: 32 },
+    { k: "DC", accepts: ["ST", "CAM"], x: 50, y: 16 },
+  ],
+};
+
+const SC_POS_LABEL = {
+  GK: "POR", RB: "LD", CB: "DFC", LB: "LI", CDM: "MCD",
+  CM: "MC", CAM: "MP", RM: "MD", LM: "MI", RW: "ED", LW: "EI", ST: "DC",
+};
+
+/* ------------------------------- HELPERS ---------------------------------- */
+const scFits = (player, slot) => {
+  const opts = [player.pos, ...(player.alt || [])];
+  return opts.some((p) => slot.accepts.includes(p));
+};
+
+const scBestSlotFor = (player, slots, placed) => {
+  // hueco abierto compatible; prioriza match exacto de pos principal
+  const open = slots.filter((s) => !placed[s.k] && scFits(player, s));
+  if (!open.length) return null;
+  const exact = open.find((s) => s.accepts[0] === player.pos);
+  return (exact || open[0]).k;
+};
+
+const scPoisson = (lambda) => {
+  const L = Math.exp(-lambda);
+  let k = 0, p = 1;
+  do { k++; p *= Math.random(); } while (p > L);
+  return k - 1;
+};
+
+const scTeamStrength = (xi) => {
+  const vals = Object.values(xi).filter(Boolean);
+  if (!vals.length) return 70;
+  return Math.round(vals.reduce((a, p) => a + p.r, 0) / vals.length);
+};
+
+const SC_OPP_POOL = {
+  "Grupos 1": [["🇨🇻", "Cabo Verde", 74], ["🇵🇦", "Panamá", 73], ["🇺🇿", "Uzbekistán", 75]],
+  "Grupos 2": [["🇶🇦", "Qatar", 76], ["🇸🇦", "Arabia Saudí", 77], ["🇨🇦", "Canadá", 78]],
+  "Grupos 3": [["🇯🇵", "Japón", 81], ["🇰🇷", "Corea", 80], ["🇲🇦", "Marruecos", 82]],
+  "Octavos": [["🇲🇽", "México", 81], ["🇺🇸", "EE. UU.", 80], ["🇸🇳", "Senegal", 82]],
+  "Cuartos": [["🇨🇭", "Suiza", 83], ["🇳🇱", "P. Bajos", 85], ["🇵🇹", "Portugal", 86]],
+  "Semis": [["🇭🇷", "Croacia", 85], ["🇧🇪", "Bélgica", 86], ["🏴", "Inglaterra", 87]],
+  "Final": [["🇧🇷", "Brasil", 88], ["🇫🇷", "Francia", 89], ["🇦🇷", "Argentina", 90]],
+};
+const SC_ROUNDS = ["Grupos 1", "Grupos 2", "Grupos 3", "Octavos", "Cuartos", "Semis", "Final"];
+const SC_KO_FROM = 3; // a partir de Octavos, perder = eliminado
+
+// nombres mostrados de cada ronda
+const SC_ROUND_LABEL = {
+  "Grupos 1": "Fase de grupos · Jornada 1",
+  "Grupos 2": "Fase de grupos · Jornada 2",
+  "Grupos 3": "Fase de grupos · Jornada 3",
+  "Octavos": "Octavos de final",
+  "Cuartos": "Cuartos de final",
+  "Semis": "Semifinal",
+  "Final": "Final",
+};
+const SC_ROUND_SHORT = {
+  "Grupos 1": "Grupos J1", "Grupos 2": "Grupos J2", "Grupos 3": "Grupos J3",
+  "Octavos": "Octavos", "Cuartos": "Cuartos", "Semis": "Semis", "Final": "Final",
+};
+
+/* --- Modelo de fuerza (réplica fiel del oficial: media + equilibrio + posición) ---
+   El wiki de Sete a Zero indica que el resultado se calcula por la calidad global
+   de la plantilla, el equilibrio de la formación y la fuerza por posición, con el
+   portero decidiendo los partidos ajustados (media <85 sufre en octavos). El
+   marcador exacto es cerrado; esto lo reproduce con esos mismos factores.        */
+const SC_LINE_OF = (pos) =>
+  pos === "GK" ? "GK"
+  : ["RB", "CB", "LB"].includes(pos) ? "DEF"
+  : ["CDM", "CM", "CAM", "RM", "LM"].includes(pos) ? "MID"
+  : "ATT";
+
+const scPowerOf = (xi) => {
+  const vals = Object.values(xi).filter(Boolean);
+  if (!vals.length) return 70;
+  const mean = vals.reduce((a, p) => a + p.r, 0) / vals.length;
+  // fuerza por línea
+  const byLine = { GK: [], DEF: [], MID: [], ATT: [] };
+  vals.forEach((p) => byLine[SC_LINE_OF(p.pos)].push(p.r));
+  const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : mean);
+  const gk = avg(byLine.GK), def = avg(byLine.DEF), mid = avg(byLine.MID), att = avg(byLine.ATT);
+  // equilibrio: penaliza la línea más floja respecto a la media
+  const weakest = Math.min(def, mid, att);
+  const balancePenalty = Math.max(0, mean - weakest) * 0.12;
+  // portero: pesa en los ajustados; bonus/malus según se aleje de la media
+  const gkFactor = (gk - mean) * 0.18;
+  return mean + gkFactor - balancePenalty;
+};
+
+// pmf de Poisson para derivar probabilidades coherentes con los goles simulados
+const scPPoisson = (k, l) => (Math.exp(-l) * Math.pow(l, k)) / scFactorial(k);
+function scFactorial(n) { let f = 1; for (let i = 2; i <= n; i++) f *= i; return f; }
+
+const scLambdasFor = (diff) => ({
+  you: Math.max(0.22, 1.35 + diff * 0.09),
+  opp: Math.max(0.2, 1.35 - diff * 0.09),
+});
+
+// Prob. de ganar el partido (incluye penaltis en eliminatorias)
+const scWinProbability = (diff, isKO) => {
+  const { you, opp } = scLambdasFor(diff);
+  let pWin = 0, pDraw = 0, pLoss = 0;
+  for (let a = 0; a <= 9; a++) {
+    for (let b = 0; b <= 9; b++) {
+      const p = scPPoisson(a, you) * scPPoisson(b, opp);
+      if (a > b) pWin += p; else if (a < b) pLoss += p; else pDraw += p;
+    }
+  }
+  if (isKO) {
+    const penEdge = Math.min(0.85, Math.max(0.15, 0.5 + diff * 0.02));
+    pWin += pDraw * penEdge; pLoss += pDraw * (1 - penEdge); pDraw = 0;
+  }
+  return Math.round(pWin * 100);
+};
+
+/* ---------------------- Narración inventada del partido -------------------- */
+const scPick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+// Goleadores rivales: si el país rival tiene plantilla en el dataset, usamos un
+// jugador real de ese país; si no, no nombramos a nadie.
+const SC_NATION_ALIAS = { "P. Bajos": "Países Bajos", "Corea": "Corea del Sur" };
+let SC_NATION_ATTACKERS = null;
+const scBuildNationAttackers = () => {
+  const m = {};
+  SC_SQUADS.forEach((s) => {
+    const atk = s.players.filter((p) => ["ATT", "MID"].includes(SC_LINE_OF(p.pos)));
+    (m[s.team] = m[s.team] || []).push(...atk.map((p) => p.name));
+  });
+  Object.keys(m).forEach((k) => (m[k] = [...new Set(m[k])]));
+  return m;
+};
+const scOppScorer = (oppName) => {
+  if (!SC_NATION_ATTACKERS) SC_NATION_ATTACKERS = scBuildNationAttackers();
+  const pool = SC_NATION_ATTACKERS[SC_NATION_ALIAS[oppName] || oppName];
+  return pool && pool.length ? scPick(pool) : null;
+};
+
+const scBuildMatchEvents = (xi, yg, og, oppName) => {
+  const players = Object.values(xi).filter(Boolean);
+  const att = players.filter((p) => ["ATT", "MID"].includes(SC_LINE_OF(p.pos)));
+  const gk = players.find((p) => p.pos === "GK");
+  const def = players.filter((p) => SC_LINE_OF(p.pos) === "DEF");
+  const mine = (pref) => (pref.length ? scPick(pref) : scPick(players));
+
+  // minutos de gol repartidos
+  const minutes = (n) => {
+    const set = new Set();
+    while (set.size < n) set.add(1 + Math.floor(Math.random() * 92));
+    return [...set];
+  };
+  const evts = [];
+  minutes(yg).forEach((m) => {
+    const sc = mine(att);
+    evts.push({ min: m, side: "you", type: "goal", who: sc.name,
+      text: `¡GOOOL! ${sc.name} ${scPick(["define cruzado", "remata de cabeza", "fusila desde el área", "la clava al ángulo", "marca de penalti", "aprovecha el rechace"])}.` });
+  });
+  minutes(og).forEach((m) => {
+    const sc = scOppScorer(oppName);
+    evts.push({ min: m, side: "opp", type: "goal", who: sc,
+      text: sc
+        ? `Gol de ${oppName}. ${sc} ${scPick(["bate al portero", "define en el área", "remata a placer", "marca tras un rechace"])}.`
+        : `Gol de ${oppName} ${scPick(["tras un contragolpe", "en un córner", "con un disparo lejano", "en boca de gol"])}.` });
+  });
+
+  // eventos de relleno (ocasiones, paradas, palos, tarjetas)
+  const fillers = 5 + Math.floor(Math.random() * 4);
+  const usedMin = new Set(evts.map((e) => e.min));
+  for (let i = 0; i < fillers; i++) {
+    let m; do { m = 1 + Math.floor(Math.random() * 92); } while (usedMin.has(m));
+    usedMin.add(m);
+    const roll = Math.random();
+    if (roll < 0.28 && gk) {
+      evts.push({ min: m, side: "you", type: "save",
+        text: `🧤 ${scPick(["Paradón", "Gran intervención", "Mano salvadora"])} de ${gk.name} ${scPick(["abajo a su palo", "en el mano a mano", "desviando a córner"])}.` });
+    } else if (roll < 0.5) {
+      const w = mine(att);
+      evts.push({ min: m, side: "you", type: "chance",
+        text: `⚡ ${scPick(["Clarísima", "Ocasión enorme", "Aviso"])}: ${w.name} ${scPick(["estrella el balón en el palo", "se topa con el meta", "manda el remate alto por poco"])}.` });
+    } else if (roll < 0.72) {
+      evts.push({ min: m, side: "opp", type: "chance",
+        text: `😬 ${oppName} perdona: ${scPick(["un disparo se estrella en el larguero", "un remate se va fuera solo ante el portero", "obligan a despejar sobre la línea"])}.` });
+    } else if (roll < 0.86) {
+      const d = mine(def.length ? def : players);
+      evts.push({ min: m, side: "you", type: "tackle",
+        text: `🛡️ Entradón de ${d.name} para cortar un contragolpe peligroso.` });
+    } else {
+      evts.push({ min: m, side: "opp", type: "card",
+        text: `🟨 Amarilla a ${oppName} por una falta dura.` });
+    }
+  }
+  evts.sort((a, b) => a.min - b.min);
+  return evts;
+};
+
+const scSimulateCampaign = (xi) => {
+  const power = scPowerOf(xi);
+  const matches = [];
+  let gf = 0, gc = 0, wins = 0, eliminated = false, reached = "";
+  for (let i = 0; i < SC_ROUNDS.length; i++) {
+    const round = SC_ROUNDS[i];
+    const [flag, name, oppR] = scPick(SC_OPP_POOL[round]);
+    const diff = power - oppR;
+    const isKO = i >= SC_KO_FROM;
+    const { you, opp } = scLambdasFor(diff);
+    let yg = scPoisson(you);
+    let og = scPoisson(opp);
+    let pens = null;
+    if (isKO && yg === og) {
+      const meWins = Math.random() < Math.min(0.85, Math.max(0.15, 0.5 + diff * 0.02));
+      pens = meWins ? "gana" : "pierde";
+    }
+    let outcome;
+    if (yg > og) outcome = "W";
+    else if (yg < og) outcome = "L";
+    else outcome = pens === "gana" ? "W" : pens === "pierde" ? "L" : "D";
+
+    const events = scBuildMatchEvents(xi, yg, og, name);
+    const pWin = scWinProbability(diff, isKO);
+
+    gf += yg; gc += og;
+    if (outcome === "W") wins++;
+    matches.push({ round, flag, name, oppR, yg, og, outcome, pens, events, pWin, isKO });
+    reached = round;
+    if (isKO && outcome !== "W") { eliminated = true; break; }
+  }
+  const champion = wins === 7;
+  return { matches, gf, gc, gd: gf - gc, wins, champion, reached, eliminated, power: Math.round(power) };
+};
+
+/* =============================== COMPONENTE =============================== */
+function SieteCeroGame({ user, onBack }) {
+  const currentUser = user ? { id: user.id, nombre: user.name, emoji: user.emoji } : null;
+  const [ready, setReady] = useState(SC_SQUADS.length > 0);
+  useEffect(() => {
+    if (SC_SQUADS.length > 0) { setReady(true); return; }
+    fetch("/sieteCeroSquads.json")
+      .then((r) => r.json())
+      .then((data) => { SC_SQUADS = data; SC_NATION_ATTACKERS = null; setReady(true); })
+      .catch(() => setReady(true));
+  }, []);
+  const [phase, setPhase] = useState("intro"); // intro | draft | match | result | board
+  const [formationKey, setFormationKey] = useState("4-3-3");
+  const [almanaque, setAlmanaque] = useState(false);
+  const [name, setName] = useState(currentUser?.nombre || "");
+
+  const slots = SC_FORMATIONS[formationKey];
+
+  // estado de draft
+  const [placed, setPlaced] = useState({});      // slotKey -> player
+  const [turn, setTurn] = useState(0);           // 0..11
+  const [drawn, setDrawn] = useState(null);      // squad sorteado actual
+  const [rerolls, setRerolls] = useState(3);
+  const [spinning, setSpinning] = useState(false); // animación de ruleta
+  const [reelTeam, setReelTeam] = useState(null);  // selección que parpadea en la ruleta
+  const spinRef = useRef(null);
+  useEffect(() => () => { if (spinRef.current) clearTimeout(spinRef.current); }, []);
+
+  // resultado
+  const [campaign, setCampaign] = useState(null);
+  const [matchIndex, setMatchIndex] = useState(0); // partido en curso en la fase 'match'
+  const [saved, setSaved] = useState(false);
+
+  // leaderboard
+  const [board, setBoard] = useState(null);
+  const [memBoard, setMemBoard] = useState([
+    { nombre: "Vallau", emoji: "🐐", wins: 7, gd: 14, gf: 16, champion: true },
+    { nombre: "Iker", emoji: "🧤", wins: 6, gd: 9, gf: 12, champion: false },
+    { nombre: "Lucía", emoji: "🔥", wins: 5, gd: 7, gf: 11, champion: false },
+  ]);
+
+  // Ruleta de tragaperras: parpadea selecciones al azar y frena hasta caer en una.
+  const drawTeam = () => {
+    if (spinRef.current) clearTimeout(spinRef.current);
+    const final = SC_SQUADS[Math.floor(Math.random() * SC_SQUADS.length)];
+    setSpinning(true);
+    setReelTeam(SC_SQUADS[Math.floor(Math.random() * SC_SQUADS.length)]);
+    const total = 1300;          // duración total del giro (ms)
+    let elapsed = 0;
+    const tick = () => {
+      setReelTeam(SC_SQUADS[Math.floor(Math.random() * SC_SQUADS.length)]);
+      const t = elapsed / total;
+      const delay = 55 + t * t * 340;   // arranca rápido y desacelera
+      elapsed += delay;
+      if (elapsed < total) {
+        spinRef.current = setTimeout(tick, delay);
+      } else {
+        setReelTeam(final);
+        setSpinning(false);
+        setDrawn(final);
+      }
+    };
+    spinRef.current = setTimeout(tick, 55);
+  };
+
+  const startGame = () => {
+    setPlaced({}); setTurn(0); setCampaign(null); setSaved(false);
+    setRerolls(3);
+    setPhase("draft");
+    drawTeam();
+  };
+
+  const pickPlayer = (player) => {
+    const k = scBestSlotFor(player, slots, placed);
+    if (!k) return;
+    const np = { ...placed, [k]: { ...player, _team: drawn.team, _flag: drawn.flag, _year: drawn.year } };
+    setPlaced(np);
+    const nextTurn = turn + 1;
+    setTurn(nextTurn);
+    if (nextTurn >= 11) {
+      const camp = scSimulateCampaign(np);
+      setCampaign(camp);
+      setMatchIndex(0);
+      setPhase("match");
+    } else {
+      setRerolls(3);   // nueva tirada: rerolls al máximo
+      drawTeam();
+    }
+  };
+
+  const reroll = () => {
+    if (rerolls > 0 && !spinning) { setRerolls((r) => r - 1); drawTeam(); }
+  };
+
+  // ---- leaderboard load + save ----
+  const loadBoard = async () => {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("siete_cero_scores")
+        .select("nombre,emoji,wins,gf,gc,gd,champion")
+        .order("wins", { ascending: false })
+        .order("gd", { ascending: false })
+        .order("gf", { ascending: false })
+        .limit(50);
+      if (!error) setBoard(data || []);
+    } else {
+      setBoard([...memBoard].sort((a, b) => b.wins - a.wins || b.gd - a.gd || b.gf - a.gf));
+    }
+  };
+
+  const saveScore = async () => {
+    if (!campaign || saved) return;
+    const row = {
+      nombre: name || currentUser?.nombre || "Anónimo",
+      emoji: currentUser?.emoji || "⚽",
+      wins: campaign.wins, gf: campaign.gf, gc: campaign.gc, gd: campaign.gd,
+      champion: campaign.champion, ronda: campaign.reached,
+      squad: Object.values(placed).map((p) => ({ name: p.name, r: p.r, team: p._team, year: p._year })),
+    };
+    if (supabase && currentUser?.id) {
+      await supabase.from("siete_cero_scores").insert({ user_id: currentUser.id, ...row });
+    } else {
+      setMemBoard((b) => [...b, { ...row }]);
+    }
+    setSaved(true);
+    await loadBoard();
+    setPhase("board");
+  };
+
+  useEffect(() => { if (phase === "board") loadBoard(); /* eslint-disable-next-line */ }, [phase]);
+
+  /* ------------------------------- RENDER -------------------------------- */
+  if (!ready) {
+    return (
+      <div style={{ background: SC_BG, color: SC_TXT, minHeight: 200, borderRadius: 14, border: `1px solid ${SC_LINE}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, padding: 40 }}>
+        <div style={{ fontSize: 34 }}>⚽</div>
+        <div style={{ fontSize: 12, color: SC_MUT }}>Cargando selecciones históricas…</div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ background: SC_BG, color: SC_TXT, minHeight: "100%", fontFamily: "system-ui, sans-serif", borderRadius: 14, overflow: "hidden", border: `1px solid ${SC_LINE}` }}>
+      <SCHeader phase={phase} onBoard={() => setPhase("board")} onHome={() => setPhase("intro")} onBack={onBack} />
+
+      {phase === "intro" && (
+        <SCIntro
+          formationKey={formationKey} setFormationKey={setFormationKey}
+          almanaque={almanaque} setAlmanaque={setAlmanaque}
+          name={name} setName={setName} hasUser={!!currentUser}
+          onStart={startGame}
+        />
+      )}
+
+      {phase === "draft" && (
+        <SCDraft
+          slots={slots} placed={placed} drawn={drawn} turn={turn}
+          rerolls={rerolls} almanaque={almanaque}
+          spinning={spinning} reelTeam={reelTeam}
+          onPick={pickPlayer} onReroll={reroll}
+        />
+      )}
+
+      {phase === "match" && campaign && (
+        <SCLiveMatch
+          key={matchIndex}
+          match={campaign.matches[matchIndex]}
+          index={matchIndex}
+          total={campaign.matches.length}
+          xi={placed}
+          cumWins={campaign.matches.slice(0, matchIndex).filter((m) => m.outcome === "W").length}
+          onNext={() => {
+            if (matchIndex + 1 < campaign.matches.length) setMatchIndex(matchIndex + 1);
+            else setPhase("result");
+          }}
+        />
+      )}
+
+      {phase === "result" && campaign && (
+        <SCResult
+          campaign={campaign} placed={placed} formationKey={formationKey}
+          saved={saved} onSave={saveScore} onReplay={startGame} onBoard={() => setPhase("board")}
+        />
+      )}
+
+      {phase === "board" && (
+        <SCBoard board={board} onReplay={startGame} />
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------- HEADER ----------------------------------- */
+function SCHeader({ phase, onBoard, onHome, onBack }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${SC_LINE}`, background: SC_PANEL }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {onBack && (
+          <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${SC_LINE}`, borderRadius: 7, background: "transparent", color: SC_TXT, cursor: "pointer", fontSize: 11 }}>← Volver</button>
+        )}
+        <button onClick={onHome} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", color: SC_TXT }}>
+          <span style={{ fontWeight: 900, fontSize: 20, color: SC_ACCENT, letterSpacing: -1 }}>7–0</span>
+          <span style={{ fontSize: 12, color: SC_MUT, fontWeight: 600 }}>SIETE CERO</span>
+        </button>
+      </div>
+      {phase !== "board" && (
+        <button onClick={onBoard} style={scBtn("ghost")}>🏆 Ranking</button>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------- INTRO ----------------------------------- */
+function SCIntro({ formationKey, setFormationKey, almanaque, setAlmanaque, name, setName, hasUser, onStart }) {
+  return (
+    <div style={{ padding: 18 }}>
+      <h2 style={{ margin: "4px 0 2px", fontSize: 22, fontWeight: 800 }}>Arma tu once. Cierra el 7-0.</h2>
+      <p style={{ color: SC_MUT, fontSize: 13.5, margin: "0 0 16px", lineHeight: 1.5 }}>
+        Cada turno se sortea una selección histórica. Eliges 1 jugador, se coloca en un hueco compatible.
+        11 turnos, luego 3 grupos + 4 eliminatorias. Gana los 7 y lo cierras 7-0.
+      </p>
+
+      <label style={scLbl()}>Formación</label>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {Object.keys(SC_FORMATIONS).map((f) => (
+          <button key={f} onClick={() => setFormationKey(f)}
+            style={scChip(formationKey === f)}>{f}</button>
+        ))}
+      </div>
+
+      <label style={scLbl()}>Modo</label>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button onClick={() => setAlmanaque(false)} style={scChip(!almanaque)}>Clásico · ratings visibles</button>
+        <button onClick={() => setAlmanaque(true)} style={scChip(almanaque)}>Almanaque · a ciegas</button>
+      </div>
+
+      {!hasUser && (
+        <>
+          <label style={scLbl()}>Tu nombre (para el ranking)</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Escribe tu nombre"
+            style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: `1px solid ${SC_LINE}`, background: SC_PANEL2, color: SC_TXT, marginBottom: 16, fontSize: 14 }} />
+        </>
+      )}
+
+      <button onClick={onStart} style={scBtn("primary", true)}>Tirar 🎲 · empezar draft</button>
+    </div>
+  );
+}
+
+/* -------------------------------- DRAFT ----------------------------------- */
+function SCDraft({ slots, placed, drawn, turn, rerolls, almanaque, spinning, reelTeam, onPick, onReroll }) {
+  const openSlots = slots.filter((s) => !placed[s.k]);
+  return (
+    <div style={{ padding: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <span style={{ fontSize: 13, color: SC_MUT }}>Jugador <b style={{ color: SC_TXT }}>{turn}/11</b></span>
+        <SCProgressDots total={11} done={turn} />
+      </div>
+
+      <SCPitch slots={slots} placed={placed} almanaque={almanaque} />
+
+      {spinning ? (
+        <SCReel team={reelTeam} />
+      ) : drawn && (
+        <div style={{ marginTop: 14, background: SC_PANEL, borderRadius: 12, border: `1px solid ${SC_LINE}`, padding: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 26 }}>{drawn.flag}</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15 }}>{drawn.team}</div>
+                <div style={{ fontSize: 12, color: SC_MUT }}>Mundial {drawn.year}</div>
+              </div>
+            </div>
+            <button onClick={onReroll} disabled={rerolls === 0} style={scBtn(rerolls ? "ghost" : "disabled")}>
+              🔄 Reroll · {rerolls}
+            </button>
+          </div>
+
+          <div style={{ fontSize: 11.5, color: SC_MUT, marginBottom: 8 }}>Toca un jugador para encajarlo en un hueco libre.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {drawn.players.map((p, i) => {
+              const slotK = scBestSlotFor(p, slots, placed);
+              const ok = !!slotK;
+              return (
+                <button key={i} onClick={() => ok && onPick(p)} disabled={!ok}
+                  style={scPlayerCard(ok)}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 10, color: ok ? SC_ACCENT : SC_MUT, fontWeight: 700 }}>{SC_POS_LABEL[p.pos]}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: almanaque ? SC_MUT : scRatingColor(p.r) }}>
+                      {almanaque ? "•••" : p.r}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2, opacity: ok ? 1 : 0.5 }}>{p.name}</div>
+                  <div style={{ fontSize: 10, color: SC_MUT, marginTop: 1 }}>
+                    {ok ? `→ ${slotK}` : "sin hueco"}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------- RULETA (TRAGAPERRAS) ------------------------- */
+function SCReel({ team }) {
+  if (!team) return null;
+  const idx = SC_SQUADS.findIndex((s) => s.id === team.id);
+  const at = (o) => SC_SQUADS[(idx + o + SC_SQUADS.length) % SC_SQUADS.length];
+  const rows = [at(-1), at(0), at(1)];
+  return (
+    <div style={{ marginTop: 14, background: SC_PANEL, borderRadius: 12, border: `1px solid ${SC_LINE}`, padding: 14 }}>
+      <div style={{ fontSize: 12, color: SC_GOLD, fontWeight: 800, textAlign: "center", marginBottom: 10, letterSpacing: 2 }}>
+        🎰 SORTEANDO…
+      </div>
+      <div style={{ position: "relative", height: 150, overflow: "hidden", borderRadius: 10, background: "#0b0f14", border: `1px solid ${SC_LINE}` }}>
+        {/* difuminado arriba/abajo */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 48, background: "linear-gradient(#0b0f14,rgba(11,15,20,0))", zIndex: 2, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 48, background: "linear-gradient(rgba(11,15,20,0),#0b0f14)", zIndex: 2, pointerEvents: "none" }} />
+        {/* ventana central */}
+        <div style={{ position: "absolute", top: "50%", left: 8, right: 8, height: 52, marginTop: -26, border: `1.5px solid ${SC_ACCENT}`, borderRadius: 8, boxShadow: `0 0 12px ${SC_ACCENT}44`, zIndex: 1, pointerEvents: "none" }} />
+        {/* filas (el carrete) */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
+          {rows.map((t, i) => {
+            const center = i === 1;
+            return (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 10, height: 50, width: "100%", justifyContent: "center",
+                opacity: center ? 1 : 0.3, transform: center ? "scale(1)" : "scale(.82)",
+                filter: center ? "none" : "blur(.5px)",
+              }}>
+                <span style={{ fontSize: center ? 32 : 24 }}>{t.flag}</span>
+                <div style={{ textAlign: "left", minWidth: 120 }}>
+                  <div style={{ fontWeight: 800, fontSize: center ? 16 : 13, color: center ? SC_TXT : SC_MUT }}>{t.team}</div>
+                  <div style={{ fontSize: 11, color: SC_MUT }}>Mundial {t.year}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------- PITCH ----------------------------------- */
+function SCPitch({ slots, placed, almanaque, small }) {
+  const h = small ? 300 : 360;
+  return (
+    <div style={{
+      position: "relative", width: "100%", height: h, borderRadius: 14,
+      background: "linear-gradient(180deg,#0e3d24 0%,#0a2e1b 100%)",
+      border: `1px solid #16482c`, overflow: "hidden",
+    }}>
+      {/* líneas */}
+      <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: 1, background: "rgba(255,255,255,.12)" }} />
+      <div style={{ position: "absolute", top: "50%", left: "50%", width: 60, height: 60, marginLeft: -30, marginTop: -30, border: "1px solid rgba(255,255,255,.12)", borderRadius: "50%" }} />
+      <div style={{ position: "absolute", top: -1, left: "30%", width: "40%", height: 34, border: "1px solid rgba(255,255,255,.12)", borderTop: "none", borderRadius: "0 0 8px 8px" }} />
+      <div style={{ position: "absolute", bottom: -1, left: "30%", width: "40%", height: 34, border: "1px solid rgba(255,255,255,.12)", borderBottom: "none", borderRadius: "8px 8px 0 0" }} />
+
+      {slots.map((s) => {
+        const p = placed[s.k];
+        return (
+          <div key={s.k} style={{ position: "absolute", left: `${s.x}%`, top: `${s.y}%`, transform: "translate(-50%,-50%)", textAlign: "center", width: 64 }}>
+            <div style={{
+              width: 40, height: 40, margin: "0 auto", borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: p ? "rgba(0,0,0,.45)" : "transparent",
+              border: p ? `2px solid ${SC_ACCENT}` : `2px dashed ${SC_RED}`,
+              boxShadow: p ? `0 0 8px rgba(79,195,247,.4)` : "none",
+              fontSize: 18,
+            }}>
+              {p ? p._flag : <span style={{ color: SC_RED, fontSize: 11, fontWeight: 800 }}>{SC_POS_LABEL[s.accepts[0]]}</span>}
+            </div>
+            {p && (
+              <div style={{ marginTop: 3 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#fff", textShadow: "0 1px 2px #000", lineHeight: 1.1 }}>
+                  {p.name.split(" ").slice(-1)[0]}
+                </div>
+                {!almanaque && <div style={{ fontSize: 9.5, color: scRatingColor(p.r), fontWeight: 800 }}>{p.r}</div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------------------------- PARTIDO EN VIVO ----------------------------- */
+function SCLiveMatch({ match, index, total, xi, cumWins, onNext }) {
+  const { round, flag, name, yg, og, outcome, pens, events, pWin, isKO } = match;
+  const [shown, setShown] = useState(0);     // nº de eventos revelados
+  const [clock, setClock] = useState(0);     // minuto actual
+  const [score, setScore] = useState({ y: 0, o: 0 });
+  const [finished, setFinished] = useState(false);
+  const tRef = useRef(null);
+
+  useEffect(() => {
+    if (shown >= events.length) {
+      setClock(90);
+      tRef.current = setTimeout(() => setFinished(true), 500);
+      return () => clearTimeout(tRef.current);
+    }
+    const ev = events[shown];
+    tRef.current = setTimeout(() => {
+      setClock(ev.min);
+      if (ev.type === "goal") {
+        setScore((s) => (ev.side === "you" ? { ...s, y: s.y + 1 } : { ...s, o: s.o + 1 }));
+      }
+      setShown((n) => n + 1);
+    }, shown === 0 ? 500 : 850);
+    return () => clearTimeout(tRef.current);
+  }, [shown, events]);
+
+  const skip = () => {
+    if (tRef.current) clearTimeout(tRef.current);
+    setScore({ y: yg, o: og });
+    setShown(events.length);
+    setClock(90);
+    setFinished(true);
+  };
+
+  const isLast = index + 1 >= total;
+  const lostKO = isKO && outcome !== "W";
+  const resultColor = outcome === "W" ? SC_ACCENT : outcome === "L" ? SC_RED : SC_MUT;
+
+  return (
+    <div style={{ padding: 16 }}>
+      {/* cabecera ronda */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 16, color: SC_TXT, fontWeight: 800 }}>{SC_ROUND_LABEL[round]}</div>
+          <div style={{ fontSize: 11, color: SC_MUT, fontWeight: 600, marginTop: 1 }}>
+            Partido {SC_ROUNDS.indexOf(round) + 1} de 7
+          </div>
+        </div>
+        {!finished && <button onClick={skip} style={scBtn("ghost")}>⏩ Saltar</button>}
+      </div>
+
+      {/* marcador en vivo */}
+      <div style={{ background: SC_PANEL, borderRadius: 14, border: `1px solid ${finished ? resultColor : SC_LINE}`, padding: 16, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ textAlign: "center", flex: 1 }}>
+            <div style={{ fontSize: 24 }}>🫵</div>
+            <div style={{ fontSize: 12, fontWeight: 800, marginTop: 2 }}>Tu equipo</div>
+          </div>
+          <div style={{ textAlign: "center", minWidth: 120 }}>
+            <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: 1, color: SC_TXT }}>
+              {score.y}<span style={{ color: SC_MUT }}> - </span>{score.o}
+            </div>
+            <div style={{ fontSize: 12, color: finished ? resultColor : SC_ACCENT, fontWeight: 800 }}>
+              {finished ? (pens ? `Final · penaltis ${pens === "gana" ? "✓" : "✗"}` : "Final")
+                        : `${clock}'`}
+            </div>
+          </div>
+          <div style={{ textAlign: "center", flex: 1 }}>
+            <div style={{ fontSize: 24 }}>{flag}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, marginTop: 2 }}>{name}</div>
+          </div>
+        </div>
+
+        {/* barra de probabilidad (modelo oficial: media + equilibrio + posición) */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: SC_MUT, marginBottom: 4 }}>
+            <span>Prob. de ganar</span><span style={{ color: SC_ACCENT, fontWeight: 800 }}>{pWin}%</span>
+          </div>
+          <div style={{ height: 7, borderRadius: 4, background: "#0b0f14", overflow: "hidden" }}>
+            <div style={{ width: `${pWin}%`, height: "100%", background: `linear-gradient(90deg,${SC_ACCENT_DARK},${SC_ACCENT})` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* feed de acciones */}
+      <div style={{ background: SC_PANEL, borderRadius: 12, border: `1px solid ${SC_LINE}`, padding: 6, minHeight: 180 }}>
+        {events.slice(0, shown).map((e, i) => (
+          <div key={i} style={{
+            display: "flex", gap: 10, padding: "8px 10px", borderBottom: i < shown - 1 ? `1px solid ${SC_LINE}` : "none",
+            background: e.type === "goal" ? (e.side === "you" ? "rgba(79,195,247,.10)" : "rgba(239,83,80,.10)") : "transparent",
+            borderRadius: 8,
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: e.type === "goal" ? (e.side === "you" ? SC_ACCENT : SC_RED) : SC_MUT, minWidth: 30 }}>{e.min}'</span>
+            <span style={{ fontSize: 13, color: e.type === "goal" ? SC_TXT : SC_MUT, fontWeight: e.type === "goal" ? 700 : 500, lineHeight: 1.35 }}>{e.text}</span>
+          </div>
+        ))}
+        {shown === 0 && <div style={{ color: SC_MUT, fontSize: 12, textAlign: "center", padding: 20 }}>Rueda el balón…</div>}
+      </div>
+
+      {/* botón siguiente al acabar */}
+      {finished && (
+        <button onClick={onNext} style={{ ...scBtn("primary", true), marginTop: 12 }}>
+          {lostKO ? "Ver resultado final" : isLast ? "Ver resultado final 🏆" : "Siguiente partido →"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------- RESULT ---------------------------------- */
+function SCResult({ campaign, placed, formationKey, saved, onSave, onReplay, onBoard }) {
+  const { matches, gf, gc, gd, wins, champion, reached, power } = campaign;
+  const slots = SC_FORMATIONS[formationKey];
+  const overall = scTeamStrength(placed);
+  return (
+    <div style={{ padding: 18 }}>
+      <div style={{
+        textAlign: "center", padding: "18px 12px", borderRadius: 14, marginBottom: 16,
+        background: champion ? "linear-gradient(135deg,#1a2a3a,#0d1117)" : SC_PANEL,
+        border: `1px solid ${champion ? SC_GOLD : SC_LINE}`,
+      }}>
+        <div style={{ fontSize: 44, fontWeight: 900, color: champion ? SC_GOLD : SC_ACCENT, letterSpacing: -2 }}>
+          {wins}-{gc === 0 ? "0" : gc}
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 800, marginTop: 2 }}>
+          {champion ? "🏆 CAMPEÓN INVICTO · 7-0" : `Eliminado en ${SC_ROUND_LABEL[reached]}`}
+        </div>
+        <div style={{ fontSize: 12.5, color: SC_MUT, marginTop: 6 }}>
+          {wins} V · {gf} GF · {gc} GC · DG {gd >= 0 ? "+" : ""}{gd} · media {overall} · fuerza {power}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+        {matches.map((m, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "9px 12px", borderRadius: 10, background: SC_PANEL,
+            border: `1px solid ${m.outcome === "W" ? "rgba(79,195,247,.4)" : m.outcome === "L" ? "rgba(239,83,80,.4)" : SC_LINE}`,
+          }}>
+            <span style={{ fontSize: 12, color: SC_MUT, width: 70 }}>{SC_ROUND_SHORT[m.round]}</span>
+            <span style={{ fontSize: 13, flex: 1 }}>{m.flag} {m.name}</span>
+            <span style={{ fontSize: 11, color: SC_MUT, width: 38, textAlign: "right" }}>{m.pWin}%</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: scOutcomeColor(m.outcome), width: 56, textAlign: "right" }}>
+              {m.yg}-{m.og}{m.pens ? " (p)" : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {!saved ? (
+        <button onClick={onSave} style={scBtn("primary", true)}>Guardar en el ranking 🏆</button>
+      ) : (
+        <button onClick={onBoard} style={scBtn("primary", true)}>Ver ranking</button>
+      )}
+      <button onClick={onReplay} style={{ ...scBtn("ghost", true), marginTop: 8 }}>Jugar otra vez 🎲</button>
+    </div>
+  );
+}
+
+/* -------------------------------- BOARD ----------------------------------- */
+function SCBoard({ board, onReplay }) {
+  return (
+    <div style={{ padding: 18 }}>
+      <h2 style={{ margin: "0 0 14px", fontSize: 20, fontWeight: 800 }}>🏆 Ranking 7-0</h2>
+      {!board ? (
+        <div style={{ color: SC_MUT, padding: 20, textAlign: "center" }}>Cargando…</div>
+      ) : board.length === 0 ? (
+        <div style={{ color: SC_MUT, padding: 20, textAlign: "center" }}>Aún nadie ha jugado. Sé el primero.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+          {board.map((e, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+              borderRadius: 10, background: SC_PANEL,
+              border: `1px solid ${i === 0 ? SC_GOLD : SC_LINE}`,
+            }}>
+              <span style={{ width: 24, fontWeight: 800, color: i === 0 ? SC_GOLD : SC_MUT }}>{i + 1}</span>
+              <span style={{ fontSize: 18 }}>{e.emoji || "⚽"}</span>
+              <span style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>
+                {e.nombre} {e.champion && <span style={{ color: SC_GOLD }}>· 7-0</span>}
+              </span>
+              <span style={{ fontSize: 13, color: SC_ACCENT, fontWeight: 800 }}>{e.wins} V</span>
+              <span style={{ fontSize: 12, color: SC_MUT, width: 48, textAlign: "right" }}>DG {e.gd >= 0 ? "+" : ""}{e.gd}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={onReplay} style={scBtn("primary", true)}>Jugar 🎲</button>
+    </div>
+  );
+}
+
+/* ------------------------------ MINI UI ----------------------------------- */
+function SCProgressDots({ total, done }) {
+  return (
+    <div style={{ display: "flex", gap: 3 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: i < done ? SC_ACCENT : SC_LINE }} />
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------ ESTILOS ----------------------------------- */
+const scRatingColor = (r) => (r >= 90 ? SC_GOLD : r >= 84 ? SC_ACCENT : r >= 78 ? "#9cc7e0" : SC_MUT);
+const scOutcomeColor = (o) => (o === "W" ? SC_ACCENT : o === "L" ? SC_RED : SC_MUT);
+
+const scLbl = () => ({ display: "block", fontSize: 12, color: SC_MUT, fontWeight: 700, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 });
+
+const scChip = (active) => ({
+  flex: 1, padding: "9px 6px", borderRadius: 10, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+  border: `1px solid ${active ? SC_ACCENT : SC_LINE}`,
+  background: active ? "rgba(79,195,247,.14)" : SC_PANEL2,
+  color: active ? SC_ACCENT : SC_MUT,
+});
+
+const scPlayerCard = (ok) => ({
+  textAlign: "left", padding: "8px 10px", borderRadius: 10, cursor: ok ? "pointer" : "not-allowed",
+  border: `1px solid ${ok ? "rgba(79,195,247,.35)" : SC_LINE}`,
+  background: ok ? SC_PANEL2 : "#12161c", color: SC_TXT, opacity: ok ? 1 : 0.55,
+});
+
+function scBtn(kind, full) {
+  const base = { padding: "11px 14px", borderRadius: 11, fontSize: 14, fontWeight: 800, cursor: "pointer", border: "none", width: full ? "100%" : "auto" };
+  if (kind === "primary") return { ...base, background: SC_ACCENT, color: "#06222f" };
+  if (kind === "ghost") return { ...base, background: SC_PANEL2, color: SC_TXT, border: `1px solid ${SC_LINE}`, fontWeight: 700 };
+  if (kind === "disabled") return { ...base, background: SC_PANEL2, color: SC_MUT, cursor: "not-allowed", border: `1px solid ${SC_LINE}`, opacity: 0.6 };
+  return base;
+}
+
+// ============================================================
 // VISTA JUEGOS
 // ============================================================
 function GamesView({ user }) {
@@ -6862,6 +7787,7 @@ function GamesView({ user }) {
   if (game === "slot") return <SlotGame user={user} onBack={() => setGame(null)} />;
   if (game === "penalty") return <PenaltyGame user={user} onBack={() => setGame(null)} />;
   if (game === "draft") return <DraftGame user={user} onBack={() => setGame(null)} />;
+  if (game === "sietecero") return <SieteCeroGame user={user} onBack={() => setGame(null)} />;
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -6892,11 +7818,16 @@ function GamesView({ user }) {
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>PENALTIS</div>
           <div style={{ fontSize: "9px", color: "#ff8a80", fontFamily: "'Inter', sans-serif" }}>5 penaltis · 2 jugadores 🔴</div>
         </button>
-    <button onClick={() => setGame("draft")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
-      <div style={{ fontSize: "34px", marginBottom: "8px" }}>🃏</div>
-      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>MUNDIAL DRAFT</div>
-      <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 · 1 jugador</div>
-    </button>
+        <button onClick={() => setGame("draft")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
+          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🃏</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>MUNDIAL DRAFT</div>
+          <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 · 1 jugador</div>
+        </button>
+        <button onClick={() => setGame("sietecero")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
+          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🏆</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>SIETE CERO</div>
+          <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 histórico · 1 jugador</div>
+        </button>
       </div>
     </div>
   );
