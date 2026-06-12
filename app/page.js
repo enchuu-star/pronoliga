@@ -6988,6 +6988,12 @@ const scByPosition = (players) => {
   const rank = (p) => { const i = SC_XI_ORDER.indexOf(p.pos); return i === -1 ? 99 : i; };
   return [...players].sort((a, b) => rank(a) - rank(b) || (b.r || 0) - (a.r || 0));
 };
+// Media (valoración) de una plantilla guardada; null si no hay jugadores
+const scSquadMedia = (squad) => {
+  const pl = scSquadPlayers(squad);
+  if (!pl.length) return null;
+  return Math.round(pl.reduce((a, p) => a + (p.r || 0), 0) / pl.length);
+};
 // Ranking por "lo más lejos que llegó": campeón → ronda alcanzada → victorias → DG → GF
 const SC_REACH_RANK = { "Grupos 1": 0, "Grupos 2": 1, "Grupos 3": 2, "Octavos": 3, "Cuartos": 4, "Semis": 5, "Final": 6 };
 const scBoardKey = (e) => [e.champion ? 1 : 0, SC_REACH_RANK[e.ronda] ?? 0, e.wins || 0, e.gd || 0, e.gf || 0];
@@ -7463,10 +7469,17 @@ function SCIntro({ formationKey, setFormationKey, almanaque, setAlmanaque, name,
 /* -------------------------------- DRAFT ----------------------------------- */
 function SCDraft({ slots, placed, drawn, turn, rerolls, almanaque, spinning, reelTeam, onPick, onReroll }) {
   const openSlots = slots.filter((s) => !placed[s.k]);
+  const picked = Object.values(placed).filter(Boolean);
+  const media = picked.length ? Math.round(picked.reduce((a, p) => a + p.r, 0) / picked.length) : null;
   return (
     <div style={{ padding: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <span style={{ fontSize: 13, color: SC_MUT }}>Jugador <b style={{ color: SC_TXT }}>{turn}/11</b></span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 13, color: SC_MUT }}>Jugador <b style={{ color: SC_TXT }}>{turn}/11</b></span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: media != null ? scRatingColor(media) : SC_MUT, background: "rgba(79,195,247,.10)", border: `1px solid ${SC_LINE}`, borderRadius: 8, padding: "3px 9px" }}>
+            Media {media ?? "—"}
+          </span>
+        </div>
         <SCProgressDots total={11} done={turn} />
       </div>
 
@@ -7781,6 +7794,7 @@ function SCRankingList({ board, meId, onView }) {
       {board.map((e, i) => {
         const isMe = meId && e.user_id === meId;
         const hasSquad = scSquadPlayers(e.squad).length > 0;
+        const media = scSquadMedia(e.squad);
         const reachLabel = e.champion ? "🏆 Campeón 7-0" : `Llegó a ${SC_ROUND_LABEL[e.ronda] || e.ronda || "—"}`;
         return (
           <button key={e.user_id || i} onClick={() => hasSquad && onView(e)} disabled={!hasSquad} style={{
@@ -7798,7 +7812,13 @@ function SCRankingList({ board, meId, onView }) {
               <div style={{ fontSize: 11, color: e.champion ? SC_GOLD : SC_MUT }}>{reachLabel}</div>
             </div>
             {hasSquad && <span style={{ fontSize: 13, color: SC_MUT }}>👁️</span>}
-            <div style={{ textAlign: "right" }}>
+            {media != null && (
+              <div style={{ textAlign: "center", minWidth: 30 }}>
+                <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1, color: scRatingColor(media) }}>{media}</div>
+                <div style={{ fontSize: 8, color: SC_MUT, letterSpacing: 1 }}>MEDIA</div>
+              </div>
+            )}
+            <div style={{ textAlign: "right", minWidth: 42 }}>
               <div style={{ fontSize: 13, color: SC_ACCENT, fontWeight: 800 }}>{e.wins} V</div>
               <div style={{ fontSize: 11, color: SC_MUT }}>DG {e.gd >= 0 ? "+" : ""}{e.gd}</div>
             </div>
@@ -7914,7 +7934,6 @@ function scBtn(kind, full) {
   if (kind === "disabled") return { ...base, background: SC_PANEL2, color: SC_MUT, cursor: "not-allowed", border: `1px solid ${SC_LINE}`, opacity: 0.6 };
   return base;
 }
-
 
 // ============================================================
 // VISTA JUEGOS
