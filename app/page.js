@@ -7936,6 +7936,275 @@ function scBtn(kind, full) {
 }
 
 // ============================================================
+// JUEGO FOOTLE
+// ============================================================
+
+const FOOTLE_WC_NATIONS = new Set([
+  "France","Spain","Germany","England","Belgium","Netherlands","Portugal",
+  "Croatia","Switzerland","Norway","Sweden","Czechia","Scotland","Türkiye",
+  "Bosnia & Herzegovina","Brazil","Argentina","Uruguay","Colombia","Ecuador",
+  "Paraguay","United States","Mexico","Canada","Panama","Haiti","Curaçao",
+  "Morocco","Senegal","Egypt","Ghana","Tunisia","Ivory Coast","Algeria",
+  "South Africa","DR Congo","Japan","South Korea","Saudi Arabia","Australia",
+  "Iran","Qatar","Iraq","Jordan","Uzbekistan","New Zealand","Austria",
+]);
+
+const FOOTLE_CONF = {
+  France:"UEFA",Spain:"UEFA",Germany:"UEFA",England:"UEFA",Belgium:"UEFA",
+  Netherlands:"UEFA",Portugal:"UEFA",Croatia:"UEFA",Switzerland:"UEFA",
+  Norway:"UEFA",Sweden:"UEFA",Czechia:"UEFA",Scotland:"UEFA",Türkiye:"UEFA",
+  "Bosnia & Herzegovina":"UEFA",Austria:"UEFA",
+  Brazil:"CONMEBOL",Argentina:"CONMEBOL",Uruguay:"CONMEBOL",
+  Colombia:"CONMEBOL",Ecuador:"CONMEBOL",Paraguay:"CONMEBOL",
+  "United States":"CONCACAF",Mexico:"CONCACAF",Canada:"CONCACAF",
+  Panama:"CONCACAF",Haiti:"CONCACAF","Curaçao":"CONCACAF",
+  Morocco:"CAF",Senegal:"CAF",Egypt:"CAF",Ghana:"CAF",Tunisia:"CAF",
+  "Ivory Coast":"CAF",Algeria:"CAF","South Africa":"CAF","DR Congo":"CAF",
+  Japan:"AFC","South Korea":"AFC","Saudi Arabia":"AFC",Australia:"AFC",
+  Iran:"AFC",Qatar:"AFC",Iraq:"AFC",Jordan:"AFC",Uzbekistan:"AFC",
+  "New Zealand":"OFC",
+};
+
+const FOOTLE_POS_GROUP = {
+  GK:"POR",CB:"DEF",LB:"DEF",RB:"DEF",
+  CDM:"MED",CM:"MED",CAM:"MED",LM:"MED",RM:"MED",
+  ST:"DEL",LW:"DEL",RW:"DEL",
+};
+
+function footleHints(guess, target) {
+  const gConf = FOOTLE_CONF[guess.nation] || "?";
+  const tConf = FOOTLE_CONF[target.nation] || "?";
+  const gPos = guess.positions[0]; const tPos = target.positions[0];
+  const gGroup = FOOTLE_POS_GROUP[gPos] || gPos;
+  const tGroup = FOOTLE_POS_GROUP[tPos] || tPos;
+  return {
+    nation: guess.nation === target.nation ? "✅" : gConf === tConf ? "🟡" : "❌",
+    nationLabel: guess.nation,
+    pos: gPos === tPos ? "✅" : gGroup === tGroup ? "🟡" : "❌",
+    posLabel: gPos,
+    league: guess.league === target.league ? "✅" : "❌",
+    leagueLabel: guess.league,
+    club: guess.club === target.club ? "✅" : "❌",
+    clubLabel: guess.club,
+    rating: guess.rating === target.rating ? "✅" : guess.rating > target.rating ? "↓" : "↑",
+    ratingLabel: guess.rating,
+  };
+}
+
+function FootleGame({ user, onBack }) {
+  const [allPlayers, setAllPlayers] = useState([]);
+  const [phase, setPhase] = useState("loading");
+  const [target, setTarget] = useState(null);
+  const [guesses, setGuesses] = useState([]);
+  const [input, setInput] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [rankings, setRankings] = useState([]);
+  const [loadingRank, setLoadingRank] = useState(false);
+  const [won, setWon] = useState(false);
+  const [score, setScore] = useState(0);
+  const MAX_GUESSES = 6;
+
+  useEffect(() => {
+    fetch("/players.json")
+      .then(r => r.json())
+      .then(data => { setAllPlayers(data.filter(p => FOOTLE_WC_NATIONS.has(p.nation))); setPhase("menu"); })
+      .catch(() => setPhase("menu"));
+  }, []);
+
+  const loadRankings = async () => {
+    setLoadingRank(true);
+    const { data: scores } = await supabase.from("footle_scores").select("*").order("score", { ascending: false });
+    const { data: profiles } = await supabase.from("profiles").select("*");
+    if (scores && profiles) {
+      const byUser = {};
+      scores.forEach(s => { if (!byUser[s.user_id] || s.score > byUser[s.user_id]) byUser[s.user_id] = s.score; });
+      const r = Object.entries(byUser)
+        .map(([uid, sc]) => ({ name: profiles.find(p => p.id === uid)?.name || "Usuario", emoji: profiles.find(p => p.id === uid)?.emoji || "⚽", score: sc }))
+        .sort((a, b) => b.score - a.score);
+      setRankings(r);
+    }
+    setLoadingRank(false);
+  };
+
+  useEffect(() => { if (phase === "menu") loadRankings(); }, [phase]);
+
+  const startGame = () => {
+    if (allPlayers.length === 0) return;
+    setTarget(allPlayers[Math.floor(Math.random() * allPlayers.length)]);
+    setGuesses([]); setInput(""); setSuggestions([]); setWon(false); setScore(0);
+    setPhase("playing");
+  };
+
+  const guessedIds = new Set(guesses.map(g => g.player.id));
+
+  useEffect(() => {
+    if (input.length < 2) { setSuggestions([]); return; }
+    const q = input.toLowerCase();
+    setSuggestions(allPlayers.filter(p => p.name.toLowerCase().includes(q) && !guessedIds.has(p.id)).slice(0, 6));
+  }, [input, allPlayers, guesses]);
+
+  const submitGuess = async (player) => {
+    if (!target || guesses.length >= MAX_GUESSES) return;
+    const hints = footleHints(player, target);
+    const newGuesses = [...guesses, { player, hints }];
+    setGuesses(newGuesses);
+    setInput(""); setSuggestions([]);
+    if (player.id === target.id) {
+      const pts = (MAX_GUESSES - newGuesses.length + 1) * 10;
+      setScore(pts); setWon(true); setPhase("result");
+      await supabase.from("footle_scores").insert({ user_id: user.id, score: pts, attempts: newGuesses.length });
+      loadRankings();
+    } else if (newGuesses.length >= MAX_GUESSES) {
+      setScore(0); setWon(false); setPhase("result");
+      await supabase.from("footle_scores").insert({ user_id: user.id, score: 0, attempts: MAX_GUESSES + 1 });
+      loadRankings();
+    }
+  };
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const HINT_COLS = [
+    { key: "nation", label: "PAÍS" },
+    { key: "pos", label: "POS" },
+    { key: "league", label: "LIGA" },
+    { key: "club", label: "CLUB" },
+    { key: "rating", label: "OVR" },
+  ];
+  const hintColor = v => {
+    if (v === "✅") return { bg: "rgba(76,175,80,0.25)", border: "rgba(76,175,80,0.6)", color: "#81c784" };
+    if (v === "🟡") return { bg: "rgba(255,193,7,0.2)", border: "rgba(255,193,7,0.5)", color: "#ffd54f" };
+    return { bg: "rgba(255,82,82,0.1)", border: "rgba(255,82,82,0.3)", color: "#ef9a9a" };
+  };
+
+  if (phase === "loading") return (
+    <div style={{ textAlign: "center", padding: "40px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", fontSize: "13px" }}>Cargando jugadores...</div>
+  );
+
+  if (phase === "menu") return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>FOOTLE</p>
+      </div>
+      <div style={{ background: CARD, border: "1px solid rgba(76,175,80,0.3)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
+        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🕵️</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "4px", marginBottom: "8px" }}>FOOTLE</div>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.9, marginBottom: "6px" }}>
+          Adivina el jugador del Mundial 2026<br/>
+          <span style={{ color: "#81c784" }}>✅ Exacto</span> · <span style={{ color: "#ffd54f" }}>🟡 Mismo grupo</span> · <span style={{ color: "#ef9a9a" }}>❌ Diferente</span>
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "6px", marginBottom: "20px", marginTop: "12px" }}>
+          {[["1 intento","60 pts"],["3 intentos","40 pts"],["6 intentos","10 pts"]].map(([a,b]) => (
+            <div key={a} style={{ background: "rgba(255,255,255,0.04)", borderRadius: "8px", padding: "8px 4px" }}>
+              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#81c784" }}>{b}</div>
+              <div style={{ fontSize: "9px", color: "#a0c0e0", fontFamily: "'Inter', sans-serif" }}>{a}</div>
+            </div>
+          ))}
+        </div>
+        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#43a047,#1b5e20)", color: "#fff", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚽ JUGAR</button>
+      </div>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FOOTLE</p>
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(76,175,80,0.1)" : CARD, border: i === 0 ? "1px solid rgba(76,175,80,0.3)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
+          <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.emoji} {r.name}</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? "#81c784" : "#e0eaf8" }}>{r.score}</span>
+          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>PTS</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  if (phase === "playing") return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+        <button onClick={() => setPhase("menu")} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Salir</button>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: "#d0e4f7", letterSpacing: "2px" }}>INTENTO {guesses.length}/{MAX_GUESSES}</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr repeat(5,52px)", gap: "3px", marginBottom: "4px" }}>
+        <div style={{ fontSize: "8px", color: "#7090b0", fontFamily: "'Inter', sans-serif", paddingLeft: "4px" }}>JUGADOR</div>
+        {HINT_COLS.map(c => <div key={c.key} style={{ fontSize: "8px", color: "#7090b0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>{c.label}</div>)}
+      </div>
+      {guesses.map((g, i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr repeat(5,52px)", gap: "3px", marginBottom: "3px" }}>
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "7px", padding: "5px 7px", fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "#e0eaf8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center" }}>{g.player.name}</div>
+          {HINT_COLS.map(c => {
+            const val = g.hints[c.key];
+            const labelVal = g.hints[c.key + "Label"];
+            const { bg, border, color } = hintColor(val);
+            return (
+              <div key={c.key} style={{ background: bg, border: `1px solid ${border}`, borderRadius: "7px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "3px 2px", minHeight: "42px" }}>
+                <span style={{ fontSize: val === "↑" || val === "↓" ? "14px" : "11px", color }}>{val}</span>
+                <span style={{ fontSize: "7px", color, fontFamily: "'Inter', sans-serif", textAlign: "center", lineHeight: 1.2, marginTop: "1px", maxWidth: "48px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(labelVal)}</span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+      {Array.from({ length: MAX_GUESSES - guesses.length }).map((_, i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr repeat(5,52px)", gap: "3px", marginBottom: "3px" }}>
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "7px", height: "42px" }} />
+          {HINT_COLS.map(c => <div key={c.key} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "7px", height: "42px" }} />)}
+        </div>
+      ))}
+      <div style={{ position: "relative", marginTop: "14px" }}>
+        <input value={input} onChange={e => setInput(e.target.value)}
+          placeholder="Escribe el nombre del jugador..."
+          style={{ width: "100%", boxSizing: "border-box", padding: "13px 14px", border: `1px solid ${BORDER}`, borderRadius: "10px", background: "rgba(255,255,255,0.06)", color: "#e0eaf8", fontFamily: "'Inter', sans-serif", fontSize: "13px", outline: "none" }} />
+        {suggestions.length > 0 && (
+          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#0e1f35", border: `1px solid ${BORDER}`, borderRadius: "10px", marginTop: "4px", zIndex: 10, overflow: "hidden" }}>
+            {suggestions.map(p => (
+              <button key={p.id} onClick={() => submitGuess(p)}
+                style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "10px 14px", border: "none", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "transparent", color: "#e0eaf8", fontFamily: "'Inter', sans-serif", fontSize: "12px", cursor: "pointer", textAlign: "left" }}>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#4fc3f7", minWidth: "28px" }}>{p.rating}</span>
+                <span style={{ flex: 1 }}>{p.name}</span>
+                <span style={{ fontSize: "10px", color: "#a0c0e0" }}>{p.nation}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <p style={{ fontSize: "9px", color: "#506070", fontFamily: "'Inter', sans-serif", marginTop: "8px", lineHeight: 1.6 }}>
+        💡 País 🟡 = misma confederación · Pos 🟡 = mismo grupo (DEF/MED/DEL) · OVR ↑ = objetivo mayor ↓ = menor
+      </p>
+    </div>
+  );
+
+  if (phase === "result") return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <button onClick={() => setPhase("menu")} style={{ marginBottom: "20px", padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
+      <div style={{ background: CARD, border: `1px solid ${won ? "rgba(76,175,80,0.4)" : "rgba(255,82,82,0.3)"}`, borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
+        <div style={{ fontSize: "44px", marginBottom: "10px" }}>{won ? "⚽" : "😢"}</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#d0e4f7", letterSpacing: "3px" }}>
+          {won ? `¡ENCONTRADO EN ${guesses.length} ${guesses.length === 1 ? "INTENTO" : "INTENTOS"}!` : "¡ERA...!"}
+        </div>
+        <div style={{ margin: "14px auto", display: "flex", alignItems: "center", gap: "12px", background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "12px 16px", justifyContent: "center", maxWidth: "280px" }}>
+          {target?.photo && <img src={target.photo} alt={target.name} style={{ width: "44px", height: "44px", borderRadius: "50%", objectFit: "cover", background: "rgba(255,255,255,0.1)" }} onError={e => { e.target.style.display="none"; }} />}
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: won ? "#81c784" : "#ef9a9a" }}>{target?.name}</div>
+            <div style={{ fontSize: "10px", color: "#a0c0e0", fontFamily: "'Inter', sans-serif" }}>{target?.nation} · {target?.positions?.[0]} · {target?.club}</div>
+            <div style={{ fontSize: "10px", color: "#ffd54f", fontFamily: "'Inter', sans-serif" }}>OVR {target?.rating}</div>
+          </div>
+        </div>
+        {won && <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: "#81c784", lineHeight: 1 }}>{score} PTS</div>}
+      </div>
+      <button onClick={startGame} style={{ width: "100%", padding: "14px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg,#43a047,#1b5e20)", color: "#fff", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 OTRA PARTIDA</button>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING FOOTLE</p>
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? "rgba(76,175,80,0.1)" : CARD, border: i === 0 ? "1px solid rgba(76,175,80,0.3)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
+          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
+          <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.emoji} {r.name}</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? "#81c784" : "#e0eaf8" }}>{r.score}</span>
+          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>PTS</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  return null;
+}
+
+
+// ============================================================
 // VISTA JUEGOS
 // ============================================================
 function GamesView({ user }) {
@@ -7948,6 +8217,7 @@ function GamesView({ user }) {
   if (game === "penalty") return <PenaltyGame user={user} onBack={() => setGame(null)} />;
   if (game === "draft") return <DraftGame user={user} onBack={() => setGame(null)} />;
   if (game === "sietecero") return <SieteCeroGame user={user} onBack={() => setGame(null)} />;
+  if (game === "footle") return <FootleGame user={user} onBack={() => setGame(null)} />;
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -7987,6 +8257,11 @@ function GamesView({ user }) {
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🏆</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>SIETE CERO</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 histórico · 1 jugador</div>
+        </button>
+        <button onClick={() => setGame("footle")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(76,175,80,0.25)", borderRadius: "14px", background: "rgba(76,175,80,0.05)", cursor: "pointer", textAlign: "center" }}>
+          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🕵️</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>FOOTLE</div>
+          <div style={{ fontSize: "9px", color: "#a8d8a8", fontFamily: "'Inter', sans-serif" }}>adivina el jugador · ilimitado</div>
         </button>
       </div>
     </div>
