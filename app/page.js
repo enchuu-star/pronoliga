@@ -7939,15 +7939,52 @@ function scBtn(kind, full) {
 // JUEGO FOOTLE
 // ============================================================
 
+c// Solo las 10 mejores selecciones del Mundial 2026
 const FOOTLE_WC_NATIONS = new Set([
-  "France","Spain","Germany","England","Belgium","Netherlands","Portugal",
-  "Croatia","Switzerland","Norway","Sweden","Czechia","Scotland","Türkiye",
-  "Bosnia & Herzegovina","Brazil","Argentina","Uruguay","Colombia","Ecuador",
-  "Paraguay","United States","Mexico","Canada","Panama","Haiti","Curaçao",
-  "Morocco","Senegal","Egypt","Ghana","Tunisia","Ivory Coast","Algeria",
-  "South Africa","DR Congo","Japan","South Korea","Saudi Arabia","Australia",
-  "Iran","Qatar","Iraq","Jordan","Uzbekistan","New Zealand","Austria",
+  "France","Spain","England","Argentina","Brazil",
+  "Portugal","Germany","Netherlands","Belgium","Uruguay",
 ]);
+
+// Convocados REALES al Mundial 2026 (listas oficiales). Se compara por apellido
+// normalizado, así que basta con que el apellido coincida con players.json.
+const FOOTLE_SQUADS = {
+  France: ["Maignan","Samba","Risser","Digne","Gusto","Lucas Hernandez","Theo Hernandez","Konaté","Koundé","Lacroix","Saliba","Upamecano","Kanté","Koné","Rabiot","Tchouaméni","Zaïre-Emery","Akliouche","Barcola","Cherki","Dembélé","Doué","Mateta","Mbappé","Olise","Thuram"],
+  Spain: ["Unai Simón","Joan García","Raya","Cucurella","Grimaldo","Cubarsí","Laporte","Pubill","Eric García","Marcos Llorente","Pedro Porro","Pedri","Fabián Ruiz","Zubimendi","Gavi","Rodri","Baena","Merino","Oyarzabal","Dani Olmo","Nico Williams","Yeremy Pino","Ferran Torres","Borja Iglesias","Víctor Muñoz","Lamine Yamal"],
+  England: ["Henderson","Pickford","Trafford","Burn","Guéhi","Reece James","Konsa","Livramento","O'Reilly","Quansah","Spence","Stones","Anderson","Bellingham","Eze","Mainoo","Rice","Rogers","Gordon","Kane","Madueke","Rashford","Saka","Toney","Watkins"],
+  Argentina: ["Musso","Rulli","Martínez","Balerdi","Tagliafico","Montiel","Lisandro Martínez","Romero","Otamendi","Medina","Molina","Paredes","De Paul","Barco","Lo Celso","Palacios","Mac Allister","Enzo Fernández","Álvarez","Messi","Nicolás González","Almada","Simeone","Paz","López","Lautaro Martínez"],
+  Brazil: ["Alisson","Ederson","Weverton","Marquinhos","Gabriel Magalhães","Bremer","Ibañez","Léo Pereira","Wesley","Alex Sandro","Douglas Santos","Danilo","Casemiro","Bruno Guimarães","Paquetá","Fabinho","Raphinha","Vinicius","Luiz Henrique","Martinelli","Neymar","Endrick","Matheus Cunha","Rayan","Igor Thiago"],
+  Portugal: ["Diogo Costa","Rui Silva","José Sá","Rúben Dias","Gonçalo Inácio","Cancelo","Nuno Mendes","Dalot","Semedo","Tomás Araújo","Renato Veiga","Vitinha","João Neves","Bruno Fernandes","Rúben Neves","Matheus Nunes","Samu Costa","Bernardo Silva","Cristiano Ronaldo","Trincão","João Félix","Gonçalo Ramos","Pedro Neto","Conceição","Leão","Gonçalo Guedes"],
+  Germany: ["Baumann","Neuer","Nübel","Anton","Brown","Raum","Rüdiger","Schlotterbeck","Tah","Thiaw","Amiri","Goretzka","Groß","Leweling","Kimmich","Musiala","Nmecha","Pavlović","Stiller","Sané","Wirtz","Beier","Havertz","Undav","Woltemade"],
+  Netherlands: ["Verbruggen","Aké","Van Dijk","Hato","Van Hecke","Dumfries","Timber","Van de Ven","Gravenberch","De Jong","De Roon","Reijnders","Koopmeiners","Lang","Wieffer","Summerville","Brobbey","Depay","Gakpo","Kluivert","Malen","Weghorst"],
+  Belgium: ["Courtois","Lammens","Penders","Castagne","De Cuyper","Meunier","Theate","Debast","Ngoy","De Winter","Mechele","Seys","Tielemans","Onana","Raskin","Vanaken","De Bruyne","Witsel","Trossard","Doku","Saelemaekers","Lukebakio","De Ketelaere","Lukaku","Moreira","Fernández-Pardo"],
+  Uruguay: ["Rochet","Muslera","Mele","Varela","Araújo","Giménez","Bueno","Cáceres","Olivera","Piquerez","Viña","Ugarte","Bentancur","Valverde","Canobbio","Sanabria","De Arrascaeta","De La Cruz","Zalazar","Pellistri","Núñez","Aguirre","Viñas"],
+};
+
+// Normaliza: minúsculas, sin acentos, sin puntos
+const footleNorm = s => (s || "")
+  .toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/[.'']/g, "").trim();
+
+// Set con apellidos normalizados de todos los convocados de las 10 selecciones
+const FOOTLE_SQUAD_KEYS = new Set(
+  Object.values(FOOTLE_SQUADS).flat().map(n => {
+    const norm = footleNorm(n);
+    const parts = norm.split(/\s+/);
+    return parts[parts.length - 1]; // apellido
+  })
+);
+
+// ¿El jugador de players.json es un convocado de una de las 10 selecciones?
+function footleIsCallup(p) {
+  if (!FOOTLE_WC_NATIONS.has(p.nation)) return false;
+  const norm = footleNorm(p.name);
+  const parts = norm.split(/\s+/);
+  const last = parts[parts.length - 1];
+  if (FOOTLE_SQUAD_KEYS.has(last)) return true;
+  // por si players.json trae el nombre completo y el apellido es compuesto
+  return parts.some(w => w.length > 3 && FOOTLE_SQUAD_KEYS.has(w));
+}
 
 const FOOTLE_CONF = {
   France:"UEFA",Spain:"UEFA",Germany:"UEFA",England:"UEFA",Belgium:"UEFA",
@@ -7972,22 +8009,15 @@ const FOOTLE_POS_GROUP = {
 };
 
 function footleHints(guess, target) {
-  const gConf = FOOTLE_CONF[guess.nation] || "?";
-  const tConf = FOOTLE_CONF[target.nation] || "?";
-  const gPos = guess.positions[0]; const tPos = target.positions[0];
-  const gGroup = FOOTLE_POS_GROUP[gPos] || gPos;
-  const tGroup = FOOTLE_POS_GROUP[tPos] || tPos;
   return {
-    nation: guess.nation === target.nation ? "✅" : gConf === tConf ? "🟡" : "❌",
+    nation: guess.nation === target.nation ? "✅" : "❌",
     nationLabel: guess.nation,
-    pos: gPos === tPos ? "✅" : gGroup === tGroup ? "🟡" : "❌",
-    posLabel: gPos,
+    pos: guess.positions[0] === target.positions[0] ? "✅" : "❌",
+    posLabel: guess.positions[0],
     league: guess.league === target.league ? "✅" : "❌",
     leagueLabel: guess.league,
     club: guess.club === target.club ? "✅" : "❌",
     clubLabel: guess.club,
-    rating: guess.rating === target.rating ? "✅" : guess.rating > target.rating ? "↓" : "↑",
-    ratingLabel: guess.rating,
   };
 }
 
@@ -8007,7 +8037,7 @@ function FootleGame({ user, onBack }) {
   useEffect(() => {
     fetch("/players.json")
       .then(r => r.json())
-      .then(data => { setAllPlayers(data.filter(p => FOOTLE_WC_NATIONS.has(p.nation))); setPhase("menu"); })
+      .then(data => { setAllPlayers(data.filter(footleIsCallup)); setPhase("menu"); })
       .catch(() => setPhase("menu"));
   }, []);
 
@@ -8066,13 +8096,11 @@ function FootleGame({ user, onBack }) {
     { key: "nation", label: "PAÍS" },
     { key: "pos", label: "POS" },
     { key: "league", label: "LIGA" },
-    { key: "club", label: "CLUB" },
-    { key: "rating", label: "OVR" },
+    { key: "club", label: "EQUIPO" },
   ];
   const hintColor = v => {
     if (v === "✅") return { bg: "rgba(76,175,80,0.25)", border: "rgba(76,175,80,0.6)", color: "#81c784" };
-    if (v === "🟡") return { bg: "rgba(255,193,7,0.2)", border: "rgba(255,193,7,0.5)", color: "#ffd54f" };
-    return { bg: "rgba(255,82,82,0.1)", border: "rgba(255,82,82,0.3)", color: "#ef9a9a" };
+    return { bg: "rgba(255,82,82,0.15)", border: "rgba(255,82,82,0.4)", color: "#ef9a9a" };
   };
 
   if (phase === "loading") return (
@@ -8090,7 +8118,7 @@ function FootleGame({ user, onBack }) {
         <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "4px", marginBottom: "8px" }}>FOOTLE</div>
         <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.9, marginBottom: "6px" }}>
           Adivina el jugador del Mundial 2026<br/>
-          <span style={{ color: "#81c784" }}>✅ Exacto</span> · <span style={{ color: "#ffd54f" }}>🟡 Mismo grupo</span> · <span style={{ color: "#ef9a9a" }}>❌ Diferente</span>
+          <span style={{ color: "#81c784" }}>🟢 Acierto</span> · <span style={{ color: "#ef9a9a" }}>🔴 Fallo</span>
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "6px", marginBottom: "20px", marginTop: "12px" }}>
           {[["1 intento","60 pts"],["3 intentos","40 pts"],["6 intentos","10 pts"]].map(([a,b]) => (
@@ -8120,12 +8148,12 @@ function FootleGame({ user, onBack }) {
         <button onClick={() => setPhase("menu")} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Salir</button>
         <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: "#d0e4f7", letterSpacing: "2px" }}>INTENTO {guesses.length}/{MAX_GUESSES}</span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr repeat(5,52px)", gap: "3px", marginBottom: "4px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr repeat(4,56px)", gap: "3px", marginBottom: "4px" }}>
         <div style={{ fontSize: "8px", color: "#7090b0", fontFamily: "'Inter', sans-serif", paddingLeft: "4px" }}>JUGADOR</div>
         {HINT_COLS.map(c => <div key={c.key} style={{ fontSize: "8px", color: "#7090b0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>{c.label}</div>)}
       </div>
       {guesses.map((g, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr repeat(5,52px)", gap: "3px", marginBottom: "3px" }}>
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr repeat(4,56px)", gap: "3px", marginBottom: "3px" }}>
           <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "7px", padding: "5px 7px", fontFamily: "'Inter', sans-serif", fontSize: "10px", color: "#e0eaf8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center" }}>{g.player.name}</div>
           {HINT_COLS.map(c => {
             const val = g.hints[c.key];
@@ -8141,7 +8169,7 @@ function FootleGame({ user, onBack }) {
         </div>
       ))}
       {Array.from({ length: MAX_GUESSES - guesses.length }).map((_, i) => (
-        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr repeat(5,52px)", gap: "3px", marginBottom: "3px" }}>
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr repeat(4,56px)", gap: "3px", marginBottom: "3px" }}>
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "7px", height: "42px" }} />
           {HINT_COLS.map(c => <div key={c.key} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "7px", height: "42px" }} />)}
         </div>
@@ -8164,7 +8192,7 @@ function FootleGame({ user, onBack }) {
         )}
       </div>
       <p style={{ fontSize: "9px", color: "#506070", fontFamily: "'Inter', sans-serif", marginTop: "8px", lineHeight: 1.6 }}>
-        💡 País 🟡 = misma confederación · Pos 🟡 = mismo grupo (DEF/MED/DEL) · OVR ↑ = objetivo mayor ↓ = menor
+        💡 Verde = aciertas · Rojo = no coincide
       </p>
     </div>
   );
@@ -8258,7 +8286,11 @@ function GamesView({ user }) {
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>SIETE CERO</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>monta tu 11 histórico · 1 jugador</div>
         </button>
-        
+        <button onClick={() => setGame("footle")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(76,175,80,0.25)", borderRadius: "14px", background: "rgba(76,175,80,0.05)", cursor: "pointer", textAlign: "center" }}>
+          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🕵️</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>FOOTLE</div>
+          <div style={{ fontSize: "9px", color: "#a8d8a8", fontFamily: "'Inter', sans-serif" }}>adivina el jugador · 1 jugador</div>
+        </button>
       </div>
     </div>
   );
