@@ -7938,8 +7938,6 @@ function scBtn(kind, full) {
 // ============================================================
 // JUEGO FOOTLE
 // ============================================================
-
-c// Solo las 10 mejores selecciones del Mundial 2026
 const FOOTLE_WC_NATIONS = new Set([
   "France","Spain","England","Argentina","Brazil",
   "Portugal","Germany","Netherlands","Belgium","Uruguay",
