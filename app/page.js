@@ -3095,7 +3095,7 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
                 </span>
               </div>
               <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "2px" }}>
-                🎯 {u.exactos} · 📏 {u.difGoles} · ✓ {u.parciales} · {u.count} eval.
+                🎯 {u.exactos} · 📏 {u.difGoles} · ✓ {u.parciales} · {u.count} total.
                 {u.qualPts > 0 ? ` · +${u.qualPts} clas.` : ""}
                 {u.specialPts > 0 ? ` · +${u.specialPts} esp.` : ""}
               </div>
