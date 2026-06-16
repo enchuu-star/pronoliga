@@ -2930,6 +2930,8 @@ function RankingView({ matches, user }) {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "predictions" }, () => loadRanking())
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "qualifier_picks" }, () => loadRanking())
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "special_predictions" }, () => loadRanking())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "matches" }, () => loadRanking())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ranking_history" }, () => loadRanking())
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, []);
