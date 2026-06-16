@@ -8607,6 +8607,209 @@ function FootleGame({ user, onBack }) {
   return null;
 }
 
+// ============================================================
+// SIMON DE BANDERAS — repite la secuencia
+// ============================================================
+const SIMON_FLAGS = [
+  { name: "México", flag: "🇲🇽" }, { name: "Brasil", flag: "🇧🇷" }, { name: "España", flag: "🇪🇸" },
+  { name: "Francia", flag: "🇫🇷" }, { name: "Argentina", flag: "🇦🇷" }, { name: "Alemania", flag: "🇩🇪" },
+  { name: "Portugal", flag: "🇵🇹" }, { name: "Inglaterra", flag: "🇬🇧" }, { name: "Países Bajos", flag: "🇳🇱" },
+];
+
+function SimonGame({ user, onBack }) {
+  const [phase, setPhase] = useState("menu"); // menu | playing | result
+  const [sequence, setSequence] = useState([]);
+  const [userStep, setUserStep] = useState(0);
+  const [showing, setShowing] = useState(false);   // mostrando la secuencia
+  const [activeIdx, setActiveIdx] = useState(null); // celda iluminada
+  const [score, setScore] = useState(0);
+  const [wrongIdx, setWrongIdx] = useState(null);   // celda fallada (flash rojo)
+  const [rankings, setRankings] = useState([]);
+  const [loadingRank, setLoadingRank] = useState(false);
+  const timersRef = useRef([]);
+
+  const clearTimers = () => { timersRef.current.forEach(clearTimeout); timersRef.current = []; };
+  useEffect(() => () => clearTimers(), []);
+
+  const loadRankings = async () => {
+    setLoadingRank(true);
+    const { data: scores } = await supabase.from("simon_scores").select("*").order("score", { ascending: false });
+    const { data: profiles } = await supabase.from("profiles").select("*");
+    if (scores && profiles) {
+      const byUser = {};
+      scores.forEach(s => { if (!byUser[s.user_id] || s.score > byUser[s.user_id]) byUser[s.user_id] = s.score; });
+      const r = Object.entries(byUser)
+        .map(([uid, sc]) => ({ name: profiles.find(p => p.id === uid)?.name || "Usuario", emoji: profiles.find(p => p.id === uid)?.emoji || "⚽", score: sc }))
+        .sort((a, b) => b.score - a.score);
+      setRankings(r);
+    }
+    setLoadingRank(false);
+  };
+  useEffect(() => { if (phase === "menu") loadRankings(); }, [phase]);
+
+  // Reproduce la secuencia iluminando celdas una a una
+  const playSequence = (seq) => {
+    setShowing(true);
+    setUserStep(0);
+    clearTimers();
+    const speed = Math.max(380, 750 - seq.length * 25); // se acelera al avanzar
+    seq.forEach((idx, i) => {
+      timersRef.current.push(setTimeout(() => setActiveIdx(idx), i * speed + 300));
+      timersRef.current.push(setTimeout(() => setActiveIdx(null), i * speed + 300 + speed * 0.6));
+    });
+    timersRef.current.push(setTimeout(() => setShowing(false), seq.length * speed + 300));
+  };
+
+  const startGame = () => {
+    const first = [Math.floor(Math.random() * SIMON_FLAGS.length)];
+    setSequence(first); setScore(0); setWrongIdx(null);
+    setPhase("playing");
+    playSequence(first);
+  };
+
+  const nextRound = (prevSeq) => {
+    const next = [...prevSeq, Math.floor(Math.random() * SIMON_FLAGS.length)];
+    setSequence(next);
+    playSequence(next);
+  };
+
+  const finishGame = async (finalScore) => {
+    clearTimers();
+    setPhase("result");
+    await supabase.from("simon_scores").insert({ user_id: user.id, score: finalScore });
+    loadRankings();
+  };
+
+  const tapCell = (idx) => {
+    if (showing || phase !== "playing") return;
+    // Feedback al pulsar
+    setActiveIdx(idx);
+    setTimeout(() => setActiveIdx(null), 180);
+
+    if (idx === sequence[userStep]) {
+      const nextStep = userStep + 1;
+      if (nextStep === sequence.length) {
+        // Ronda completada
+        const newScore = sequence.length;
+        setScore(newScore);
+        timersRef.current.push(setTimeout(() => nextRound(sequence), 700));
+      } else {
+        setUserStep(nextStep);
+      }
+    } else {
+      // Fallo
+      setWrongIdx(idx);
+      timersRef.current.push(setTimeout(() => finishGame(score), 800));
+    }
+  };
+
+  const medals = ["🥇", "🥈", "🥉"];
+
+  // Paleta por celda (para que cada bandera tenga su color al iluminarse)
+  const CELL_COLORS = ["#4fc3f7", "#34d399", "#ffd54f", "#ff6b4a", "#c084fc", "#f472b6", "#60a5fa", "#fb923c", "#2dd4bf"];
+
+  if (phase === "menu") return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>SIMON BANDERAS</p>
+      </div>
+      <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
+        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🧠🚩</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>SIMON DE BANDERAS</div>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8, marginBottom: "20px" }}>
+          Memoriza la secuencia de banderas y repítela.<br/>Cada ronda añade una más. ¿Hasta dónde llegas?
+        </p>
+        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+      </div>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING SIMON</p>
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
+          <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.emoji} {r.name}</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8" }}>{r.score}</span>
+          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>RONDA</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  if (phase === "playing") return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <button onClick={() => { clearTimers(); setPhase("menu"); }} style={{ padding: "6px 12px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Salir</button>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: GREEN }}>RONDA {sequence.length}</span>
+      </div>
+
+      <div style={{ textAlign: "center", marginBottom: "20px", minHeight: "22px" }}>
+        <span style={{ fontSize: "12px", color: showing ? "#ffd54f" : GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", animation: "pulse 1.5s infinite" }}>
+          {showing ? "👀 MEMORIZA..." : "👆 TU TURNO"}
+        </span>
+      </div>
+
+      {/* Cuadrícula 3x3 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", maxWidth: "360px", margin: "0 auto" }}>
+        {SIMON_FLAGS.map((f, i) => {
+          const lit = activeIdx === i;
+          const isWrong = wrongIdx === i;
+          const color = CELL_COLORS[i % CELL_COLORS.length];
+          return (
+            <button
+              key={i}
+              onClick={() => tapCell(i)}
+              disabled={showing}
+              style={{
+                aspectRatio: "1",
+                border: `2px solid ${isWrong ? "#cc2222" : lit ? color : BORDER}`,
+                borderRadius: "14px",
+                background: isWrong ? "rgba(204,34,34,0.3)" : lit ? `${color}33` : CARD,
+                cursor: showing ? "default" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "clamp(34px,11vw,46px)",
+                transform: lit ? "scale(1.06)" : "scale(1)",
+                boxShadow: lit ? `0 0 22px ${color}` : "none",
+                transition: "all 0.12s ease",
+                opacity: showing && !lit ? 0.55 : 1,
+              }}>
+              {f.flag}
+            </button>
+          );
+        })}
+      </div>
+
+      <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "20px" }}>
+        Pulsa las banderas en el mismo orden que se iluminaron
+      </p>
+    </div>
+  );
+
+  if (phase === "result") return (
+    <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
+      <button onClick={() => setPhase("menu")} style={{ marginBottom: "20px", padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
+      <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
+        <div style={{ fontSize: "44px", marginBottom: "10px" }}>{score >= 12 ? "🏆" : score >= 7 ? "🧠" : "😅"}</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#d0e4f7", letterSpacing: "3px" }}>LLEGASTE A LA RONDA</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: GREEN, lineHeight: 1 }}>{score}</div>
+        <p style={{ marginTop: "10px", fontSize: "12px", color: "#e0eefa", fontFamily: "'Inter', sans-serif" }}>
+          {score >= 12 ? "¡Memoria de elefante! 🐘" : score >= 7 ? "Muy buen nivel 🧠" : "A entrenar la memoria 😅"}
+        </p>
+      </div>
+      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 OTRA VEZ</button>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING SIMON</p>
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
+          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
+          <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.emoji} {r.name}</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8" }}>{r.score}</span>
+          <span style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif" }}>RONDA</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  return null;
+}
+
 
 // ============================================================
 // VISTA JUEGOS
@@ -8622,6 +8825,7 @@ function GamesView({ user }) {
   if (game === "draft") return <DraftGame user={user} onBack={() => setGame(null)} />;
   if (game === "sietecero") return <SieteCeroGame user={user} onBack={() => setGame(null)} />;
   if (game === "footle") return <FootleGame user={user} onBack={() => setGame(null)} />;
+  if (game === "simon") return <SimonGame user={user} onBack={() => setGame(null)} />;
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -8666,6 +8870,11 @@ function GamesView({ user }) {
           <div style={{ fontSize: "34px", marginBottom: "8px" }}>🕵️</div>
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>FOOTLE</div>
           <div style={{ fontSize: "9px", color: "#a8d8a8", fontFamily: "'Inter', sans-serif" }}>adivina el jugador · 1 jugador</div>
+        </button>
+        <button onClick={() => setGame("simon")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(192,132,252,0.25)", borderRadius: "14px", background: "rgba(192,132,252,0.05)", cursor: "pointer", textAlign: "center" }}>
+          <div style={{ fontSize: "34px", marginBottom: "8px" }}>🧠</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>SIMON BANDERAS</div>
+          <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>memoria · 1 jugador</div>
         </button>
       </div>
     </div>
