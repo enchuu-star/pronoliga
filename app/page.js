@@ -4744,14 +4744,6 @@ function DailySummary({ user, matches }) {
                 <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#ff6b4a" }}>{data.worstDay.pts}</span>
               </div>
             )}
-            {data.plenos.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
-                <span style={{ fontSize: "20px" }}>🎯</span>
-                <span style={{ flex: 1, fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>
-                  Marcador exacto: <b style={{ color: "#e0eaf8" }}>{data.plenos.join(", ")}</b>
-                </span>
-              </div>
-            )}
           </div>
 
           <div style={{ textAlign: "center", marginTop: "16px", paddingTop: "12px", borderTop: `1px solid ${BORDER}` }}>
