@@ -8652,7 +8652,7 @@ function SimonGame({ user, onBack }) {
     setShowing(true);
     setUserStep(0);
     clearTimers();
-    const speed = Math.max(380, 750 - seq.length * 25); // se acelera al avanzar
+    const speed = Math.max(260, 680 - seq.length * 38); // se acelera al avanzar
     seq.forEach((idx, i) => {
       timersRef.current.push(setTimeout(() => setActiveIdx(idx), i * speed + 300));
       timersRef.current.push(setTimeout(() => setActiveIdx(null), i * speed + 300 + speed * 0.6));
