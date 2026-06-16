@@ -2682,27 +2682,27 @@ function MoveIndicator({ move, size = 10 }) {
 // HISTÓRICO DE POSICIONES (Top 5 + tú) — una línea por jugador,
 // un punto por cada foto del ranking (antes de cada partido)
 // ============================================================
-function RankingHistory({ ranking, user }) {
-  const [snapshots, setSnapshots] = useState([]);
+function RankingHistory({ ranking, user, matches }) {
+  const [allPreds, setAllPreds] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const loadPreds = async () => {
+    const { data } = await supabase.from("predictions").select("*").range(0, 99999);
+    setAllPreds(data || []);
+    setLoading(false);
+  };
+
+  // Recarga al montar y cada vez que cambian los partidos (nuevos resultados)
+  useEffect(() => { loadPreds(); }, [matches]);
+
+  // Realtime: recalcula al actualizarse los puntos de las predicciones
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("ranking_history")
-        .select("user_id, position, snapshot_at")
-        .order("snapshot_at", { ascending: true });
-      const bySnap = {};
-      (data || []).forEach(r => {
-        if (!bySnap[r.snapshot_at]) bySnap[r.snapshot_at] = {};
-        bySnap[r.snapshot_at][r.user_id] = r.position;
-      });
-      const snaps = Object.entries(bySnap)
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([at, positions]) => ({ at, positions }));
-      setSnapshots(snaps);
-      setLoading(false);
-    })();
+    const ch = supabase
+      .channel("ranking_history_realtime")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "predictions" }, loadPreds)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "predictions" }, loadPreds)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
   }, []);
 
   if (loading) {
@@ -2714,15 +2714,48 @@ function RankingHistory({ ranking, user }) {
     );
   }
 
+  // ── Fotos del ranking calculadas SOLAS desde los resultados ──
+  // 1) Partidos terminados, agrupados por franja horaria, en orden cronológico
+  const finished = (matches || []).filter(m => m.result_home !== null && m.result_away !== null);
+  const bySlot = {};
+  finished.forEach(m => {
+    const key = (m.match_date || "") + " " + (m.match_time || "");
+    (bySlot[key] = bySlot[key] || []).push(m);
+  });
+  const slotKeys = Object.keys(bySlot).sort();
+
+  // 2) Acumular puntos partido a partido y fotografiar las posiciones
+  const ids = ranking.map(u => u.id);
+  const cum = {};
+  ids.forEach(id => { cum[id] = 0; });
+
+  const snapshots = slotKeys.map(key => {
+    bySlot[key].forEach(m => {
+      allPreds.filter(p => p.match_id === m.id).forEach(p => {
+        if (cum[p.user_id] != null && p.points != null) cum[p.user_id] += p.points;
+      });
+    });
+    const order = [...ids].sort((a, b) => cum[b] - cum[a]);
+    const positions = {};
+    order.forEach((id, i) => { positions[id] = i + 1; });
+    return { positions };
+  });
+
+  // La última foto = ranking en vivo (incluye clasificados y especiales)
+  if (snapshots.length) {
+    const livePos = {};
+    ranking.forEach((u, i) => { livePos[u.id] = i + 1; });
+    snapshots[snapshots.length - 1] = { positions: livePos };
+  }
+
+  const n = snapshots.length;
+
   // Jugadores a seguir: Top 5 actual + tú
   const top5 = ranking.slice(0, 5).map(u => u.id);
   const trackedIds = [...new Set([...top5, user.id])];
 
-  // Datos por jugador (nombre/emoji/posición actual desde el ranking en vivo)
   const meta = {};
   ranking.forEach((u, i) => { meta[u.id] = { name: u.name, emoji: u.emoji || "⚽", curPos: i + 1 }; });
-
-  const n = snapshots.length;
 
   if (n < 2) {
     return (
@@ -2733,7 +2766,7 @@ function RankingHistory({ ranking, user }) {
         <div style={{ background: CARD, border: `1px dashed ${BORDER}`, borderRadius: "12px", padding: "28px 20px", textAlign: "center" }}>
           <div style={{ fontSize: "32px", marginBottom: "8px" }}>📈</div>
           <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6 }}>
-            Aún no hay suficientes fotos del ranking.<br/>La evolución aparecerá tras los primeros partidos.
+            La evolución aparecerá cuando haya al menos<br/>dos franjas de partidos terminadas.
           </p>
         </div>
       </div>
@@ -2827,7 +2860,7 @@ function RankingHistory({ ranking, user }) {
         </div>
 
         <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", marginTop: "8px", textAlign: "center" }}>
-          Cada punto es una foto del ranking · arriba = mejor posición
+          Cada punto es una franja de partidos · arriba = mejor posición
         </p>
       </div>
     </div>
@@ -3059,7 +3092,7 @@ function RankingView({ matches, user }) {
           <span style={{ color: GREEN }}>+5</span> exacto · <span style={{ color: "#4fc3f7" }}>+3</span> ganador + diferencia · <span style={{ color: "#ffd54f" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
         </p>
       </div>
-      <RankingHistory ranking={ranking} user={user} />
+      <RankingHistory ranking={ranking} user={user} matches={matches} />
     </div>
   );
 }
