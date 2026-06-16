@@ -7,7 +7,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-
 // ============================================================
 // ⚙️ PARTIDOS — orden cronológico real, local y visitante correctos
 // ============================================================
