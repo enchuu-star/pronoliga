@@ -8573,7 +8573,6 @@ export default function Home() {
             {view === "games" && <GamesView user={user} />}
             {view === "payments" && <PaymentsView user={user} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
-            {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
           {showEmojiTip && (
