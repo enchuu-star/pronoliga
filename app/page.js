@@ -2315,7 +2315,7 @@ function MiniAreaChart({ points, width = 320, height = 130, color = GREEN }) {
 // ============================================================
 // PERFIL DE USUARIO
 // ============================================================
-function ProfileView({ user, matches }) {
+function ProfileView({ user, matches, viewProfileId, onClearProfile }) {
   const [myPreds, setMyPreds] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [allPreds, setAllPreds] = useState([]);
@@ -2326,6 +2326,8 @@ function ProfileView({ user, matches }) {
   const [editingEmoji, setEditingEmoji] = useState(false);
   const [emojiInput, setEmojiInput] = useState(user.emoji || "⚽");
   const [savingEmoji, setSavingEmoji] = useState(false);
+  const targetId = viewProfileId || user.id;
+  const isOwnProfile = targetId === user.id;
   
   const saveEmoji = async () => {
     setSavingEmoji(true);
@@ -2338,13 +2340,13 @@ function ProfileView({ user, matches }) {
 
   useEffect(() => {
     (async () => {
-      const { data: mp } = await supabase.from("predictions").select("*").range(0, 99999).eq("user_id", user.id);
+      const { data: mp } = await supabase.from("predictions").select("*").range(0, 99999).eq("user_id", targetId);
       const { data: profs } = await supabase.from("profiles").select("*").eq("role", "user");
       const { data: ap } = await supabase.from("predictions").select("*").range(0, 99999);
       setMyPreds(mp || []); setProfiles(profs || []); setAllPreds(ap || []);
       setLoading(false);
     })();
-  }, [user.id]);
+  }, [targetId]);
 
   if (loading) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -2362,6 +2364,7 @@ function ProfileView({ user, matches }) {
     </div>
   );
 
+  const targetProfile = isOwnProfile ? user : (profiles.find(p => p.id === targetId) || user);
   const evaluated = myPreds.filter(p => p.points !== null);
   const total = evaluated.reduce((s, p) => s + p.points, 0);
   const exactos = evaluated.filter(p => p.points === 5).length;
@@ -2400,6 +2403,11 @@ function ProfileView({ user, matches }) {
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
+    {!isOwnProfile && (
+        <button onClick={onClearProfile} style={{ marginBottom: "16px", padding: "6px 12px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>
+          ← Volver
+        </button>
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
   <div style={{ position: "relative" }}>
     <div style={{
@@ -2407,21 +2415,23 @@ function ProfileView({ user, matches }) {
       background: GREEN_DIM, border: `1px solid rgba(79,195,247,0.3)`,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: "28px", cursor: "pointer",
-    }} onClick={() => { setEditingEmoji(true); setEmojiInput(emoji); }}>
-      {emoji}
+    }} onClick={() => { if (isOwnProfile) { setEditingEmoji(true); setEmojiInput(emoji); } }}>
+      {isOwnProfile ? emoji : (targetProfile.emoji || "⚽")}
     </div>
-    <div style={{
-      position: "absolute", bottom: 0, right: 0,
-      width: "18px", height: "18px", borderRadius: "50%",
-      background: GREEN, border: "2px solid #0a1628",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: "9px", cursor: "pointer",
-    }} onClick={() => { setEditingEmoji(true); setEmojiInput(emoji); }}>
-      ✏️
-    </div>
+    {isOwnProfile && (
+      <div style={{
+        position: "absolute", bottom: 0, right: 0,
+        width: "18px", height: "18px", borderRadius: "50%",
+        background: GREEN, border: "2px solid #0a1628",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: "9px", cursor: "pointer",
+      }} onClick={() => { setEditingEmoji(true); setEmojiInput(emoji); }}>
+        ✏️
+      </div>
+    )}
   </div>
   <div>
-    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#e0eaf8", letterSpacing: "1px" }}>{user.name}</div>
+    <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#e0eaf8", letterSpacing: "1px" }}>{targetProfile.name}</div>
     <div style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "'Inter', sans-serif" }}>{myPreds.length} pronósticos enviados · {evaluated.length} evaluados</div>
   </div>
 </div>
@@ -2870,7 +2880,7 @@ function RankingHistory({ ranking, user, matches }) {
 // ============================================================
 // RANKING
 // ============================================================
-function RankingView({ matches, user }) {
+function RankingView({ matches, user, setView, setViewProfileId }) {
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -2896,6 +2906,8 @@ function RankingView({ matches, user }) {
         ...p,
         total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts,
         exactos: myPreds.filter(x => x.points === 5).length,
+        difGoles: myPreds.filter(x => x.points === 3).length,
+        parciales: myPreds.filter(x => x.points === 1).length,
         count: myPreds.length,
         qualPts, specialPts,
       };
@@ -2940,6 +2952,10 @@ function RankingView({ matches, user }) {
   const formatTime = d => d
     ? `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`
     : "";
+  const goToProfile = (id) => {
+    setViewProfileId(id === user.id ? null : id);
+    setView("profile");
+  };
 
   if (loading) return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -2994,7 +3010,7 @@ function RankingView({ matches, user }) {
               const isFirst = idx === 0;
               const isMe = user && u.id === user.id;
               return (
-                <div key={u.id} style={{ flex: 1, maxWidth: "120px", textAlign: "center" }}>
+                <div key={u.id} onClick={() => goToProfile(u.id)} className="tappable" style={{ flex: 1, maxWidth: "120px", textAlign: "center", cursor: "pointer" }}>
                   {/* Medalla */}
                   <div style={{ fontSize: isFirst ? "30px" : "24px", marginBottom: "4px" }}>
                     {medals[idx]}
@@ -3020,6 +3036,9 @@ function RankingView({ matches, user }) {
                     marginBottom: "6px",
                   }}>
                     {u.name?.split(" ")[0]}
+                  </div>
+                  <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", marginBottom: "6px" }}>
+                    🎯{u.exactos} 📏{u.difGoles} ✓{u.parciales}
                   </div>
 
                   {/* 👇 Movimiento (sube/baja) */}
@@ -3057,12 +3076,12 @@ function RankingView({ matches, user }) {
         const realIdx = i + 3;
         const isMe = user && u.id === user.id;
         return (
-          <div key={u.id} style={{
+          <div key={u.id} onClick={() => goToProfile(u.id)} className="tappable" style={{
             display: "flex", alignItems: "center", gap: "12px",
             background: isMe ? GREEN_DIM : CARD,
             border: `1px solid ${isMe ? GREEN : BORDER}`,
             boxShadow: isMe ? `0 0 14px rgba(79,195,247,0.35)` : "none",
-            borderRadius: "10px", padding: "14px 16px", marginBottom: "6px",
+            borderRadius: "10px", padding: "14px 16px", marginBottom: "6px", cursor: "pointer",
           }}>
             <div style={{ minWidth: "32px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
               <span style={{ fontSize: "16px", fontFamily: "'Bebas Neue', monospace", color: "#7ab8e0" }}>#{realIdx + 1}</span>
@@ -3076,9 +3095,9 @@ function RankingView({ matches, user }) {
                 </span>
               </div>
               <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "2px" }}>
-                {u.exactos} exactos · {u.count} eval.
-                {u.qualPts > 0 ? ` · +${u.qualPts} clasificados` : ""}
-                {u.specialPts > 0 ? ` · +${u.specialPts} especiales` : ""}
+                🎯 {u.exactos} · 📏 {u.difGoles} · ✓ {u.parciales} · {u.count} eval.
+                {u.qualPts > 0 ? ` · +${u.qualPts} clas.` : ""}
+                {u.specialPts > 0 ? ` · +${u.specialPts} esp.` : ""}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -8464,6 +8483,7 @@ export default function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showEmojiTip, setShowEmojiTip] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [viewProfileId, setViewProfileId] = useState(null);
 
   // PWA — registrar service worker
   useEffect(() => {
@@ -8596,15 +8616,15 @@ export default function Home() {
       {screen === "login" && <LoginPage onLogin={handleLogin} />}
       {screen === "app" && user && (
         <>
-          <NavBar user={user} view={view} setView={setView} onLogout={handleLogout} />
+          <NavBar user={user} view={view} setView={(v) => { if (v === "profile") setViewProfileId(null); setView(v); }} onLogout={handleLogout} />
           
           <div style={{ maxWidth: "700px", margin: "0 auto", padding: "62px 14px 84px", position: "relative", zIndex: 1 }}>
             {view === "home" && <HomeView user={user} matches={matches} predictions={predictions} setView={setView} loadingData={loadingData} />}
             {view === "groups" && <GroupsView user={user} matches={matches} predictions={predictions} onDataChange={loadData} allClosed={allClosed} />}
             {view === "results" && <ResultsView matches={matches} />}
             {view === "community" && <CommunityView matches={matches} user={user} />}
-            {view === "profile" && <ProfileView user={user} matches={matches} />}
-            {view === "ranking" && <RankingView matches={matches} user={user} />}
+            {view === "profile" && <ProfileView user={user} matches={matches} viewProfileId={viewProfileId} onClearProfile={() => setViewProfileId(null)} />}
+            {view === "ranking" && <RankingView matches={matches} user={user} setView={setView} setViewProfileId={setViewProfileId} />}
             {view === "games" && <GamesView user={user} />}
             {view === "payments" && <PaymentsView user={user} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
