@@ -4520,7 +4520,7 @@ function DailySummary({ user, matches }) {
       const ranked = Object.entries(byUser)
         .map(([id, pts]) => ({ id, name: nameOf(id), emoji: profiles?.find(x => x.id === id)?.emoji || "⚽", pts }))
         .sort((a, b) => b.pts - a.pts);
-      const topDay = ranked[0] || null;
+
 
       // Plenos del día (alguien con marcador exacto en algún partido)
       const exactScorers = (allPreds || [])
@@ -4528,10 +4528,44 @@ function DailySummary({ user, matches }) {
         .map(p => nameOf(p.user_id));
       const plenos = [...new Set(exactScorers)];
 
+      // Mejor y peor del día (entre quienes puntuaron hoy)
+      const bestDay = ranked[0] || null;
+      const worstDay = ranked.length > 1 ? ranked[ranked.length - 1] : null;
+
+      // Mi posición actual en el ranking GENERAL + movimiento desde la última foto
+      const { data: allPredsFull } = await supabase
+        .from("predictions").select("user_id, points").range(0, 99999);
+      const { data: specials } = await supabase.from("special_predictions").select("*");
+      const totals = (profiles || []).map(pr => {
+        const base = (allPredsFull || [])
+          .filter(x => x.user_id === pr.id && x.points != null)
+          .reduce((s, x) => s + (x.points || 0), 0);
+        const sp = (specials || []).find(x => x.user_id === pr.id);
+        const spPts = sp ? (sp.top_scorer_points || 0) + (sp.best_player_points || 0) : 0;
+        return { id: pr.id, total: base + spPts };
+      }).sort((a, b) => b.total - a.total);
+
+      const myPos = totals.findIndex(t => t.id === user.id) + 1; // 0 si no aparece
+
+      // Movimiento: comparar contra la penúltima foto del ranking_history
+      let myMove = null;
+      const { data: snaps } = await supabase
+        .from("ranking_history")
+        .select("user_id, position, snapshot_at")
+        .order("snapshot_at", { ascending: false });
+      if (snaps && snaps.length) {
+        const stamps = [...new Set(snaps.map(s => s.snapshot_at))];
+        // la foto más reciente es el "antes" de la tanda de hoy
+        const refStamp = stamps[0];
+        const prev = snaps.find(s => s.snapshot_at === refStamp && s.user_id === user.id);
+        if (prev && myPos > 0) myMove = prev.position - myPos; // + sube, - baja
+      }
+      
       setData({
         dateLabel: new Date(now).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }),
-        rows, myDayTotal, topDay, plenos, anyScored,
+        rows, myDayTotal, bestDay, worstDay, plenos, anyScored,
         matchCount: dayMatches.length,
+        myPos, myMove,
       });
       setLoading(false);
 
@@ -4640,6 +4674,37 @@ function DailySummary({ user, matches }) {
             <div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{data.matchCount} {data.matchCount === 1 ? "partido" : "partidos"}</div>
           </div>
 
+          {/* Mi posición actual + movimiento */}
+          {data.myPos > 0 && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "12px",
+              padding: "12px 14px", marginBottom: "16px",
+              background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px",
+            }}>
+              <div style={{ textAlign: "center", flexShrink: 0 }}>
+                <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>VAS</div>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "32px", color: GREEN, lineHeight: 1 }}>
+                  {data.myPos}<span style={{ fontSize: "15px" }}>º</span>
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                {data.myMove == null ? (
+                  <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>Tu posición en el ranking general</span>
+                ) : data.myMove === 0 ? (
+                  <span style={{ fontSize: "11px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>= Mantienes tu posición</span>
+                ) : data.myMove > 0 ? (
+                  <span style={{ fontSize: "12px", color: "#34d399", fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
+                    ▲ Has subido {data.myMove} {data.myMove === 1 ? "puesto" : "puestos"}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "12px", color: "#ff6b4a", fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
+                    ▼ Has bajado {Math.abs(data.myMove)} {Math.abs(data.myMove) === 1 ? "puesto" : "puestos"}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Partido a partido */}
           <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px" }}>TUS PRONÓSTICOS</p>
           <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
@@ -4662,13 +4727,22 @@ function DailySummary({ user, matches }) {
           {/* Resumen del grupo */}
           <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px" }}>EN EL GRUPO HOY</p>
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            {data.topDay && (
+            {data.bestDay && (
               <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: GREEN_DIM, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
                 <span style={{ fontSize: "20px" }}>🔥</span>
                 <span style={{ flex: 1, fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>
-                  Mejor del día: <b>{data.topDay.emoji} {data.topDay.name}</b>
+                  Mejor del día: <b>{data.bestDay.emoji} {data.bestDay.name}</b>
                 </span>
-                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{data.topDay.pts}</span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{data.bestDay.pts}</span>
+              </div>
+            )}
+            {data.worstDay && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: "rgba(255,107,74,0.06)", border: "1px solid rgba(255,107,74,0.2)", borderRadius: "8px" }}>
+                <span style={{ fontSize: "20px" }}>🥶</span>
+                <span style={{ flex: 1, fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>
+                  Peor del día: <b>{data.worstDay.emoji} {data.worstDay.name}</b>
+                </span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: "#ff6b4a" }}>{data.worstDay.pts}</span>
               </div>
             )}
             {data.plenos.length > 0 && (
