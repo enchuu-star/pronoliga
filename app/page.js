@@ -4446,6 +4446,264 @@ function PaymentsView({ user }) {
 }
 
 // ============================================================
+// RESUMEN DIARIO (aparece al entrar, a partir de las 08:00)
+// ============================================================
+function DailySummary({ user, matches }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const cardRef = useRef(null);
+
+  // Ventana del resumen: desde las 08:00 de AYER hasta ahora (hora España).
+  // Trabajamos con el instante real de cada partido (fecha+hora locales).
+  const matchInstant = (m) => new Date(`${m.match_date}T${(m.match_time || "00:00")}:00+02:00`).getTime();
+
+  useEffect(() => {
+    (async () => {
+      const now = new Date();
+      // "Hoy a las 08:00" en hora España. Si aún no son las 8, no mostramos nada.
+      const today8 = new Date(now); today8.setHours(8, 0, 0, 0);
+      if (now.getTime() < today8.getTime()) { setLoading(false); return; }
+
+      // Ventana: desde las 08:00 de ayer hasta ahora
+      const from = today8.getTime() - 24 * 3600 * 1000;
+      const to = now.getTime();
+
+      // Partidos terminados y puntuados dentro de la ventana
+      const dayMatches = (matches || []).filter(m => {
+        if (m.result_home === null || m.result_away === null) return false;
+        const t = matchInstant(m);
+        return t >= from && t <= to;
+      }).sort((a, b) => matchInstant(a) - matchInstant(b));
+
+      if (dayMatches.length === 0) { setLoading(false); return; }
+
+      const ids = dayMatches.map(m => m.id);
+
+      // Mis predicciones de esos partidos
+      const { data: mine } = await supabase
+        .from("predictions").select("*")
+        .eq("user_id", user.id).in("match_id", ids);
+      const myMap = {};
+      (mine || []).forEach(p => { myMap[p.match_id] = p; });
+
+      // Solo seguimos si al menos un partido mío está puntuado
+      const anyScored = (mine || []).some(p => p.points != null);
+
+      // Datos del grupo: todas las predicciones de esos partidos + perfiles
+      const { data: allPreds } = await supabase
+        .from("predictions").select("user_id, match_id, points").in("match_id", ids);
+      const { data: profiles } = await supabase
+        .from("profiles").select("id, name, emoji").eq("role", "user");
+      const nameOf = (id) => profiles?.find(p => p.id === id)?.name || "Usuario";
+
+      // Mis filas partido a partido
+      const rows = dayMatches.map(m => {
+        const p = myMap[m.id];
+        const pts = p && p.points != null ? p.points : (p ? null : 0);
+        return {
+          id: m.id, home: m.home, away: m.away,
+          rh: m.result_home, ra: m.result_away,
+          pred: p ? `${p.predicted_home}-${p.predicted_away}` : "—",
+          pts, hasPred: !!p,
+        };
+      });
+      const myDayTotal = rows.reduce((s, r) => s + (r.pts || 0), 0);
+
+      // Resumen del grupo: puntos del día por usuario
+      const byUser = {};
+      (allPreds || []).forEach(p => {
+        if (p.points == null) return;
+        byUser[p.user_id] = (byUser[p.user_id] || 0) + p.points;
+      });
+      const ranked = Object.entries(byUser)
+        .map(([id, pts]) => ({ id, name: nameOf(id), emoji: profiles?.find(x => x.id === id)?.emoji || "⚽", pts }))
+        .sort((a, b) => b.pts - a.pts);
+      const topDay = ranked[0] || null;
+
+      // Plenos del día (alguien con marcador exacto en algún partido)
+      const exactScorers = (allPreds || [])
+        .filter(p => p.points === 5)
+        .map(p => nameOf(p.user_id));
+      const plenos = [...new Set(exactScorers)];
+
+      setData({
+        dateLabel: new Date(now).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }),
+        rows, myDayTotal, topDay, plenos, anyScored,
+        matchCount: dayMatches.length,
+      });
+      setLoading(false);
+
+      // Mostrar automáticamente una vez al día
+      const key = `dailySummary_${new Date().toISOString().slice(0, 10)}`;
+      try { if (!localStorage.getItem(key)) setOpen(true); } catch { setOpen(true); }
+    })();
+  }, [matches, user.id]);
+
+  const dismiss = () => {
+    setOpen(false);
+    const key = `dailySummary_${new Date().toISOString().slice(0, 10)}`;
+    try { localStorage.setItem(key, "1"); } catch {}
+  };
+
+  // ── Compartir como imagen (share nativo → WhatsApp, etc.) ──
+  const loadHtml2Canvas = () => new Promise(resolve => {
+    if (window.html2canvas) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    s.onload = resolve;
+    document.head.appendChild(s);
+  });
+
+  const share = async () => {
+    setSharing(true);
+    try {
+      await loadHtml2Canvas();
+      const canvas = await window.html2canvas(cardRef.current, { backgroundColor: "#0a1628", scale: 2, useCORS: true, logging: false });
+      const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+      const file = new File([blob], "resumen-porra-vallau.png", { type: "image/png" });
+      const text = `📊 Mi resumen de hoy en la Porra Vallau · ${data.myDayTotal} pts`;
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+      } else {
+        // Fallback: descargar la imagen
+        const link = document.createElement("a");
+        link.download = "resumen-porra-vallau.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      }
+    } catch (e) {
+      console.error("share error", e);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  if (loading || !data) return null;
+
+  // Botón pequeño para reabrir el resumen si ya lo cerró
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="tappable" style={{
+        width: "100%", display: "flex", alignItems: "center", gap: "10px",
+        padding: "11px 14px", marginBottom: "16px", cursor: "pointer",
+        background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}`, borderRadius: "12px",
+      }}>
+        <span style={{ fontSize: "22px" }}>📊</span>
+        <div style={{ flex: 1, textAlign: "left" }}>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: "#e0eaf8", letterSpacing: "1px" }}>RESUMEN DE HOY</div>
+          <div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>Sacaste {data.myDayTotal} pts · toca para ver</div>
+        </div>
+        <span style={{ fontSize: "16px", color: GREEN }}>→</span>
+      </button>
+    );
+  }
+
+  const ptsBadge = (pts) => {
+    if (pts == null) return <span style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>pendiente</span>;
+    const cfg = pts === 5 ? ["🎯 +5", GREEN, GREEN_DIM]
+      : pts === 3 ? ["📏 +3", "#4fc3f7", "rgba(79,195,247,0.08)"]
+      : pts === 1 ? ["✓ +1", "#ffd54f", "rgba(255,193,7,0.1)"]
+      : ["✗ +0", "#cc2222", "rgba(255,82,82,0.08)"];
+    return <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: cfg[2], color: cfg[1] }}>{cfg[0]}</span>;
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 280, background: "rgba(5,12,24,0.85)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
+      animation: "fadeIn 0.25s ease",
+    }} onClick={dismiss}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "420px", maxHeight: "90vh", overflowY: "auto" }}>
+        {/* Tarjeta que se exporta como imagen */}
+        <div ref={cardRef} style={{
+          background: "linear-gradient(160deg,#102339,#0a1628)",
+          border: `2px solid ${GREEN}`, borderRadius: "16px", padding: "20px",
+        }}>
+          <div style={{ textAlign: "center", marginBottom: "16px" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#e0eaf8", letterSpacing: "3px", lineHeight: 1 }}>
+              PORRA <span style={{ color: GREEN }}>VALLAU</span>
+            </div>
+            <div style={{ fontSize: "10px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginTop: "4px", textTransform: "uppercase" }}>
+              📊 Resumen · {data.dateLabel}
+            </div>
+          </div>
+
+          {/* Mi total del día */}
+          <div style={{
+            textAlign: "center", padding: "14px", marginBottom: "16px",
+            background: "rgba(79,195,247,0.10)", border: `1px solid ${GREEN}`, borderRadius: "12px",
+          }}>
+            <div style={{ fontSize: "9px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", letterSpacing: "2px" }}>TUS PUNTOS DE HOY</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "46px", color: GREEN, lineHeight: 1 }}>{data.myDayTotal}</div>
+            <div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{data.matchCount} {data.matchCount === 1 ? "partido" : "partidos"}</div>
+          </div>
+
+          {/* Partido a partido */}
+          <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px" }}>TUS PRONÓSTICOS</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
+            {data.rows.map(r => {
+              const ht = getTeam(r.home), at = getTeam(r.away);
+              return (
+                <div key={r.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
+                  <span style={{ fontSize: "15px" }}>{ht.flag}</span>
+                  <span style={{ flex: 1, fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {r.home} <b style={{ color: "#e0eaf8" }}>{r.rh}-{r.ra}</b> {r.away}
+                  </span>
+                  <span style={{ fontSize: "15px" }}>{at.flag}</span>
+                  <span style={{ fontSize: "10px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", minWidth: "30px", textAlign: "center" }}>{r.pred}</span>
+                  {ptsBadge(r.pts)}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Resumen del grupo */}
+          <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px" }}>EN EL GRUPO HOY</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {data.topDay && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: GREEN_DIM, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
+                <span style={{ fontSize: "20px" }}>🔥</span>
+                <span style={{ flex: 1, fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>
+                  Mejor del día: <b>{data.topDay.emoji} {data.topDay.name}</b>
+                </span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "20px", color: GREEN }}>{data.topDay.pts}</span>
+              </div>
+            )}
+            {data.plenos.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
+                <span style={{ fontSize: "20px" }}>🎯</span>
+                <span style={{ flex: 1, fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>
+                  Marcador exacto: <b style={{ color: "#e0eaf8" }}>{data.plenos.join(", ")}</b>
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: "16px", paddingTop: "12px", borderTop: `1px solid ${BORDER}` }}>
+            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", letterSpacing: "1px" }}>⚽ porra vallau · mundial 2026</span>
+          </div>
+        </div>
+
+        {/* Botones (fuera de la imagen) */}
+        <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+          <button onClick={dismiss} style={{
+            flex: 1, padding: "13px", border: `1px solid ${BORDER}`, borderRadius: "10px",
+            background: "transparent", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", fontSize: "12px", cursor: "pointer",
+          }}>Cerrar</button>
+          <button onClick={share} disabled={sharing} style={{
+            flex: 2, padding: "13px", border: "none", borderRadius: "10px",
+            background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628",
+            fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "1px",
+          }}>{sharing ? "GENERANDO..." : "📲 COMPARTIR"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // PANTALLA DE INICIO
 // ============================================================
 function HomeView({ user, matches, predictions, setView, loadingData }) {
@@ -4533,6 +4791,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <DailySummary user={user} matches={matches} />
       {/* Cuenta atrás (solo antes de empezar) */}
       {!mundialStarted && <CountdownBanner />}
       {!mundialStarted && boteCard}
