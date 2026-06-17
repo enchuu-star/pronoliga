@@ -4469,14 +4469,22 @@ function DailySummary({ user, matches }) {
       const from = today8.getTime() - 24 * 3600 * 1000;
       const to = now.getTime();
 
-      // Partidos terminados y puntuados dentro de la ventana
-      const dayMatches = (matches || []).filter(m => {
-        if (m.result_home === null || m.result_away === null) return false;
+     // Todos los partidos de la ventana (tengan o no resultado todavía)
+      const windowMatches = (matches || []).filter(m => {
         const t = matchInstant(m);
         return t >= from && t <= to;
-      }).sort((a, b) => matchInstant(a) - matchInstant(b));
+      });
 
-      if (dayMatches.length === 0) { setLoading(false); return; }
+      if (windowMatches.length === 0) { setLoading(false); return; }
+
+      // Si algún partido de la ventana aún no tiene resultado, esperamos a que
+      // se registre: el resumen no se crea hasta que TODOS estén cerrados.
+      const allHaveResults = windowMatches.every(
+        m => m.result_home !== null && m.result_away !== null
+      );
+      if (!allHaveResults) { setLoading(false); return; }
+
+      const dayMatches = windowMatches.sort((a, b) => matchInstant(a) - matchInstant(b));
 
       const ids = dayMatches.map(m => m.id);
 
