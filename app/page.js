@@ -2919,8 +2919,17 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
       .order("snapshot_at", { ascending: false });
     let prevPos = {};
     if (snap && snap.length) {
-      const latest = snap[0].snapshot_at;
-      snap.filter(s => s.snapshot_at === latest).forEach(s => { prevPos[s.user_id] = s.position; });
+      const stamps = [...new Set(snap.map(s => s.snapshot_at))];
+      const curPos = {};
+      r.forEach((u, i) => { curPos[u.id] = i + 1; });
+      let chosen = null;
+      for (const st of stamps) {
+        const snapPos = {};
+        snap.filter(s => s.snapshot_at === st).forEach(s => { snapPos[s.user_id] = s.position; });
+        const differs = r.some(u => snapPos[u.id] != null && snapPos[u.id] !== curPos[u.id]);
+        if (differs) { chosen = snapPos; break; }
+      }
+      if (chosen) prevPos = chosen;
     }
     const rWithMove = r.map((u, i) => {
       const prev = prevPos[u.id];
