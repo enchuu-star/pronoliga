@@ -8849,11 +8849,23 @@ function chFormation() {
     r: type === "ball" ? CH_BR : CH_DR,
     m: type === "ball" ? 0.5 : 1, team, idx, type,
   });
+  
   return [
-    mk(45, 180, "p1", 0, "disc"), mk(140, 110, "p1", 1, "disc"), mk(140, 250, "p1", 2, "disc"),
-    mk(245, 130, "p1", 3, "disc"), mk(245, 230, "p1", 4, "disc"),
-    mk(555, 180, "p2", 0, "disc"), mk(460, 110, "p2", 1, "disc"), mk(460, 250, "p2", 2, "disc"),
-    mk(355, 130, "p2", 3, "disc"), mk(355, 230, "p2", 4, "disc"),
+    // --- Equipo 1 (Izquierda) ---
+    mk(45, 180, "p1", 0, "disc"),   // Portero
+    mk(150, 140, "p1", 1, "disc"),  // Defensa superior (más cerrado)
+    mk(150, 220, "p1", 2, "disc"),  // Defensa inferior (más cerrado)
+    mk(240, 155, "p1", 3, "disc"),  // Medio superior (bloqueando el centro)
+    mk(240, 205, "p1", 4, "disc"),  // Medio inferior (bloqueando el centro)
+
+    // --- Equipo 2 (Derecha) ---
+    mk(555, 180, "p2", 0, "disc"),  // Portero
+    mk(450, 140, "p2", 1, "disc"),  // Defensa superior
+    mk(450, 220, "p2", 2, "disc"),  // Defensa inferior
+    mk(360, 155, "p2", 3, "disc"),  // Medio superior
+    mk(360, 205, "p2", 4, "disc"),  // Medio inferior
+
+    // --- Balón ---
     mk(300, 180, "ball", 0, "ball"),
   ];
 }
