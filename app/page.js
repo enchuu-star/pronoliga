@@ -8896,25 +8896,16 @@ function chStep(b) {
 const chSettled = (b) => b.every(p => Math.abs(p.vx) < 0.08 && Math.abs(p.vy) < 0.08);
 
 function chDraw(ctx, b, aim, myRole, p1Flag, p2Flag) {
-  // El campo es horizontal (600x360) pero se DIBUJA girado 90°
-  // para ocupar la pantalla a lo largo (buffer del canvas: 360x600).
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, CH_H, CH_W);
-  ctx.save();
-  ctx.translate(CH_H, 0);
-  ctx.rotate(Math.PI / 2);
-
-  // césped
+  ctx.clearRect(0, 0, CH_W, CH_H);
   for (let i = 0; i < 10; i++) {
     ctx.fillStyle = i % 2 === 0 ? "#0f2e1a" : "#0d2817";
     ctx.fillRect(i * (CH_W / 10), 0, CH_W / 10, CH_H);
   }
-  // líneas
   ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(CH_W / 2, 0); ctx.lineTo(CH_W / 2, CH_H); ctx.stroke();
   ctx.beginPath(); ctx.arc(CH_W / 2, CH_H / 2, 52, 0, Math.PI * 2); ctx.stroke();
   ctx.beginPath(); ctx.arc(CH_W / 2, CH_H / 2, 3, 0, Math.PI * 2); ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fill();
-  // porterías
   const drawGoal = (xLine, side) => {
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.fillRect(side === "L" ? xLine : xLine - 10, CH_GTOP - 4, 10, 8);
@@ -8925,7 +8916,6 @@ function chDraw(ctx, b, aim, myRole, p1Flag, p2Flag) {
     ctx.beginPath(); ctx.moveTo(xLine, CH_GTOP); ctx.lineTo(xLine, CH_GBOT); ctx.stroke();
   };
   drawGoal(2, "L"); drawGoal(CH_W - 2, "R");
-  // aim
   if (aim && aim.disc != null) {
     const d = b[aim.disc];
     ctx.strokeStyle = aim.power > 0.66 ? "#ff6b4a" : aim.power > 0.33 ? "#ffd54f" : CH_P1;
@@ -8940,7 +8930,6 @@ function chDraw(ctx, b, aim, myRole, p1Flag, p2Flag) {
     ctx.lineTo(ex - 9 * Math.cos(ang + 0.4), ey - 9 * Math.sin(ang + 0.4));
     ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
   }
-  // fichas
   for (const p of b) {
     if (p.type === "ball") continue;
     const ring = p.team === "p1" ? CH_P1 : CH_P2;
@@ -8954,13 +8943,10 @@ function chDraw(ctx, b, aim, myRole, p1Flag, p2Flag) {
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(p.team === "p1" ? p1Flag : p2Flag, p.x, p.y + 1);
   }
-  // balón
   const ball = b[10];
   ctx.font = `${Math.round(CH_BR * 1.9)}px serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText("⚽", ball.x, ball.y + 1);
-
-  ctx.restore();
 }
 
 function ChapasGame({ user, onBack }) {
@@ -9000,6 +8986,16 @@ function ChapasGame({ user, onBack }) {
   const rafRef = useRef(null);
   const phaseRef = useRef("menu");
   const startedRef = useRef(false);
+  const myRoleRef = useRef(null);
+  const roomRef = useRef(null);
+  const myCountryRef = useRef(null);
+  const rotatedRef = useRef(false);
+  const iRematchRef = useRef(false);
+  const theyRematchRef = useRef(false);
+  const [iWantRematch, setIWantRematch] = useState(false);
+  const [theyWantRematch, setTheyWantRematch] = useState(false);
+  const [opponentLeft, setOpponentLeft] = useState(false);
+  const [dims, setDims] = useState({ w: 0, h: 0 });
 
   useEffect(() => () => {
     if (roomChanRef.current) supabase.removeChannel(roomChanRef.current);
@@ -9008,6 +9004,16 @@ function ChapasGame({ user, onBack }) {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
   }, []);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { myRoleRef.current = myRole; }, [myRole]);
+  useEffect(() => { roomRef.current = room; }, [room]);
+  useEffect(() => { myCountryRef.current = myCountry; }, [myCountry]);
+  useEffect(() => {
+    const upd = () => setDims({ w: window.innerWidth, h: window.innerHeight });
+    upd();
+    window.addEventListener("resize", upd);
+    window.addEventListener("orientationchange", upd);
+    return () => { window.removeEventListener("resize", upd); window.removeEventListener("orientationchange", upd); };
+  }, []);
 
   // ---------- estadísticas ----------
   const loadStats = async () => {
@@ -9090,15 +9096,17 @@ function ChapasGame({ user, onBack }) {
 
   // ---------- canal de juego (broadcast) ----------
   useEffect(() => {
-    if (phase !== "playing" || !roomIdRef.current) return;
-    const ch = supabase.channel(`soccer_game_${roomIdRef.current}`, { config: { broadcast: { self: false } } });
+    if (!room?.id || gameChanRef.current) return;
+    const ch = supabase.channel(`soccer_game_${room.id}`, { config: { broadcast: { self: false } } });
     ch.on("broadcast", { event: "shot" }, ({ payload }) => onRemoteShot(payload));
     ch.on("broadcast", { event: "state" }, ({ payload }) => onRemoteState(payload));
+    ch.on("broadcast", { event: "rematch" }, () => onRemoteRematch());
+    ch.on("broadcast", { event: "leave" }, () => onRemoteLeave());
     ch.subscribe();
     gameChanRef.current = ch;
-    return () => { supabase.removeChannel(ch); gameChanRef.current = null; };
+    // No se cierra aquí: persiste para la revancha. Se cierra en resetToMenu/unmount.
     // eslint-disable-next-line
-  }, [phase]);
+  }, [room?.id]);
 
   const send = (event, payload) => gameChanRef.current?.send({ type: "broadcast", event, payload });
 
@@ -9185,28 +9193,64 @@ function ChapasGame({ user, onBack }) {
   const finishMatch = async (s1, s2) => {
     if (savedRef.current) return;
     savedRef.current = true;
+    const role = myRoleRef.current, rm = roomRef.current, mc = myCountryRef.current;
     const winner = s1 > s2 ? "p1" : "p2";
-    const iWon = winner === myRole;
-    const myScore = myRole === "p1" ? s1 : s2;
-    const theirScore = myRole === "p1" ? s2 : s1;
-    const theirName = myRole === "p1" ? room?.player2_name : room?.player1_name;
+    const iWon = winner === role;
+    const myScore = role === "p1" ? s1 : s2;
+    const theirScore = role === "p1" ? s2 : s1;
+    const theirName = role === "p1" ? rm?.player2_name : rm?.player1_name;
     setPhase("finished");
     await supabase.from("soccer_scores").insert({
       user_id: user.id, won: iWon, my_score: myScore, their_score: theirScore,
-      country: myCountry?.name, flag: myCountry?.flag, opponent_name: theirName || "Rival",
+      country: mc?.name, flag: mc?.flag, opponent_name: theirName || "Rival",
     });
     await supabase.from("soccer_rooms").update({ status: "finished" }).eq("id", roomIdRef.current);
   };
 
+  const startRematch = () => {
+    iRematchRef.current = false; theyRematchRef.current = false;
+    setIWantRematch(false); setTheyWantRematch(false); setOpponentLeft(false);
+    bodiesRef.current = chFormation();
+    setScore1(0); setScore2(0); scoreRef.current = { s1: 0, s2: 0 };
+    setTurn("p1"); turnRef.current = "p1";
+    savedRef.current = false; goalRef.current = null; animatingRef.current = false;
+    setShowGoal(null);
+    setPhase("playing");
+  };
+  const requestRematch = () => {
+    if (iRematchRef.current || opponentLeft) return;
+    iRematchRef.current = true; setIWantRematch(true);
+    send("rematch", {});
+    if (theyRematchRef.current) startRematch();
+  };
+  const onRemoteRematch = () => {
+    theyRematchRef.current = true; setTheyWantRematch(true);
+    if (iRematchRef.current) startRematch();
+  };
+  const onRemoteLeave = () => { setOpponentLeft(true); };
+  const leaveGame = () => { send("leave", {}); resetToMenu(); };
+
   // ---------- input (apuntar y lanzar) ----------
   const toLogical = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-    // El buffer es CH_H x CH_W (girado 90°). Lo convertimos a coords de campo.
-    const px = cx * (CH_H / rect.width);
-    const py = cy * (CH_W / rect.height);
-    return { x: py, y: CH_H - px };
+    const cv = canvasRef.current;
+    const rect = cv.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    if (rotatedRef.current) {
+      // El escenario está girado 90°. rect es el AABB del canvas girado.
+      const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+      const sdx = clientX - cx, sdy = clientY - cy;
+      const lx = sdy, ly = -sdx;                 // inversa de rotate(90deg)
+      const cssW = rect.height, cssH = rect.width; // dimensiones sin girar
+      return {
+        x: (lx + cssW / 2) * (CH_W / cssW),
+        y: (ly + cssH / 2) * (CH_H / cssH),
+      };
+    }
+    return {
+      x: (clientX - rect.left) * (CH_W / rect.width),
+      y: (clientY - rect.top) * (CH_H / rect.height),
+    };
   };
   const canShoot = () => phase === "playing" && turnRef.current === myRole && !animatingRef.current && !savedRef.current;
   const myRange = myRole === "p1" ? [0, 4] : [5, 9];
@@ -9252,6 +9296,8 @@ function ChapasGame({ user, onBack }) {
     setRoom(null); setMyRole(null); setRoomCode(""); setInputCode("");
     startedRef.current = false;
     bodiesRef.current = chFormation();
+    iRematchRef.current = false; theyRematchRef.current = false;
+    setIWantRematch(false); setTheyWantRematch(false); setOpponentLeft(false);
     setPhase("menu");
   };
 
@@ -9347,6 +9393,24 @@ function ChapasGame({ user, onBack }) {
     </div>
   );
 
+  const vw = dims.w || 360, vh = dims.h || 640;
+  const isPortrait = vh >= vw;
+  rotatedRef.current = isPortrait;
+  const stageW = isPortrait ? vh : vw;
+  const stageH = isPortrait ? vw : vh;
+  const stageWrap = (content) => (
+    <div style={{ position: "fixed", inset: 0, zIndex: 400, background: DARK, overflow: "hidden" }}>
+      <div style={{
+        position: "absolute", top: "50%", left: "50%",
+        width: `${stageW}px`, height: `${stageH}px`,
+        transform: `translate(-50%,-50%) rotate(${isPortrait ? 90 : 0}deg)`,
+        transformOrigin: "center center",
+        display: "flex", flexDirection: "column",
+        padding: "8px 12px", boxSizing: "border-box",
+      }}>{content}</div>
+    </div>
+  );
+
   // ============================== JUGANDO ==============================
   if (phase === "playing") {
     const amIShooter = turn === myRole && !animatingRef.current;
@@ -9354,42 +9418,44 @@ function ChapasGame({ user, onBack }) {
     const theirFlag = myRole === "p1" ? room?.player2_flag : room?.player1_flag;
     const myScore = myRole === "p1" ? score1 : score2;
     const theirScore = myRole === "p1" ? score2 : score1;
-    return (
-      <div style={{ animation: "fadeIn 0.3s ease" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", marginBottom: "10px", alignItems: "center" }}>
-          <div style={{ background: GREEN_DIM, border: `1px solid rgba(79,195,247,0.3)`, borderRadius: "10px", padding: "8px", textAlign: "center" }}>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: GREEN, lineHeight: 1 }}>{myFlag} {myScore}</div>
-            <div style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>TÚ</div>
-          </div>
-          <div style={{ textAlign: "center", fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#7ab8e0" }}>VS</div>
-          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "8px", textAlign: "center" }}>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: "#e0eaf8", lineHeight: 1 }}>{theirScore} {theirFlag}</div>
-            <div style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>RIVAL</div>
-          </div>
-        </div>
-
-        <div style={{ textAlign: "center", marginBottom: "8px", minHeight: "16px" }}>
-          <span style={{ fontSize: "11px", fontFamily: "'Bebas Neue', cursive", letterSpacing: "2px", color: amIShooter ? GREEN : "#7ab8e0" }}>
-            {amIShooter ? "⚽ TU TURNO · arrastra una ficha hacia atrás" : "⏳ TURNO DEL RIVAL"}
-          </span>
-        </div>
-
-        <div style={{ position: "relative", borderRadius: "12px", overflow: "hidden", border: `1px solid ${BORDER}`, maxWidth: "440px", margin: "0 auto" }}>
-          <canvas ref={canvasRef} width={CH_H} height={CH_W}
-            onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
-            onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
-            style={{ display: "block", width: "100%", height: "auto", touchAction: "none", cursor: amIShooter ? "pointer" : "default" }} />
-          {showGoal && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.35)", animation: "popIn 0.3s ease" }}>
-              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "48px", letterSpacing: "4px", color: showGoal === myRole ? GREEN : "#ff8a5b", textShadow: "0 0 18px rgba(0,0,0,0.6)" }}>
-                {showGoal === myRole ? "¡GOOOL!" : "GOL RIVAL"}
-              </span>
+    const boardW = stageW - 24, boardH = stageH - 72;
+    const cW = Math.min(boardW, boardH * (CH_W / CH_H)), cH = cW * (CH_H / CH_W);
+    return stageWrap(
+      <>
+        {/* MARCADOR ARRIBA */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+          <button onClick={leaveGame} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px", flexShrink: 0 }}>Salir</button>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", background: GREEN_DIM, border: `1px solid rgba(79,195,247,0.3)`, borderRadius: "8px", padding: "4px 12px" }}>
+              <span style={{ fontSize: "20px" }}>{myFlag}</span>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: GREEN, lineHeight: 1 }}>{myScore}</span>
             </div>
-          )}
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: amIShooter ? GREEN : "#7ab8e0", minWidth: "86px", textAlign: "center" }}>
+              {amIShooter ? "TU TURNO" : "TURNO RIVAL"}
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px", padding: "4px 12px" }}>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#e0eaf8", lineHeight: 1 }}>{theirScore}</span>
+              <span style={{ fontSize: "20px" }}>{theirFlag}</span>
+            </div>
+          </div>
         </div>
-          
-        <button onClick={resetToMenu} style={{ display: "block", margin: "12px auto 0", padding: "8px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Salir</button>
-      </div>
+        {/* TABLERO */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 }}>
+          <div style={{ position: "relative" }}>
+            <canvas ref={canvasRef} width={CH_W} height={CH_H}
+              onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+              onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+              style={{ display: "block", width: `${cW}px`, height: `${cH}px`, borderRadius: "12px", border: `1px solid ${BORDER}`, touchAction: "none", cursor: amIShooter ? "pointer" : "default" }} />
+            {showGoal && (
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.35)", borderRadius: "12px" }}>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "46px", letterSpacing: "4px", color: showGoal === myRole ? GREEN : "#ff8a5b", textShadow: "0 0 18px rgba(0,0,0,0.6)" }}>
+                  {showGoal === myRole ? "¡GOOOL!" : "GOL RIVAL"}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
     );
   }
 
@@ -9399,23 +9465,37 @@ function ChapasGame({ user, onBack }) {
     const theirScore = myRole === "p1" ? score2 : score1;
     const iWon = myScore > theirScore;
     const theirName = myRole === "p1" ? room?.player2_name : room?.player1_name;
-    return (
-      <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
-        <div style={{ background: CARD, border: `1px solid ${iWon ? "rgba(79,195,247,0.4)" : "rgba(255,82,82,0.25)"}`, borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
-          <div style={{ fontSize: "52px", marginBottom: "10px" }}>{iWon ? "🏆" : "😔"}</div>
-          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: iWon ? GREEN : "#cc2222", letterSpacing: "3px", marginBottom: "16px" }}>{iWon ? "¡GANASTE!" : "PERDISTE"}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", alignItems: "center" }}>
-            <div><div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: GREEN }}>{myScore}</div><div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{myCountry?.flag} TÚ</div></div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#7ab8e0" }}>VS</div>
-            <div><div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: "#e0eaf8" }}>{theirScore}</div><div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{theirName?.split(" ")[0] || "Rival"}</div></div>
-          </div>
+    return stageWrap(
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", textAlign: "center" }}>
+        <div style={{ fontSize: "44px" }}>{iWon ? "🏆" : "😔"}</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: iWon ? GREEN : "#cc2222", letterSpacing: "3px" }}>{iWon ? "¡GANASTE!" : "PERDISTE"}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div><div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "44px", color: GREEN, lineHeight: 1 }}>{myScore}</div><div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{myCountry?.flag} TÚ</div></div>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#7ab8e0" }}>-</span>
+          <div><div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "44px", color: "#e0eaf8", lineHeight: 1 }}>{theirScore}</div><div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{theirName?.split(" ")[0] || "Rival"}</div></div>
         </div>
-        <button onClick={resetToMenu} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>🔄 NUEVA PARTIDA</button>
+
+        {opponentLeft ? (
+          <>
+            <p style={{ fontSize: "12px", color: "#ff8a5b", fontFamily: "'Inter', sans-serif" }}>El rival ha salido de la partida</p>
+            <button onClick={resetToMenu} style={{ padding: "12px 32px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "2px" }}>SALIR</button>
+          </>
+        ) : (
+          <>
+            {theyWantRematch && !iWantRematch && (
+              <p style={{ fontSize: "11px", color: "#ffd54f", fontFamily: "'Inter', sans-serif" }}>🔁 El rival quiere la revancha</p>
+            )}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button onClick={requestRematch} disabled={iWantRematch} style={{ padding: "12px 26px", border: "none", borderRadius: "10px", background: iWantRematch ? "rgba(79,195,247,0.15)" : `linear-gradient(135deg,${GREEN},#0077cc)`, color: iWantRematch ? GREEN : "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: iWantRematch ? "default" : "pointer", letterSpacing: "2px" }}>
+                {iWantRematch ? "ESPERANDO RIVAL..." : "🔄 REVANCHA"}
+              </button>
+              <button onClick={leaveGame} style={{ padding: "12px 26px", border: `1px solid ${BORDER}`, borderRadius: "10px", background: "transparent", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 700, cursor: "pointer", letterSpacing: "2px" }}>SALIR</button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
-  return null;
-}
 
 // 🔒 BETA CHAPAS — el juego solo lo ven estos usuarios.
 // Puedes poner el NOMBRE (tal cual aparece en la app) o el EMAIL. Da igual mayúsculas.
