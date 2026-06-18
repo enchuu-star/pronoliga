@@ -9389,6 +9389,20 @@ function ChapasGame({ user, onBack }) {
       <div style={{ display: "inline-block", background: GREEN_DIM, border: `2px solid ${GREEN}`, borderRadius: "12px", padding: "16px 32px", marginBottom: "24px" }}>
         <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "42px", color: GREEN, letterSpacing: "8px" }}>{roomCode}</span>
       </div>
+      <button
+        onClick={() => {
+          const texto = `⚽ ¡Te reto a las CHAPAS en la Porra Vallau!\n\nEntra en Juegos → Chapas → "Unirse con código" y mete este código:\n\n👉 ${roomCode}`;
+          const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+          window.open(url, "_blank");
+        }}
+        style={{
+          display: "block", margin: "0 auto 14px", padding: "12px 22px",
+          border: "none", borderRadius: "10px", background: "#25D366", color: "#0a1628",
+          fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800,
+          cursor: "pointer", letterSpacing: "1px",
+        }}>
+        📲 COMPARTIR POR WHATSAPP
+      </button>
       <button onClick={resetToMenu} style={{ display: "block", margin: "0 auto", padding: "8px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cancelar</button>
     </div>
   );
