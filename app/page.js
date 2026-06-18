@@ -8840,6 +8840,8 @@ const CH_FR = 0.986, CH_E = 0.9, CH_MINV = 0.05;
 const CH_MAXPULL = 130, CH_MAXV = 15, CH_MINPULL = 6;
 const CH_P1 = "#4fc3f7", CH_P2 = "#ff8a5b";   // colores de cada equipo
 const CH_WIN_GOALS = 3;
+const CH_SUBSTEPS = 2;   // ⬅️ menos pasos por frame = chapas y balón más lentos (antes iban a 4)
+// Nota: el canvas pasa a ser 360x600 (vertical) y el campo se dibuja girado 90°.
 
 function chFormation() {
   const mk = (x, y, team, idx, type) => ({
@@ -8894,7 +8896,14 @@ function chStep(b) {
 const chSettled = (b) => b.every(p => Math.abs(p.vx) < 0.08 && Math.abs(p.vy) < 0.08);
 
 function chDraw(ctx, b, aim, myRole, p1Flag, p2Flag) {
-  ctx.clearRect(0, 0, CH_W, CH_H);
+  // El campo es horizontal (600x360) pero se DIBUJA girado 90°
+  // para ocupar la pantalla a lo largo (buffer del canvas: 360x600).
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, CH_H, CH_W);
+  ctx.save();
+  ctx.translate(CH_H, 0);
+  ctx.rotate(Math.PI / 2);
+
   // césped
   for (let i = 0; i < 10; i++) {
     ctx.fillStyle = i % 2 === 0 ? "#0f2e1a" : "#0d2817";
@@ -8950,6 +8959,8 @@ function chDraw(ctx, b, aim, myRole, p1Flag, p2Flag) {
   ctx.font = `${Math.round(CH_BR * 1.9)}px serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText("⚽", ball.x, ball.y + 1);
+
+  ctx.restore();
 }
 
 function ChapasGame({ user, onBack }) {
@@ -9120,9 +9131,9 @@ function ChapasGame({ user, onBack }) {
     const ctx = canvasRef.current?.getContext("2d");
     const loop = () => {
       if (animatingRef.current && ctx) {
-        for (let k = 0; k < 4; k++) { const g = chStep(bodiesRef.current); if (g) { goalRef.current = g; break; } }
+        for (let k = 0; k < CH_SUBSTEPS; k++) { const g = chStep(bodiesRef.current); if (g) { goalRef.current = g; break; } }
         frameRef.current++;
-        if (goalRef.current || chSettled(bodiesRef.current) || frameRef.current > 1400) {
+        if (goalRef.current || chSettled(bodiesRef.current) || frameRef.current > 3000) {
           animatingRef.current = false;
           onSimEnd();
         }
@@ -9192,7 +9203,10 @@ function ChapasGame({ user, onBack }) {
     const rect = canvasRef.current.getBoundingClientRect();
     const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
     const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-    return { x: cx * (CH_W / rect.width), y: cy * (CH_H / rect.height) };
+    // El buffer es CH_H x CH_W (girado 90°). Lo convertimos a coords de campo.
+    const px = cx * (CH_H / rect.width);
+    const py = cy * (CH_W / rect.height);
+    return { x: py, y: CH_H - px };
   };
   const canShoot = () => phase === "playing" && turnRef.current === myRole && !animatingRef.current && !savedRef.current;
   const myRange = myRole === "p1" ? [0, 4] : [5, 9];
@@ -9242,7 +9256,6 @@ function ChapasGame({ user, onBack }) {
   };
 
   const medals = ["🥇", "🥈", "🥉"];
-  const portrait = typeof window !== "undefined" && window.innerHeight > window.innerWidth;
 
   // ============================== MENÚ ==============================
   if (phase === "menu") return (
@@ -9257,7 +9270,7 @@ function ChapasGame({ user, onBack }) {
         <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8 }}>
           Fútbol de chapas 1v1 en tiempo real · por turnos<br/>Mete <span style={{ color: GREEN }}>3 goles</span> antes que tu rival 🔴
         </p>
-        <p style={{ fontSize: "10px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", marginTop: "8px" }}>📱 Gira el móvil en horizontal para jugar</p>
+        <p style={{ fontSize: "10px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", marginTop: "8px" }}>JUEGO MULTIJUGADOR</p>
       </div>
 
       <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px" }}>1️⃣ ELIGE TU PAÍS</p>
@@ -9361,8 +9374,8 @@ function ChapasGame({ user, onBack }) {
           </span>
         </div>
 
-        <div style={{ position: "relative", borderRadius: "12px", overflow: "hidden", border: `1px solid ${BORDER}` }}>
-          <canvas ref={canvasRef} width={CH_W} height={CH_H}
+        <div style={{ position: "relative", borderRadius: "12px", overflow: "hidden", border: `1px solid ${BORDER}`, maxWidth: "440px", margin: "0 auto" }}>
+          <canvas ref={canvasRef} width={CH_H} height={CH_W}
             onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
             onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
             style={{ display: "block", width: "100%", height: "auto", touchAction: "none", cursor: amIShooter ? "pointer" : "default" }} />
@@ -9374,8 +9387,7 @@ function ChapasGame({ user, onBack }) {
             </div>
           )}
         </div>
-
-        {portrait && <p style={{ fontSize: "10px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "8px" }}>📱 Gira el móvil para verlo más grande</p>}
+          
         <button onClick={resetToMenu} style={{ display: "block", margin: "12px auto 0", padding: "8px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Salir</button>
       </div>
     );
