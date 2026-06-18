@@ -8827,6 +8827,591 @@ function SimonGame({ user, onBack }) {
   return null;
 }
 
+// ============================================================
+// CHAPAS — fútbol de chapas 1v1 en tiempo real (estilo Soccer Stars)
+// Horizontal · a 3 goles · física de rebotes por turnos
+// Requiere: tablas soccer_rooms y soccer_scores en Supabase
+// ============================================================
+const CH_W = 600, CH_H = 360, CH_DR = 17, CH_BR = 12;
+const CH_GTOP = 110, CH_GBOT = 250;     // boca de portería
+const CH_FR = 0.986, CH_E = 0.9, CH_MINV = 0.05;
+const CH_MAXPULL = 130, CH_MAXV = 15, CH_MINPULL = 6;
+const CH_P1 = "#4fc3f7", CH_P2 = "#ff8a5b";   // colores de cada equipo
+const CH_WIN_GOALS = 3;
+
+function chFormation() {
+  const mk = (x, y, team, idx, type) => ({
+    x, y, vx: 0, vy: 0,
+    r: type === "ball" ? CH_BR : CH_DR,
+    m: type === "ball" ? 0.5 : 1, team, idx, type,
+  });
+  return [
+    mk(45, 180, "p1", 0, "disc"), mk(140, 110, "p1", 1, "disc"), mk(140, 250, "p1", 2, "disc"),
+    mk(245, 130, "p1", 3, "disc"), mk(245, 230, "p1", 4, "disc"),
+    mk(555, 180, "p2", 0, "disc"), mk(460, 110, "p2", 1, "disc"), mk(460, 250, "p2", 2, "disc"),
+    mk(355, 130, "p2", 3, "disc"), mk(355, 230, "p2", 4, "disc"),
+    mk(300, 180, "ball", 0, "ball"),
+  ];
+}
+
+function chStep(b) {
+  let goal = null;
+  for (const p of b) {
+    p.x += p.vx; p.y += p.vy; p.vx *= CH_FR; p.vy *= CH_FR;
+    if (Math.abs(p.vx) < CH_MINV) p.vx = 0;
+    if (Math.abs(p.vy) < CH_MINV) p.vy = 0;
+    if (p.y - p.r < 0) { p.y = p.r; p.vy = -p.vy * CH_E; }
+    if (p.y + p.r > CH_H) { p.y = CH_H - p.r; p.vy = -p.vy * CH_E; }
+    const inBand = p.y > CH_GTOP && p.y < CH_GBOT;
+    if (p.type === "ball" && inBand) {
+      if (p.x < -p.r) goal = "p2";          // balón en portería izquierda → marca p2
+      else if (p.x > CH_W + p.r) goal = "p1";
+    } else {
+      if (p.x - p.r < 0) { p.x = p.r; p.vx = -p.vx * CH_E; }
+      if (p.x + p.r > CH_W) { p.x = CH_W - p.r; p.vx = -p.vx * CH_E; }
+    }
+  }
+  for (let i = 0; i < b.length; i++) for (let j = i + 1; j < b.length; j++) {
+    const a = b[i], c = b[j];
+    const dx = c.x - a.x, dy = c.y - a.y;
+    const d = Math.hypot(dx, dy), min = a.r + c.r;
+    if (d > 0 && d < min) {
+      const nx = dx / d, ny = dy / d, overlap = min - d, totM = a.m + c.m;
+      a.x -= nx * overlap * (c.m / totM); a.y -= ny * overlap * (c.m / totM);
+      c.x += nx * overlap * (a.m / totM); c.y += ny * overlap * (a.m / totM);
+      const rel = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
+      if (rel < 0) {
+        const imp = -(1 + CH_E) * rel / (1 / a.m + 1 / c.m);
+        a.vx -= imp * nx / a.m; a.vy -= imp * ny / a.m;
+        c.vx += imp * nx / c.m; c.vy += imp * ny / c.m;
+      }
+    }
+  }
+  return goal;
+}
+const chSettled = (b) => b.every(p => Math.abs(p.vx) < 0.08 && Math.abs(p.vy) < 0.08);
+
+function chDraw(ctx, b, aim, myRole, p1Flag, p2Flag) {
+  ctx.clearRect(0, 0, CH_W, CH_H);
+  // césped
+  for (let i = 0; i < 10; i++) {
+    ctx.fillStyle = i % 2 === 0 ? "#0f2e1a" : "#0d2817";
+    ctx.fillRect(i * (CH_W / 10), 0, CH_W / 10, CH_H);
+  }
+  // líneas
+  ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(CH_W / 2, 0); ctx.lineTo(CH_W / 2, CH_H); ctx.stroke();
+  ctx.beginPath(); ctx.arc(CH_W / 2, CH_H / 2, 52, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(CH_W / 2, CH_H / 2, 3, 0, Math.PI * 2); ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fill();
+  // porterías
+  const drawGoal = (xLine, side) => {
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(side === "L" ? xLine : xLine - 10, CH_GTOP - 4, 10, 8);
+    ctx.fillRect(side === "L" ? xLine : xLine - 10, CH_GBOT - 4, 10, 8);
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(side === "L" ? xLine - 14 : xLine, CH_GTOP, 14, CH_GBOT - CH_GTOP);
+    ctx.strokeStyle = "#f0f0e8"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(xLine, CH_GTOP); ctx.lineTo(xLine, CH_GBOT); ctx.stroke();
+  };
+  drawGoal(2, "L"); drawGoal(CH_W - 2, "R");
+  // aim
+  if (aim && aim.disc != null) {
+    const d = b[aim.disc];
+    ctx.strokeStyle = aim.power > 0.66 ? "#ff6b4a" : aim.power > 0.33 ? "#ffd54f" : CH_P1;
+    ctx.lineWidth = 3; ctx.setLineDash([6, 5]);
+    const len = 14 + aim.power * 70;
+    const ex = d.x + aim.dx * len, ey = d.y + aim.dy * len;
+    ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.setLineDash([]);
+    const ang = Math.atan2(aim.dy, aim.dx);
+    ctx.beginPath(); ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - 9 * Math.cos(ang - 0.4), ey - 9 * Math.sin(ang - 0.4));
+    ctx.lineTo(ex - 9 * Math.cos(ang + 0.4), ey - 9 * Math.sin(ang + 0.4));
+    ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+  }
+  // fichas
+  for (const p of b) {
+    if (p.type === "ball") continue;
+    const ring = p.team === "p1" ? CH_P1 : CH_P2;
+    const mine = p.team === myRole;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(10,22,40,0.85)"; ctx.fill();
+    ctx.lineWidth = mine ? 3 : 2; ctx.strokeStyle = ring;
+    if (mine) { ctx.shadowColor = ring; ctx.shadowBlur = 8; }
+    ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.font = `${Math.round(p.r * 1.25)}px serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(p.team === "p1" ? p1Flag : p2Flag, p.x, p.y + 1);
+  }
+  // balón
+  const ball = b[10];
+  ctx.font = `${Math.round(CH_BR * 1.9)}px serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("⚽", ball.x, ball.y + 1);
+}
+
+function ChapasGame({ user, onBack }) {
+  const COUNTRIES = Object.values(GROUPS).flat();
+  const [phase, setPhase] = useState("menu"); // menu | waiting | playing | finished
+  const [myCountry, setMyCountry] = useState(null);
+  const [inputCode, setInputCode] = useState("");
+  const [roomCode, setRoomCode] = useState("");
+  const [room, setRoom] = useState(null);
+  const [myRole, setMyRole] = useState(null);
+  const [turn, setTurn] = useState("p1");
+  const [score1, setScore1] = useState(0);
+  const [score2, setScore2] = useState(0);
+  const [error, setError] = useState("");
+  const [ranking, setRanking] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [showGoal, setShowGoal] = useState(null);
+
+  const canvasRef = useRef(null);
+  const roomIdRef = useRef(null);
+  const roomChanRef = useRef(null);
+  const gameChanRef = useRef(null);
+  const pollRef = useRef(null);
+
+  const bodiesRef = useRef(chFormation());
+  const aimRef = useRef(null);
+  const animatingRef = useRef(false);
+  const goalRef = useRef(null);
+  const frameRef = useRef(0);
+  const simShooterRef = useRef(null);   // 'me' | 'remote'
+  const replayDoneRef = useRef(false);
+  const pendingStateRef = useRef(null);
+  const turnRef = useRef("p1");
+  const scoreRef = useRef({ s1: 0, s2: 0 });
+  const savedRef = useRef(false);
+  const rafRef = useRef(null);
+
+  useEffect(() => () => {
+    if (roomChanRef.current) supabase.removeChannel(roomChanRef.current);
+    if (gameChanRef.current) supabase.removeChannel(gameChanRef.current);
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  // ---------- estadísticas ----------
+  const loadStats = async () => {
+    setLoadingStats(true);
+    const { data: scores } = await supabase.from("soccer_scores").select("*").order("created_at", { ascending: false });
+    const { data: profiles } = await supabase.from("profiles").select("*");
+    const byUser = {};
+    (scores || []).forEach(s => {
+      if (!byUser[s.user_id]) byUser[s.user_id] = { wins: 0, games: 0 };
+      byUser[s.user_id].games++;
+      if (s.won) byUser[s.user_id].wins++;
+    });
+    const r = Object.entries(byUser).map(([uid, v]) => ({
+      name: profiles?.find(p => p.id === uid)?.name || "Usuario",
+      emoji: profiles?.find(p => p.id === uid)?.emoji || "⚽",
+      wins: v.wins, games: v.games,
+    })).sort((a, b) => b.wins - a.wins || b.games - a.games);
+    setRanking(r);
+    setHistory((scores || []).filter(s => s.user_id === user.id).slice(0, 12));
+    setLoadingStats(false);
+  };
+  useEffect(() => { if (phase === "menu") loadStats(); /* eslint-disable-next-line */ }, [phase]);
+
+  // ---------- lobby ----------
+  const checkRoom = async (id) => {
+    const { data } = await supabase.from("soccer_rooms").select("*").eq("id", id).single();
+    if (!data) return;
+    setRoom(data);
+    if (data.status === "playing" && phase !== "playing" && phase !== "finished") startPlaying(data);
+  };
+  const subscribeRoom = (id) => {
+    if (roomChanRef.current) supabase.removeChannel(roomChanRef.current);
+    roomChanRef.current = supabase.channel(`soccer_room_${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "soccer_rooms", filter: `id=eq.${id}` },
+        () => checkRoom(id))
+      .subscribe();
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => checkRoom(id), 2500);
+  };
+
+  const createRoom = async () => {
+    setError("");
+    if (!myCountry) { setError("Elige tu país primero"); return; }
+    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const { data, error: err } = await supabase.from("soccer_rooms").insert({
+      code, player1_id: user.id, player1_name: user.name,
+      player1_country: myCountry.name, player1_flag: myCountry.flag,
+      status: "waiting", current_turn: "p1", score1: 0, score2: 0,
+    }).select().single();
+    if (err) { setError("Error al crear: " + err.message); return; }
+    setRoomCode(code); setMyRole("p1"); setRoom(data);
+    roomIdRef.current = data.id; subscribeRoom(data.id); setPhase("waiting");
+  };
+  const joinRoom = async () => {
+    setError("");
+    if (!myCountry) { setError("Elige tu país primero"); return; }
+    if (!inputCode.trim()) return;
+    const { data, error: err } = await supabase.from("soccer_rooms")
+      .select("*").eq("code", inputCode.trim().toUpperCase()).eq("status", "waiting").single();
+    if (err || !data) { setError("Sala no encontrada o ya en curso"); return; }
+    if (data.player1_id === user.id) { setError("No puedes unirte a tu propia sala"); return; }
+    const { data: up, error: e2 } = await supabase.from("soccer_rooms")
+      .update({ player2_id: user.id, player2_name: user.name, player2_country: myCountry.name, player2_flag: myCountry.flag, status: "playing" })
+      .eq("id", data.id).select().single();
+    if (e2) { setError("Error al unirse"); return; }
+    setMyRole("p2"); roomIdRef.current = up.id; subscribeRoom(up.id); startPlaying(up);
+  };
+
+  const startPlaying = (data) => {
+    setRoom(data);
+    bodiesRef.current = chFormation();
+    setScore1(0); setScore2(0); scoreRef.current = { s1: 0, s2: 0 };
+    setTurn("p1"); turnRef.current = "p1";
+    savedRef.current = false; goalRef.current = null; animatingRef.current = false;
+    setPhase("playing");
+  };
+
+  // ---------- canal de juego (broadcast) ----------
+  useEffect(() => {
+    if (phase !== "playing" || !roomIdRef.current) return;
+    const ch = supabase.channel(`soccer_game_${roomIdRef.current}`, { config: { broadcast: { self: false } } });
+    ch.on("broadcast", { event: "shot" }, ({ payload }) => onRemoteShot(payload));
+    ch.on("broadcast", { event: "state" }, ({ payload }) => onRemoteState(payload));
+    ch.subscribe();
+    gameChanRef.current = ch;
+    return () => { supabase.removeChannel(ch); gameChanRef.current = null; };
+    // eslint-disable-next-line
+  }, [phase]);
+
+  const send = (event, payload) => gameChanRef.current?.send({ type: "broadcast", event, payload });
+
+  const onRemoteShot = ({ disc, vx, vy }) => {
+    goalRef.current = null; frameRef.current = 0;
+    simShooterRef.current = "remote"; replayDoneRef.current = false; pendingStateRef.current = null;
+    const b = bodiesRef.current;
+    b[disc].vx = vx; b[disc].vy = vy;
+    animatingRef.current = true;
+  };
+  const onRemoteState = (s) => {
+    if (animatingRef.current && simShooterRef.current === "remote" && !replayDoneRef.current) {
+      pendingStateRef.current = s;
+    } else {
+      applyState(s);
+    }
+  };
+  const applyState = (s) => {
+    const b = bodiesRef.current;
+    s.bodies.forEach((p, i) => { b[i].x = p.x; b[i].y = p.y; b[i].vx = 0; b[i].vy = 0; });
+    setScore1(s.s1); setScore2(s.s2); scoreRef.current = { s1: s.s1, s2: s.s2 };
+    setTurn(s.turn); turnRef.current = s.turn;
+    if (s.scored) { setShowGoal(s.scored); setTimeout(() => setShowGoal(null), 1400); }
+    if (s.over) finishMatch(s.s1, s.s2);
+  };
+
+  // ---------- bucle de animación ----------
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const ctx = canvasRef.current?.getContext("2d");
+    const loop = () => {
+      if (animatingRef.current && ctx) {
+        for (let k = 0; k < 4; k++) { const g = chStep(bodiesRef.current); if (g) { goalRef.current = g; break; } }
+        frameRef.current++;
+        if (goalRef.current || chSettled(bodiesRef.current) || frameRef.current > 1400) {
+          animatingRef.current = false;
+          onSimEnd();
+        }
+      }
+      if (ctx) {
+        const p1f = myRole === "p1" ? myCountry?.flag : (room?.player1_flag || "🏳️");
+        const p2f = myRole === "p2" ? myCountry?.flag : (room?.player2_flag || "🏳️");
+        chDraw(ctx, bodiesRef.current, aimRef.current, myRole, room?.player1_flag || p1f, room?.player2_flag || p2f);
+      }
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+    // eslint-disable-next-line
+  }, [phase, room, myRole]);
+
+  const onSimEnd = () => {
+    if (simShooterRef.current === "me") {
+      const b = bodiesRef.current;
+      const scored = goalRef.current;
+      let { s1, s2 } = scoreRef.current;
+      let newTurn, over = false, sentBodies;
+      if (scored) {
+        if (scored === "p1") s1++; else s2++;
+        over = s1 >= CH_WIN_GOALS || s2 >= CH_WIN_GOALS;
+        if (!over) {
+          const f = chFormation(); bodiesRef.current = f;
+          sentBodies = f.map(p => ({ x: p.x, y: p.y }));
+          newTurn = scored === "p1" ? "p2" : "p1";
+        } else {
+          sentBodies = b.map(p => ({ x: p.x, y: p.y }));
+          newTurn = turnRef.current;
+        }
+        setShowGoal(scored); setTimeout(() => setShowGoal(null), 1400);
+      } else {
+        sentBodies = b.map(p => ({ x: p.x, y: p.y }));
+        newTurn = turnRef.current === "p1" ? "p2" : "p1";
+      }
+      scoreRef.current = { s1, s2 }; setScore1(s1); setScore2(s2);
+      turnRef.current = newTurn; setTurn(newTurn);
+      send("state", { bodies: sentBodies, s1, s2, turn: newTurn, scored, over });
+      if (over) finishMatch(s1, s2);
+    } else {
+      replayDoneRef.current = true;
+      if (pendingStateRef.current) { applyState(pendingStateRef.current); pendingStateRef.current = null; }
+    }
+  };
+
+  const finishMatch = async (s1, s2) => {
+    if (savedRef.current) return;
+    savedRef.current = true;
+    const winner = s1 > s2 ? "p1" : "p2";
+    const iWon = winner === myRole;
+    const myScore = myRole === "p1" ? s1 : s2;
+    const theirScore = myRole === "p1" ? s2 : s1;
+    const theirName = myRole === "p1" ? room?.player2_name : room?.player1_name;
+    setPhase("finished");
+    await supabase.from("soccer_scores").insert({
+      user_id: user.id, won: iWon, my_score: myScore, their_score: theirScore,
+      country: myCountry?.name, flag: myCountry?.flag, opponent_name: theirName || "Rival",
+    });
+    await supabase.from("soccer_rooms").update({ status: "finished" }).eq("id", roomIdRef.current);
+  };
+
+  // ---------- input (apuntar y lanzar) ----------
+  const toLogical = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    return { x: cx * (CH_W / rect.width), y: cy * (CH_H / rect.height) };
+  };
+  const canShoot = () => phase === "playing" && turnRef.current === myRole && !animatingRef.current && !savedRef.current;
+  const myRange = myRole === "p1" ? [0, 4] : [5, 9];
+
+  const onDown = (e) => {
+    if (!canShoot()) return;
+    const p = toLogical(e);
+    const b = bodiesRef.current;
+    let best = -1, bestD = 1e9;
+    for (let i = myRange[0]; i <= myRange[1]; i++) {
+      const d = Math.hypot(b[i].x - p.x, b[i].y - p.y);
+      if (d < CH_DR * 1.8 && d < bestD) { bestD = d; best = i; }
+    }
+    if (best >= 0) { aimRef.current = { disc: best, dx: 0, dy: 0, power: 0 }; e.preventDefault?.(); }
+  };
+  const onMove = (e) => {
+    if (!aimRef.current) return;
+    const p = toLogical(e);
+    const d = bodiesRef.current[aimRef.current.disc];
+    const pullx = d.x - p.x, pully = d.y - p.y;   // honda: tiras hacia atrás
+    const mag = Math.hypot(pullx, pully);
+    if (mag < 1) { aimRef.current.power = 0; return; }
+    const power = Math.min(mag, CH_MAXPULL) / CH_MAXPULL;
+    aimRef.current.dx = pullx / mag; aimRef.current.dy = pully / mag; aimRef.current.power = power;
+    e.preventDefault?.();
+  };
+  const onUp = () => {
+    const a = aimRef.current; aimRef.current = null;
+    if (!a || a.disc == null) return;
+    const d = bodiesRef.current[a.disc];
+    const mag = a.power * CH_MAXPULL;
+    if (mag < CH_MINPULL) return;
+    const vx = a.dx * a.power * CH_MAXV, vy = a.dy * a.power * CH_MAXV;
+    goalRef.current = null; frameRef.current = 0; simShooterRef.current = "me";
+    d.vx = vx; d.vy = vy; animatingRef.current = true;
+    send("shot", { disc: a.disc, vx, vy });
+  };
+
+  const resetToMenu = () => {
+    if (gameChanRef.current) { supabase.removeChannel(gameChanRef.current); gameChanRef.current = null; }
+    if (roomChanRef.current) { supabase.removeChannel(roomChanRef.current); roomChanRef.current = null; }
+    if (pollRef.current) clearInterval(pollRef.current);
+    setRoom(null); setMyRole(null); setRoomCode(""); setInputCode("");
+    bodiesRef.current = chFormation();
+    setPhase("menu");
+  };
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const portrait = typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+
+  // ============================== MENÚ ==============================
+  if (phase === "menu") return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>CHAPAS</p>
+      </div>
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "14px", padding: "22px", textAlign: "center", marginBottom: "18px" }}>
+        <div style={{ fontSize: "46px", marginBottom: "10px" }}>🔵⚽🟠</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>CHAPAS MUNDIAL</div>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.8 }}>
+          Fútbol de chapas 1v1 en tiempo real · por turnos<br/>Mete <span style={{ color: GREEN }}>3 goles</span> antes que tu rival 🔴
+        </p>
+        <p style={{ fontSize: "10px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", marginTop: "8px" }}>📱 Gira el móvil en horizontal para jugar</p>
+      </div>
+
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px" }}>1️⃣ ELIGE TU PAÍS</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", maxHeight: "150px", overflowY: "auto", marginBottom: "16px", padding: "2px" }}>
+        {COUNTRIES.map(c => (
+          <button key={c.name} onClick={() => setMyCountry(c)} style={{
+            display: "flex", alignItems: "center", gap: "5px", padding: "6px 9px",
+            border: `1px solid ${myCountry?.name === c.name ? GREEN : BORDER}`, borderRadius: "8px",
+            background: myCountry?.name === c.name ? GREEN_DIM : CARD,
+            color: myCountry?.name === c.name ? GREEN : "#a8d4f0",
+            cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "10px",
+          }}>
+            <span style={{ fontSize: "16px" }}>{c.flag}</span>{c.name}
+          </button>
+        ))}
+      </div>
+
+      {error && <p style={{ color: "#cc2222", fontFamily: "'Inter', sans-serif", fontSize: "12px", marginBottom: "10px", textAlign: "center" }}>⚠ {error}</p>}
+
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px" }}>2️⃣ JUGAR</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "24px" }}>
+        <button onClick={createRoom} style={{ padding: "20px", border: `1px solid ${GREEN}`, borderRadius: "12px", background: GREEN_DIM, color: GREEN, fontFamily: "'Inter', sans-serif", fontSize: "12px", cursor: "pointer", fontWeight: 700 }}>➕ CREAR SALA</button>
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "14px" }}>
+          <p style={{ fontSize: "9px", color: "#e0eefa", fontFamily: "'Inter', sans-serif", marginBottom: "8px", letterSpacing: "2px" }}>UNIRSE CON CÓDIGO</p>
+          <input value={inputCode} onChange={e => setInputCode(e.target.value.toUpperCase())} placeholder="XXXXX" maxLength={5}
+            style={{ width: "100%", boxSizing: "border-box", padding: "10px", marginBottom: "8px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "rgba(0,0,0,0.3)", color: "#e0eaf8", fontSize: "18px", fontFamily: "'Bebas Neue', monospace", letterSpacing: "4px", textAlign: "center", outline: "none" }} />
+          <button onClick={joinRoom} style={{ width: "100%", padding: "10px", border: "none", borderRadius: "7px", background: GREEN, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>UNIRSE</button>
+        </div>
+      </div>
+
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>🏆 RANKING · VICTORIAS</p>
+      {loadingStats ? <SkeletonRanking count={4} /> : ranking.length === 0
+        ? <EmptyState emoji="⚽" title="AÚN NADIE HA JUGADO" text="Crea una sala y reta a alguien del grupo a las chapas." />
+        : ranking.map((r, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+            <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
+            <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.emoji} {r.name}</span>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8", lineHeight: 1 }}>{r.wins}</div>
+              <div style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{r.games} jug.</div>
+            </div>
+          </div>
+        ))}
+
+      {history.length > 0 && (
+        <>
+          <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", margin: "18px 0 12px" }}>📋 TUS RESULTADOS</p>
+          {history.map((h, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", marginBottom: "5px", borderRadius: "9px", background: CARD, border: `1px solid ${h.won ? "rgba(0,200,100,0.25)" : "rgba(255,107,74,0.25)"}`, borderLeft: `3px solid ${h.won ? "#34d399" : "#ff6b4a"}` }}>
+              <span style={{ fontSize: "18px" }}>{h.flag || "⚽"}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: h.won ? "#34d399" : "#ff6b4a", fontWeight: 700 }}>{h.won ? "VICTORIA" : "DERROTA"} · {h.my_score}-{h.their_score}</div>
+                <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>vs {h.opponent_name}</div>
+              </div>
+              <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>{new Date(h.created_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}</span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+
+  // ============================== ESPERANDO ==============================
+  if (phase === "waiting") return (
+    <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center", padding: "40px 0" }}>
+      <div style={{ fontSize: "52px", marginBottom: "16px" }}>⏳</div>
+      <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#e0eaf8", marginBottom: "6px" }}>ESPERANDO RIVAL</div>
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#e0eefa", marginBottom: "8px" }}>Tu equipo: {myCountry?.flag} {myCountry?.name}</p>
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#e0eefa", marginBottom: "20px" }}>Comparte este código:</p>
+      <div style={{ display: "inline-block", background: GREEN_DIM, border: `2px solid ${GREEN}`, borderRadius: "12px", padding: "16px 32px", marginBottom: "24px" }}>
+        <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "42px", color: GREEN, letterSpacing: "8px" }}>{roomCode}</span>
+      </div>
+      <button onClick={resetToMenu} style={{ display: "block", margin: "0 auto", padding: "8px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Cancelar</button>
+    </div>
+  );
+
+  // ============================== JUGANDO ==============================
+  if (phase === "playing") {
+    const amIShooter = turn === myRole && !animatingRef.current;
+    const myFlag = myCountry?.flag;
+    const theirFlag = myRole === "p1" ? room?.player2_flag : room?.player1_flag;
+    const myScore = myRole === "p1" ? score1 : score2;
+    const theirScore = myRole === "p1" ? score2 : score1;
+    return (
+      <div style={{ animation: "fadeIn 0.3s ease" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", marginBottom: "10px", alignItems: "center" }}>
+          <div style={{ background: GREEN_DIM, border: `1px solid rgba(79,195,247,0.3)`, borderRadius: "10px", padding: "8px", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: GREEN, lineHeight: 1 }}>{myFlag} {myScore}</div>
+            <div style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>TÚ</div>
+          </div>
+          <div style={{ textAlign: "center", fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#7ab8e0" }}>VS</div>
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "8px", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "30px", color: "#e0eaf8", lineHeight: 1 }}>{theirScore} {theirFlag}</div>
+            <div style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>RIVAL</div>
+          </div>
+        </div>
+
+        <div style={{ textAlign: "center", marginBottom: "8px", minHeight: "16px" }}>
+          <span style={{ fontSize: "11px", fontFamily: "'Bebas Neue', cursive", letterSpacing: "2px", color: amIShooter ? GREEN : "#7ab8e0" }}>
+            {amIShooter ? "⚽ TU TURNO · arrastra una ficha hacia atrás" : "⏳ TURNO DEL RIVAL"}
+          </span>
+        </div>
+
+        <div style={{ position: "relative", borderRadius: "12px", overflow: "hidden", border: `1px solid ${BORDER}` }}>
+          <canvas ref={canvasRef} width={CH_W} height={CH_H}
+            onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+            onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+            style={{ display: "block", width: "100%", height: "auto", touchAction: "none", cursor: amIShooter ? "pointer" : "default" }} />
+          {showGoal && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.35)", animation: "popIn 0.3s ease" }}>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "48px", letterSpacing: "4px", color: showGoal === myRole ? GREEN : "#ff8a5b", textShadow: "0 0 18px rgba(0,0,0,0.6)" }}>
+                {showGoal === myRole ? "¡GOOOL!" : "GOL RIVAL"}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {portrait && <p style={{ fontSize: "10px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "8px" }}>📱 Gira el móvil para verlo más grande</p>}
+        <button onClick={resetToMenu} style={{ display: "block", margin: "12px auto 0", padding: "8px 16px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>Salir</button>
+      </div>
+    );
+  }
+
+  // ============================== FIN ==============================
+  if (phase === "finished") {
+    const myScore = myRole === "p1" ? score1 : score2;
+    const theirScore = myRole === "p1" ? score2 : score1;
+    const iWon = myScore > theirScore;
+    const theirName = myRole === "p1" ? room?.player2_name : room?.player1_name;
+    return (
+      <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
+        <div style={{ background: CARD, border: `1px solid ${iWon ? "rgba(79,195,247,0.4)" : "rgba(255,82,82,0.25)"}`, borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
+          <div style={{ fontSize: "52px", marginBottom: "10px" }}>{iWon ? "🏆" : "😔"}</div>
+          <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: iWon ? GREEN : "#cc2222", letterSpacing: "3px", marginBottom: "16px" }}>{iWon ? "¡GANASTE!" : "PERDISTE"}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "8px", alignItems: "center" }}>
+            <div><div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: GREEN }}>{myScore}</div><div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{myCountry?.flag} TÚ</div></div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#7ab8e0" }}>VS</div>
+            <div><div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "52px", color: "#e0eaf8" }}>{theirScore}</div><div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{theirName?.split(" ")[0] || "Rival"}</div></div>
+          </div>
+        </div>
+        <button onClick={resetToMenu} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>🔄 NUEVA PARTIDA</button>
+      </div>
+    );
+  }
+  return null;
+}
+
+// 🔒 BETA CHAPAS — el juego solo lo ven estos usuarios.
+// Puedes poner el NOMBRE (tal cual aparece en la app) o el EMAIL. Da igual mayúsculas.
+// Los admin lo ven siempre.
+const CHAPAS_BETA = [
+  "URIEN",            // ← por nombre
+  "tu-email@mail.com", // ← o por email
+  // "Otro amigo",
+];
+
+function chapasEnabled(user) {
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  const list = CHAPAS_BETA.map(s => s.toLowerCase().trim());
+  return list.includes((user.email || "").toLowerCase().trim())
+      || list.includes((user.name || "").toLowerCase().trim());
+}
 
 // ============================================================
 // VISTA JUEGOS
@@ -8843,6 +9428,7 @@ function GamesView({ user }) {
   if (game === "sietecero") return <SieteCeroGame user={user} onBack={() => setGame(null)} />;
   if (game === "footle") return <FootleGame user={user} onBack={() => setGame(null)} />;
   if (game === "simon") return <SimonGame user={user} onBack={() => setGame(null)} />;
+  if (game === "chapas" && chapasEnabled(user)) return <ChapasGame user={user} onBack={() => setGame(null)} />;
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -8893,6 +9479,13 @@ function GamesView({ user }) {
           <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>SIMON BANDERAS</div>
           <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>memoria · 1 jugador</div>
         </button>
+        {chapasEnabled(user) && (
+          <button onClick={() => setGame("chapas")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(255,138,91,0.25)", borderRadius: "14px", background: "rgba(255,138,91,0.05)", cursor: "pointer", textAlign: "center" }}>
+            <div style={{ fontSize: "34px", marginBottom: "8px" }}>🔵⚽</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>CHAPAS <span style={{ fontSize: "9px", color: "#ffb38a" }}>BETA</span></div>
+            <div style={{ fontSize: "9px", color: "#ffb38a", fontFamily: "'Inter', sans-serif" }}>fútbol de chapas · 2 jugadores 🔴</div>
+          </button>
+        )}
       </div>
     </div>
   );
