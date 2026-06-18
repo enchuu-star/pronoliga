@@ -6482,6 +6482,7 @@ function PenaltyGame({ user, onBack }) {
 
   const createRoom = async () => {
     setError("");
+    startedRef.current = false;
     const code = Math.random().toString(36).substring(2, 7).toUpperCase();
     const { data, error: err } = await supabase.from("penalty_rooms").insert({
       code, player1_id: user.id, player1_name: user.name,
@@ -6495,6 +6496,7 @@ function PenaltyGame({ user, onBack }) {
 
   const joinRoom = async () => {
     setError("");
+    startedRef.current = false;
     if (!inputCode.trim()) return;
     const { data, error: err } = await supabase.from("penalty_rooms")
       .select("*").eq("code", inputCode.trim().toUpperCase()).eq("status", "waiting").single();
@@ -8985,6 +8987,8 @@ function ChapasGame({ user, onBack }) {
   const scoreRef = useRef({ s1: 0, s2: 0 });
   const savedRef = useRef(false);
   const rafRef = useRef(null);
+  const phaseRef = useRef("menu");
+  const startedRef = useRef(false);
 
   useEffect(() => () => {
     if (roomChanRef.current) supabase.removeChannel(roomChanRef.current);
@@ -8992,6 +8996,7 @@ function ChapasGame({ user, onBack }) {
     if (pollRef.current) clearInterval(pollRef.current);
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
   }, []);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   // ---------- estadísticas ----------
   const loadStats = async () => {
@@ -9020,7 +9025,7 @@ function ChapasGame({ user, onBack }) {
     const { data } = await supabase.from("soccer_rooms").select("*").eq("id", id).single();
     if (!data) return;
     setRoom(data);
-    if (data.status === "playing" && phase !== "playing" && phase !== "finished") startPlaying(data);
+    if (data.status === "playing" && !startedRef.current) startPlaying(data);
   };
   const subscribeRoom = (id) => {
     if (roomChanRef.current) supabase.removeChannel(roomChanRef.current);
@@ -9061,6 +9066,9 @@ function ChapasGame({ user, onBack }) {
   };
 
   const startPlaying = (data) => {
+    if (startedRef.current) return;          // ⬅️ evita reinicios repetidos
+    startedRef.current = true;
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } // ⬅️ ya no hace falta sondear
     setRoom(data);
     bodiesRef.current = chFormation();
     setScore1(0); setScore2(0); scoreRef.current = { s1: 0, s2: 0 };
@@ -9228,6 +9236,7 @@ function ChapasGame({ user, onBack }) {
     if (roomChanRef.current) { supabase.removeChannel(roomChanRef.current); roomChanRef.current = null; }
     if (pollRef.current) clearInterval(pollRef.current);
     setRoom(null); setMyRole(null); setRoomCode(""); setInputCode("");
+    startedRef.current = false;
     bodiesRef.current = chFormation();
     setPhase("menu");
   };
