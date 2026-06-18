@@ -9496,6 +9496,8 @@ function ChapasGame({ user, onBack }) {
       </div>
     );
   }
+return null;
+}   // ⬅️ AQUÍ se cierra ChapasGame
 
 // 🔒 BETA CHAPAS — el juego solo lo ven estos usuarios.
 // Puedes poner el NOMBRE (tal cual aparece en la app) o el EMAIL. Da igual mayúsculas.
