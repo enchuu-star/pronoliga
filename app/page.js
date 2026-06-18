@@ -8996,12 +8996,15 @@ function ChapasGame({ user, onBack }) {
   const [theyWantRematch, setTheyWantRematch] = useState(false);
   const [opponentLeft, setOpponentLeft] = useState(false);
   const [dims, setDims] = useState({ w: 0, h: 0 });
+  const [timeLeft, setTimeLeft] = useState(30);
+  const timerRef = useRef(null);
 
   useEffect(() => () => {
     if (roomChanRef.current) supabase.removeChannel(roomChanRef.current);
     if (gameChanRef.current) supabase.removeChannel(gameChanRef.current);
     if (pollRef.current) clearInterval(pollRef.current);
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
   }, []);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { myRoleRef.current = myRole; }, [myRole]);
@@ -9190,6 +9193,23 @@ function ChapasGame({ user, onBack }) {
     }
   };
 
+  // Reinicia el reloj cada vez que cambia el turno
+  useEffect(() => { setTimeLeft(30); }, [turn, phase]);
+
+  // Cuenta atrás de 30 s: solo corre en TU turno y cuando no hay animación
+  useEffect(() => {
+    if (phase !== "playing") return;
+    timerRef.current = setInterval(() => {
+      if (turnRef.current !== myRoleRef.current || animatingRef.current || savedRef.current) return;
+      setTimeLeft(t => {
+        if (t <= 1) { timeoutPass(); return 30; }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line
+  }, [phase]);
+
   const finishMatch = async (s1, s2) => {
     if (savedRef.current) return;
     savedRef.current = true;
@@ -9228,6 +9248,13 @@ function ChapasGame({ user, onBack }) {
     if (iRematchRef.current) startRematch();
   };
   const onRemoteLeave = () => { setOpponentLeft(true); };
+  const timeoutPass = () => {
+    if (turnRef.current !== myRoleRef.current || animatingRef.current || savedRef.current) return;
+    const newTurn = turnRef.current === "p1" ? "p2" : "p1";
+    const sentBodies = bodiesRef.current.map(p => ({ x: p.x, y: p.y }));
+    turnRef.current = newTurn; setTurn(newTurn);
+    send("state", { bodies: sentBodies, s1: scoreRef.current.s1, s2: scoreRef.current.s2, turn: newTurn, scored: null, over: false });
+  };
   const leaveGame = () => { send("leave", {}); resetToMenu(); };
 
   // ---------- input (apuntar y lanzar) ----------
@@ -9444,8 +9471,10 @@ function ChapasGame({ user, onBack }) {
               <span style={{ fontSize: "20px" }}>{myFlag}</span>
               <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: GREEN, lineHeight: 1 }}>{myScore}</span>
             </div>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: amIShooter ? GREEN : "#7ab8e0", minWidth: "86px", textAlign: "center" }}>
-              {amIShooter ? "TU TURNO" : "TURNO RIVAL"}
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "14px", color: amIShooter ? (timeLeft <= 10 ? "#ff6b4a" : GREEN) : "#7ab8e0", minWidth: "96px", textAlign: "center", lineHeight: 1.1 }}>
+              {amIShooter
+                ? <>TU TURNO<br/><span style={{ fontSize: "22px", color: timeLeft <= 10 ? "#ff6b4a" : GREEN }}>⏱ {timeLeft}s</span></>
+                : "TURNO RIVAL"}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px", padding: "4px 12px" }}>
               <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#e0eaf8", lineHeight: 1 }}>{theirScore}</span>
