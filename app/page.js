@@ -9551,13 +9551,7 @@ const CHAPAS_BETA = [
   // "Otro amigo",
 ];
 
-function chapasEnabled(user) {
-  if (!user) return false;
-  if (user.role === "admin") return true;
-  const list = CHAPAS_BETA.map(s => s.toLowerCase().trim());
-  return list.includes((user.email || "").toLowerCase().trim())
-      || list.includes((user.name || "").toLowerCase().trim());
-}
+function chapasEnabled(user) { return true; }
 
 // ============================================================
 // VISTA JUEGOS
