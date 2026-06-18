@@ -8867,28 +8867,28 @@ function chStep(b) {
     if (Math.abs(p.vx) < CH_MINV) p.vx = 0;
     if (Math.abs(p.vy) < CH_MINV) p.vy = 0;
 
-    const inBandY = p.y > CH_GTOP && p.y < CH_GBOT;
-    const inLeftGoal = p.x < 0 && inBandY;
-    const inRightGoal = p.x > CH_W && inBandY;
+    if (p.y - p.r < 0) { p.y = p.r; p.vy = -p.vy * CH_E; }
+    if (p.y + p.r > CH_H) { p.y = CH_H - p.r; p.vy = -p.vy * CH_E; }
 
-    if (inLeftGoal) {                         // dentro de la portería izquierda
-      if (p.x - p.r < -CH_GD) { p.x = -CH_GD + p.r; p.vx = -p.vx * CH_E; }   // fondo de la red
-      if (p.y - p.r < CH_GTOP) { p.y = CH_GTOP + p.r; p.vy = -p.vy * CH_E; } // poste sup.
-      if (p.y + p.r > CH_GBOT) { p.y = CH_GBOT - p.r; p.vy = -p.vy * CH_E; } // poste inf.
-      if (p.type === "ball" && p.x < -2) goal = "p2";
-    } else if (inRightGoal) {                 // dentro de la portería derecha
-      if (p.x + p.r > CH_W + CH_GD) { p.x = CH_W + CH_GD - p.r; p.vx = -p.vx * CH_E; }
-      if (p.y - p.r < CH_GTOP) { p.y = CH_GTOP + p.r; p.vy = -p.vy * CH_E; }
-      if (p.y + p.r > CH_GBOT) { p.y = CH_GBOT - p.r; p.vy = -p.vy * CH_E; }
-      if (p.type === "ball" && p.x > CH_W + 2) goal = "p1";
-    } else {                                  // campo
-      if (p.y - p.r < 0) { p.y = p.r; p.vy = -p.vy * CH_E; }
-      if (p.y + p.r > CH_H) { p.y = CH_H - p.r; p.vy = -p.vy * CH_E; }
-      if (!inBandY) {                         // fuera de la boca → rebota en banda lateral
-        if (p.x - p.r < 0) { p.x = p.r; p.vx = -p.vx * CH_E; }
-        if (p.x + p.r > CH_W) { p.x = CH_W - p.r; p.vx = -p.vx * CH_E; }
+    const inBandY = p.y > CH_GTOP && p.y < CH_GBOT;
+
+    if (p.type === "ball" && inBandY) {
+      // SOLO el balón entra en la portería
+      if (p.x < 0) {
+        if (p.x < -2) goal = "p2";
+        if (p.x - p.r < -CH_GD) { p.x = -CH_GD + p.r; p.vx = -p.vx * CH_E; }   // fondo red
+        if (p.y - p.r < CH_GTOP) { p.y = CH_GTOP + p.r; p.vy = -p.vy * CH_E; } // poste sup
+        if (p.y + p.r > CH_GBOT) { p.y = CH_GBOT - p.r; p.vy = -p.vy * CH_E; } // poste inf
+      } else if (p.x > CH_W) {
+        if (p.x > CH_W + 2) goal = "p1";
+        if (p.x + p.r > CH_W + CH_GD) { p.x = CH_W + CH_GD - p.r; p.vx = -p.vx * CH_E; }
+        if (p.y - p.r < CH_GTOP) { p.y = CH_GTOP + p.r; p.vy = -p.vy * CH_E; }
+        if (p.y + p.r > CH_GBOT) { p.y = CH_GBOT - p.r; p.vy = -p.vy * CH_E; }
       }
-      // si está en la boca (inBandY) NO rebota: balón y chapas pueden entrar en la portería
+    } else {
+      // chapas SIEMPRE rebotan en la línea (no entran → no se quedan detrás)
+      if (p.x - p.r < 0) { p.x = p.r; p.vx = -p.vx * CH_E; }
+      if (p.x + p.r > CH_W) { p.x = CH_W - p.r; p.vx = -p.vx * CH_E; }
     }
   }
   for (let i = 0; i < b.length; i++) for (let j = i + 1; j < b.length; j++) {
@@ -8946,18 +8946,26 @@ function chDraw(ctx, b, aim, myRole, p1Flag, p2Flag) {
     ctx.lineTo(ex - 9 * Math.cos(ang + 0.4), ey - 9 * Math.sin(ang + 0.4));
     ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
   }
+  const pulse = 0.5 + 0.5 * Math.sin((Date.now() % 900) / 900 * Math.PI * 2);
   for (const p of b) {
     if (p.type === "ball") continue;
     const ring = p.team === "p1" ? CH_P1 : CH_P2;
-    const mine = p.team === myRole;
+    const lit = p.team === highlightTeam;     // ⬅️ ilumina el equipo al que le toca
+    if (lit) {
+      ctx.save();
+      ctx.shadowColor = ring; ctx.shadowBlur = 14 + pulse * 14;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 4, 0, Math.PI * 2);
+      ctx.lineWidth = 3; ctx.strokeStyle = ring; ctx.globalAlpha = 0.9; ctx.stroke();
+      ctx.restore();
+    }
+    ctx.globalAlpha = lit ? 1 : 0.45;          // atenúa al rival
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(10,22,40,0.85)"; ctx.fill();
-    ctx.lineWidth = mine ? 3 : 2; ctx.strokeStyle = ring;
-    if (mine) { ctx.shadowColor = ring; ctx.shadowBlur = 8; }
-    ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = lit ? "rgba(10,22,40,0.9)" : "rgba(10,22,40,0.6)"; ctx.fill();
+    ctx.lineWidth = lit ? 4 : 2; ctx.strokeStyle = ring; ctx.stroke();
     ctx.font = `${Math.round(p.r * 1.25)}px serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(p.team === "p1" ? p1Flag : p2Flag, p.x, p.y + 1);
+    ctx.globalAlpha = 1;
   }
   const ball = b[10];
   ctx.font = `${Math.round(CH_BR * 1.9)}px serif`;
@@ -9431,8 +9439,11 @@ function ChapasGame({ user, onBack }) {
     const theirFlag = myRole === "p1" ? room?.player2_flag : room?.player1_flag;
     const myScore = myRole === "p1" ? score1 : score2;
     const theirScore = myRole === "p1" ? score2 : score1;
-    const boardW = stageW - 24, boardH = stageH - 72;
-    const cW = Math.min(boardW, boardH * (CH_CW / CH_H)), cH = cW * (CH_H / CH_CW);
+    const aspect = CH_CW / CH_H;
+    const availW = stageW - 20;          // margen lateral
+    const availH = stageH - 64;          // marcador + márgenes
+    let cW = Math.min(availW, availH * aspect);
+    let cH = cW / aspect;
     return stageWrap(
       <>
         {/* MARCADOR ARRIBA */}
