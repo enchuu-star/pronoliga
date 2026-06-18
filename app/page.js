@@ -8840,6 +8840,8 @@ const CH_FR = 0.986, CH_E = 0.9, CH_MINV = 0.05;
 const CH_MAXPULL = 130, CH_MAXV = 15, CH_MINPULL = 6;
 const CH_P1 = "#4fc3f7", CH_P2 = "#ff8a5b";   // colores de cada equipo
 const CH_WIN_GOALS = 3;
+const CH_GD = 26;                 // profundidad de la portería (red)
+const CH_CW = CH_W + CH_GD * 2;   // ancho real del canvas (incluye las dos porterías)
 const CH_SUBSTEPS = 2;   // ⬅️ menos pasos por frame = chapas y balón más lentos (antes iban a 4)
 // Nota: el canvas pasa a ser 360x600 (vertical) y el campo se dibuja girado 90°.
 
@@ -8864,15 +8866,29 @@ function chStep(b) {
     p.x += p.vx; p.y += p.vy; p.vx *= CH_FR; p.vy *= CH_FR;
     if (Math.abs(p.vx) < CH_MINV) p.vx = 0;
     if (Math.abs(p.vy) < CH_MINV) p.vy = 0;
-    if (p.y - p.r < 0) { p.y = p.r; p.vy = -p.vy * CH_E; }
-    if (p.y + p.r > CH_H) { p.y = CH_H - p.r; p.vy = -p.vy * CH_E; }
-    const inBand = p.y > CH_GTOP && p.y < CH_GBOT;
-    if (p.type === "ball" && inBand) {
-      if (p.x < -p.r) goal = "p2";          // balón en portería izquierda → marca p2
-      else if (p.x > CH_W + p.r) goal = "p1";
-    } else {
-      if (p.x - p.r < 0) { p.x = p.r; p.vx = -p.vx * CH_E; }
-      if (p.x + p.r > CH_W) { p.x = CH_W - p.r; p.vx = -p.vx * CH_E; }
+
+    const inBandY = p.y > CH_GTOP && p.y < CH_GBOT;
+    const inLeftGoal = p.x < 0 && inBandY;
+    const inRightGoal = p.x > CH_W && inBandY;
+
+    if (inLeftGoal) {                         // dentro de la portería izquierda
+      if (p.x - p.r < -CH_GD) { p.x = -CH_GD + p.r; p.vx = -p.vx * CH_E; }   // fondo de la red
+      if (p.y - p.r < CH_GTOP) { p.y = CH_GTOP + p.r; p.vy = -p.vy * CH_E; } // poste sup.
+      if (p.y + p.r > CH_GBOT) { p.y = CH_GBOT - p.r; p.vy = -p.vy * CH_E; } // poste inf.
+      if (p.type === "ball" && p.x < -2) goal = "p2";
+    } else if (inRightGoal) {                 // dentro de la portería derecha
+      if (p.x + p.r > CH_W + CH_GD) { p.x = CH_W + CH_GD - p.r; p.vx = -p.vx * CH_E; }
+      if (p.y - p.r < CH_GTOP) { p.y = CH_GTOP + p.r; p.vy = -p.vy * CH_E; }
+      if (p.y + p.r > CH_GBOT) { p.y = CH_GBOT - p.r; p.vy = -p.vy * CH_E; }
+      if (p.type === "ball" && p.x > CH_W + 2) goal = "p1";
+    } else {                                  // campo
+      if (p.y - p.r < 0) { p.y = p.r; p.vy = -p.vy * CH_E; }
+      if (p.y + p.r > CH_H) { p.y = CH_H - p.r; p.vy = -p.vy * CH_E; }
+      if (!inBandY) {                         // fuera de la boca → rebota en banda lateral
+        if (p.x - p.r < 0) { p.x = p.r; p.vx = -p.vx * CH_E; }
+        if (p.x + p.r > CH_W) { p.x = CH_W - p.r; p.vx = -p.vx * CH_E; }
+      }
+      // si está en la boca (inBandY) NO rebota: balón y chapas pueden entrar en la portería
     }
   }
   for (let i = 0; i < b.length; i++) for (let j = i + 1; j < b.length; j++) {
@@ -9147,9 +9163,7 @@ function ChapasGame({ user, onBack }) {
         }
       }
       if (ctx) {
-        const p1f = myRole === "p1" ? myCountry?.flag : (room?.player1_flag || "🏳️");
-        const p2f = myRole === "p2" ? myCountry?.flag : (room?.player2_flag || "🏳️");
-        chDraw(ctx, bodiesRef.current, aimRef.current, myRole, room?.player1_flag || p1f, room?.player2_flag || p2f);
+        chDraw(ctx, bodiesRef.current, aimRef.current, turnRef.current, room?.player1_flag || "🏳️", room?.player2_flag || "🏳️");
       }
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -9237,18 +9251,17 @@ function ChapasGame({ user, onBack }) {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     if (rotatedRef.current) {
-      // El escenario está girado 90°. rect es el AABB del canvas girado.
       const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
       const sdx = clientX - cx, sdy = clientY - cy;
-      const lx = sdy, ly = -sdx;                 // inversa de rotate(90deg)
-      const cssW = rect.height, cssH = rect.width; // dimensiones sin girar
+      const lx = sdy, ly = -sdx;
+      const cssW = rect.height, cssH = rect.width;
       return {
-        x: (lx + cssW / 2) * (CH_W / cssW),
+        x: (lx + cssW / 2) * (CH_CW / cssW) - CH_GD,
         y: (ly + cssH / 2) * (CH_H / cssH),
       };
     }
     return {
-      x: (clientX - rect.left) * (CH_W / rect.width),
+      x: (clientX - rect.left) * (CH_CW / rect.width) - CH_GD,
       y: (clientY - rect.top) * (CH_H / rect.height),
     };
   };
@@ -9419,7 +9432,7 @@ function ChapasGame({ user, onBack }) {
     const myScore = myRole === "p1" ? score1 : score2;
     const theirScore = myRole === "p1" ? score2 : score1;
     const boardW = stageW - 24, boardH = stageH - 72;
-    const cW = Math.min(boardW, boardH * (CH_W / CH_H)), cH = cW * (CH_H / CH_W);
+    const cW = Math.min(boardW, boardH * (CH_CW / CH_H)), cH = cW * (CH_H / CH_CW);
     return stageWrap(
       <>
         {/* MARCADOR ARRIBA */}
@@ -9442,7 +9455,7 @@ function ChapasGame({ user, onBack }) {
         {/* TABLERO */}
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 }}>
           <div style={{ position: "relative" }}>
-            <canvas ref={canvasRef} width={CH_W} height={CH_H}
+            <canvas ref={canvasRef} width={CH_CW} height={CH_H}
               onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
               onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
               style={{ display: "block", width: `${cW}px`, height: `${cH}px`, borderRadius: "12px", border: `1px solid ${BORDER}`, touchAction: "none", cursor: amIShooter ? "pointer" : "default" }} />
