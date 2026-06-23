@@ -423,6 +423,79 @@ function buildRoundOf32(standingsByGroup) {
   }));
 }
 
+// ============================================================
+// CUADRO COMPLETO DE ELIMINATORIAS (R32 → Final) — Mundial 2026
+// Parejas oficiales FIFA confirmadas.
+// ============================================================
+const KO_TREE = {
+  // Octavos: cada uno toma el ganador de dos partidos de R32
+  R16: [
+    { match: "M89", from: ["M74", "M77"] },
+    { match: "M90", from: ["M73", "M75"] },
+    { match: "M91", from: ["M76", "M78"] },
+    { match: "M92", from: ["M79", "M80"] },
+    { match: "M93", from: ["M83", "M84"] },
+    { match: "M94", from: ["M81", "M82"] },
+    { match: "M95", from: ["M86", "M88"] },
+    { match: "M96", from: ["M85", "M87"] },
+  ],
+  QF: [
+    { match: "M97",  from: ["M89", "M90"] },
+    { match: "M98",  from: ["M93", "M94"] },
+    { match: "M99",  from: ["M91", "M92"] },
+    { match: "M100", from: ["M95", "M96"] },
+  ],
+  SF: [
+    { match: "M101", from: ["M97", "M98"] },
+    { match: "M102", from: ["M99", "M100"] },
+  ],
+  FINAL: [
+    { match: "M104", from: ["M101", "M102"] },
+  ],
+};
+
+const KO_ROUND_LABELS = {
+  R32: "Dieciseisavos", R16: "Octavos", QF: "Cuartos", SF: "Semifinales", FINAL: "Final",
+};
+
+// Construye el cuadro completo a partir del R32 + los picks del usuario.
+// picks: { "M73": "España", "M89": "Brasil", ... }  (winner por match)
+// Devuelve { R32:[...], R16:[...], QF:[...], SF:[...], FINAL:[...] }
+// Cada partido: { match, home:{name,flag,placeholder}, away:{...}, winner }
+function buildKnockoutBracket(standingsByGroup, picks) {
+  const r32 = buildRoundOf32(standingsByGroup); // [{match, home, away}]
+  const matchById = {};
+  r32.forEach(m => { matchById[m.match] = { ...m, winner: picks[m.match] || null }; });
+
+  const blank = { name: "Por definir", flag: "❔", placeholder: true };
+
+  // Equipo ganador de un partido según el pick (o placeholder si aún no elegido)
+  const winnerOf = (matchId) => {
+    const m = matchById[matchId];
+    if (!m) return blank;
+    const w = m.winner;
+    if (!w) return blank;
+    if (m.home?.name === w) return { name: m.home.name, flag: m.home.flag };
+    if (m.away?.name === w) return { name: m.away.name, flag: m.away.flag };
+    return blank;
+  };
+
+  const buildRound = (defs) => defs.map(d => {
+    const home = winnerOf(d.from[0]);
+    const away = winnerOf(d.from[1]);
+    const m = { match: d.match, home, away, winner: picks[d.match] || null, from: d.from };
+    matchById[d.match] = m; // para que la siguiente ronda lea su ganador
+    return m;
+  });
+
+  const R16 = buildRound(KO_TREE.R16);
+  const QF = buildRound(KO_TREE.QF);
+  const SF = buildRound(KO_TREE.SF);
+  const FINAL = buildRound(KO_TREE.FINAL);
+
+  return { R32: r32.map(m => matchById[m.match]), R16, QF, SF, FINAL };
+}
+
 // +2 por cada equipo que el usuario sitúa como clasificado (1º, 2º o
 // tercero entre los 8 mejores) y que realmente se clasifica.
 // Solo puntúa cuando TODOS los partidos de la fase de grupos están definidos.
@@ -4993,6 +5066,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
         {navCard("📊", "RESULTADOS", "marcadores reales", GREEN, "rgba(79,195,247,0.2)", "rgba(79,195,247,0.05)", "results")}
         {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", GREEN, "rgba(79,195,247,0.15)", "rgba(79,195,247,0.04)", "games")}
         {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#e0eefa", "rgba(79,195,247,0.15)", "rgba(255,255,255,0.03)", "profile")}
+        {user.role === "admin" && navCard("🏟️", "ELIMINATORIAS", "cuadro · beta admin", "#34d399", "rgba(52,211,153,0.2)", "rgba(52,211,153,0.05)", "knockout")}
         {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#cc2222", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
         {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
       </div>
@@ -9580,6 +9654,176 @@ const CHAPAS_BETA = [
 function chapasEnabled(user) { return true; }
 
 // ============================================================
+// ELIMINATORIAS — pronóstico del cuadro (de momento solo admin)
+// ============================================================
+function KnockoutView({ user, matches }) {
+  const [picks, setPicks] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Clasificación REAL por grupo (a partir de los resultados ya cargados)
+  const standingsByGroup = {};
+  Object.keys(GROUPS).forEach(g => {
+    standingsByGroup[g] = calcRealStandings(g, matches);
+  });
+
+  // El cuadro solo es válido cuando TODOS los partidos de grupos están jugados
+  // (los 8 mejores terceros no se conocen hasta entonces).
+  const groupMatches = matches.filter(m => m.grp);
+  const groupsComplete =
+    groupMatches.length > 0 &&
+    groupMatches.every(m => m.result_home !== null && m.result_away !== null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("knockout_picks").select("*").eq("user_id", user.id);
+      const map = {};
+      (data || []).forEach(r => { if (r.winner) map[r.match_id] = r.winner; });
+      setPicks(map);
+      setLoading(false);
+    })();
+  }, [user.id]);
+
+  // Mapa partido -> partido siguiente que depende de él (para limpiar aguas abajo)
+  const childMap = {};
+  ["R16", "QF", "SF", "FINAL"].forEach(rk => {
+    KO_TREE[rk].forEach(d => d.from.forEach(src => { childMap[src] = d.match; }));
+  });
+
+  const choose = async (matchId, teamName) => {
+    if (!teamName || teamName === "Por definir") return;
+    const next = { ...picks };
+    // Si cambia el ganador, invalida la cadena descendente
+    if (next[matchId] !== teamName) {
+      let cur = matchId;
+      const toDelete = [];
+      while (childMap[cur]) {
+        const child = childMap[cur];
+        if (next[child] !== undefined) { delete next[child]; toDelete.push(child); }
+        cur = child;
+      }
+      next[matchId] = teamName;
+      setPicks(next);
+      setSaving(true);
+      await supabase.from("knockout_picks").upsert(
+        { user_id: user.id, match_id: matchId, winner: teamName, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,match_id" }
+      );
+      // Borra en BD los que ya no aplican
+      if (toDelete.length) {
+        await supabase.from("knockout_picks").delete().eq("user_id", user.id).in("match_id", toDelete);
+      }
+      setSaving(false);
+    }
+  };
+
+  if (loading) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <SkeletonRows count={4} height={70} />
+    </div>
+  );
+
+  if (!groupsComplete) {
+    return (
+      <div style={{ animation: "fadeIn 0.3s ease" }}>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "16px" }}>FASE ELIMINATORIA</p>
+        <EmptyState emoji="🔒" title="FASE DE GRUPOS EN JUEGO"
+          text="El cuadro de eliminatorias se abrirá cuando se hayan jugado todos los partidos de la fase de grupos y se conozcan los 32 clasificados reales." />
+      </div>
+    );
+  }
+
+  const bracket = buildKnockoutBracket(standingsByGroup, picks);
+
+  // Un cruce individual: dos equipos tocables; el elegido se resalta
+  const MatchCard = ({ m, accent = GREEN }) => {
+    const row = (team, side) => {
+      const isWinner = m.winner && team.name === m.winner;
+      const tappable = !team.placeholder;
+      return (
+        <button
+          key={side}
+          onClick={() => tappable && choose(m.match, team.name)}
+          disabled={!tappable}
+          style={{
+            display: "flex", alignItems: "center", gap: "8px", width: "100%",
+            padding: "9px 10px", border: "none", textAlign: "left",
+            borderRadius: side === "home" ? "8px 8px 0 0" : "0 0 8px 8px",
+            background: isWinner ? GREEN_DIM : "transparent",
+            cursor: tappable ? "pointer" : "default",
+            opacity: team.placeholder ? 0.5 : 1,
+            borderLeft: `3px solid ${isWinner ? accent : "transparent"}`,
+          }}>
+          <span style={{ fontSize: "18px" }}>{team.flag}</span>
+          <span style={{ flex: 1, fontSize: "12px", fontFamily: "'Inter', sans-serif",
+            color: isWinner ? accent : team.placeholder ? "#7ab8e0" : "#e0eaf8",
+            fontWeight: isWinner ? 700 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {team.name}
+          </span>
+          {isWinner && <span style={{ fontSize: "13px", color: accent }}>✓</span>}
+        </button>
+      );
+    };
+    return (
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", overflow: "hidden", marginBottom: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 10px", borderBottom: `1px solid ${BORDER}` }}>
+          <span style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "'Bebas Neue', monospace", letterSpacing: "1px" }}>{m.match}</span>
+        </div>
+        {row(m.home, "home")}
+        <div style={{ height: "1px", background: BORDER, margin: "0 10px" }} />
+        {row(m.away, "away")}
+      </div>
+    );
+  };
+
+  const RoundBlock = ({ rk, list, accent }) => (
+    <div style={{ marginBottom: "24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+        <div style={{ flex: 1, height: "1px", background: BORDER }} />
+        <span style={{ fontSize: "10px", color: accent, fontFamily: "'Bebas Neue', cursive", letterSpacing: "3px" }}>
+          {KO_ROUND_LABELS[rk]}
+        </span>
+        <div style={{ flex: 1, height: "1px", background: BORDER }} />
+      </div>
+      {list.map(m => <MatchCard key={m.match} m={m} accent={accent} />)}
+    </div>
+  );
+
+  const champion = bracket.FINAL[0]?.winner;
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>TU CUADRO ELIMINATORIO</p>
+        {saving && <span style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif" }}>guardando…</span>}
+      </div>
+
+      <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6, marginBottom: "20px" }}>
+        Toca al equipo que crees que pasa en cada cruce. El ganador avanza solo a la siguiente ronda. Los dieciseisavos salen de tus pronósticos de la fase de grupos.
+      </p>
+
+      {/* Campeón */}
+      {champion && (() => {
+        const t = getTeam(champion);
+        return (
+          <div style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(255,213,79,0.18), rgba(10,22,40,0) 70%), rgba(255,255,255,0.03)", border: "1px solid rgba(255,213,79,0.4)", borderRadius: "14px", padding: "18px", marginBottom: "24px", textAlign: "center", animation: "glowPulse 2.5s ease-in-out infinite" }}>
+            <div style={{ fontSize: "9px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "6px" }}>🏆 TU CAMPEÓN</div>
+            <div style={{ fontSize: "48px", lineHeight: 1, marginBottom: "4px" }}>{t.flag}</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#ffd54f", letterSpacing: "2px" }}>{champion}</div>
+          </div>
+        );
+      })()}
+
+      <RoundBlock rk="R32"   list={bracket.R32}   accent={GREEN} />
+      <RoundBlock rk="R16"   list={bracket.R16}   accent="#4fc3f7" />
+      <RoundBlock rk="QF"    list={bracket.QF}    accent="#34d399" />
+      <RoundBlock rk="SF"    list={bracket.SF}    accent="#ffd54f" />
+      <RoundBlock rk="FINAL" list={bracket.FINAL} accent="#ffd54f" />
+    </div>
+  );
+}
+
+// ============================================================
 // VISTA JUEGOS
 // ============================================================
 function GamesView({ user }) {
@@ -9936,6 +10180,7 @@ export default function Home() {
             {view === "ranking" && <RankingView matches={matches} user={user} setView={setView} setViewProfileId={setViewProfileId} />}
             {view === "games" && <GamesView user={user} />}
             {view === "payments" && <PaymentsView user={user} />}
+            {view === "knockout" && user.role === "admin" && <KnockoutView user={user} matches={matches} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
