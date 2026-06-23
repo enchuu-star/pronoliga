@@ -452,48 +452,87 @@ const KO_TREE = {
   FINAL: [
     { match: "M104", from: ["M101", "M102"] },
   ],
+  THIRD: [
+    { match: "M103", from: ["M101", "M102"] }, // perdedores de las semis
+  ],
 };
 
 const KO_ROUND_LABELS = {
   R32: "Dieciseisavos", R16: "Octavos", QF: "Cuartos", SF: "Semifinales", FINAL: "Final",
 };
 
-// Construye el cuadro completo a partir del R32 + los picks del usuario.
-// picks: { "M73": "España", "M89": "Brasil", ... }  (winner por match)
-// Devuelve { R32:[...], R16:[...], QF:[...], SF:[...], FINAL:[...] }
-// Cada partido: { match, home:{name,flag,placeholder}, away:{...}, winner }
+// Reparto izquierda/derecha del cuadro (orden vertical real para que alineen)
+const KO_SIDES = {
+  left:  { R32: ["M74","M77","M73","M75","M83","M84","M81","M82"],
+           R16: ["M89","M90","M93","M94"], QF: ["M97","M98"], SF: ["M101"] },
+  right: { R32: ["M76","M78","M79","M80","M86","M88","M85","M87"],
+           R16: ["M91","M92","M95","M96"], QF: ["M99","M100"], SF: ["M102"] },
+};
+
+// Abreviaturas de 3 letras para las tarjetas
+const KO_ABBR = {
+  "México":"MEX","Sudáfrica":"RSA","Corea del Sur":"KOR","Rep. Checa":"CZE",
+  "Canadá":"CAN","Bosnia y Herz.":"BIH","Suiza":"SUI","Qatar":"QAT",
+  "Brasil":"BRA","Marruecos":"MAR","Escocia":"SCO","Haití":"HAI",
+  "Estados Unidos":"USA","Paraguay":"PAR","Australia":"AUS","Turquía":"TUR",
+  "Alemania":"GER","Curazao":"CUW","Costa de Marfil":"CIV","Ecuador":"ECU",
+  "Países Bajos":"NED","Japón":"JPN","Túnez":"TUN","Suecia":"SWE",
+  "Bélgica":"BEL","Egipto":"EGY","Irán":"IRN","Nueva Zelanda":"NZL",
+  "España":"ESP","Cabo Verde":"CPV","Arabia Saudí":"KSA","Uruguay":"URU",
+  "Francia":"FRA","Senegal":"SEN","Noruega":"NOR","Iraq":"IRQ",
+  "Argentina":"ARG","Argelia":"ALG","Austria":"AUT","Jordania":"JOR",
+  "Portugal":"POR","Colombia":"COL","Uzbekistán":"UZB","RD Congo":"COD",
+  "Inglaterra":"ENG","Croacia":"CRO","Panamá":"PAN","Ghana":"GHA",
+};
+const koAbbr = (n) => KO_ABBR[n] || (n ? n.slice(0, 3).toUpperCase() : "—");
+
+// Resuelve un partido: con marcador decide ganador/perdedor; si hay empate,
+// usa el avance elegido (pick.adv). Devuelve también los goles introducidos.
+function koResolve(m, pick) {
+  const h = pick?.h ?? null, a = pick?.a ?? null;
+  const known = m.home && m.away && !m.home.placeholder && !m.away.placeholder;
+  if (!known || h == null || a == null) return { winner: null, loser: null, h, a, adv: pick?.adv ?? null };
+  if (h > a) return { winner: m.home, loser: m.away, h, a, adv: null };
+  if (a > h) return { winner: m.away, loser: m.home, h, a, adv: null };
+  // empate -> decide el avance seleccionado
+  const adv = pick?.adv;
+  if (adv === m.home.name) return { winner: m.home, loser: m.away, h, a, adv };
+  if (adv === m.away.name) return { winner: m.away, loser: m.home, h, a, adv };
+  return { winner: null, loser: null, h, a, adv: null }; // empate sin elegir aún
+}
+
 function buildKnockoutBracket(standingsByGroup, picks) {
-  const r32 = buildRoundOf32(standingsByGroup); // [{match, home, away}]
-  const matchById = {};
-  r32.forEach(m => { matchById[m.match] = { ...m, winner: picks[m.match] || null }; });
+  const r32 = buildRoundOf32(standingsByGroup);
+  const byId = {};
+  const blank = (label) => ({ name: label, flag: "❔", placeholder: true });
 
-  const blank = { name: "Por definir", flag: "❔", placeholder: true };
+  // R32 (de los clasificados reales)
+  r32.forEach(m => { byId[m.match] = { ...m, ...koResolve(m, picks[m.match]) }; });
 
-  // Equipo ganador de un partido según el pick (o placeholder si aún no elegido)
-  const winnerOf = (matchId) => {
-    const m = matchById[matchId];
-    if (!m) return blank;
-    const w = m.winner;
-    if (!w) return blank;
-    if (m.home?.name === w) return { name: m.home.name, flag: m.home.flag };
-    if (m.away?.name === w) return { name: m.away.name, flag: m.away.flag };
-    return blank;
-  };
+  const winnerTeam = (code) => byId[code]?.winner || blank("Gan. " + code);
+  const loserTeam  = (code) => byId[code]?.loser  || blank("Per. " + code);
 
-  const buildRound = (defs) => defs.map(d => {
-    const home = winnerOf(d.from[0]);
-    const away = winnerOf(d.from[1]);
-    const m = { match: d.match, home, away, winner: picks[d.match] || null, from: d.from };
-    matchById[d.match] = m; // para que la siguiente ronda lea su ganador
+  const buildRound = (defs, kind = "winners") => defs.map(d => {
+    const home = kind === "losers" ? loserTeam(d.from[0]) : winnerTeam(d.from[0]);
+    const away = kind === "losers" ? loserTeam(d.from[1]) : winnerTeam(d.from[1]);
+    const base = { match: d.match, home, away, from: d.from };
+    const m = { ...base, ...koResolve(base, picks[d.match]) };
+    byId[d.match] = m;
     return m;
   });
 
-  const R16 = buildRound(KO_TREE.R16);
-  const QF = buildRound(KO_TREE.QF);
-  const SF = buildRound(KO_TREE.SF);
+  const R16   = buildRound(KO_TREE.R16);
+  const QF    = buildRound(KO_TREE.QF);
+  const SF    = buildRound(KO_TREE.SF);          // antes que FINAL/THIRD
   const FINAL = buildRound(KO_TREE.FINAL);
+  const THIRD = buildRound(KO_TREE.THIRD, "losers");
 
-  return { R32: r32.map(m => matchById[m.match]), R16, QF, SF, FINAL };
+  return {
+    byId,
+    R32: r32.map(m => byId[m.match]),
+    R16, QF, SF, FINAL, THIRD,
+    champion: byId["M104"]?.winner || null,
+  };
 }
 
 // +2 por cada equipo que el usuario sitúa como clasificado (1º, 2º o
@@ -9654,26 +9693,27 @@ const CHAPAS_BETA = [
 function chapasEnabled(user) { return true; }
 
 // ============================================================
-// ELIMINATORIAS — pronóstico del cuadro (de momento solo admin)
+// ELIMINATORIAS — cuadro con resultado exacto (de momento solo admin)
 // ============================================================
 function KnockoutView({ user, matches }) {
-  const [picks, setPicks] = useState({});
+  const [picks, setPicks] = useState({});        // { M73: { h, a, adv } }
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(null);  // matchId en edición
+  const [hIn, setHIn] = useState("");
+  const [aIn, setAIn] = useState("");
+  const [advSel, setAdvSel] = useState(null);
+  const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Clasificación REAL por grupo (a partir de los resultados ya cargados)
+  // Clasificación REAL por grupo
   const standingsByGroup = {};
-  Object.keys(GROUPS).forEach(g => {
-    standingsByGroup[g] = calcRealStandings(g, matches);
-  });
+  Object.keys(GROUPS).forEach(g => { standingsByGroup[g] = calcRealStandings(g, matches); });
 
-  // ⚙️ TEST: construye el cuadro con la posición ACTUAL de los grupos.
-  // Pon WAIT_FOR_GROUPS_DONE en true para exigir que terminen los 72 partidos.
+  // ⚙️ TEST: muestra el cuadro con la posición ACTUAL. Pon true para esperar
+  // a que terminen los 72 partidos de grupos (comportamiento real).
   const WAIT_FOR_GROUPS_DONE = false;
   const groupMatches = matches.filter(m => m.grp);
-  const groupsDone =
-    groupMatches.length > 0 &&
-    groupMatches.every(m => m.result_home !== null && m.result_away !== null);
+  const groupsDone = groupMatches.length > 0 && groupMatches.every(m => m.result_home !== null && m.result_away !== null);
   const anyPlayed = matches.some(m => m.grp && m.result_home !== null);
   const groupsComplete = WAIT_FOR_GROUPS_DONE ? groupsDone : anyPlayed;
 
@@ -9681,151 +9721,237 @@ function KnockoutView({ user, matches }) {
     (async () => {
       const { data } = await supabase.from("knockout_picks").select("*").eq("user_id", user.id);
       const map = {};
-      (data || []).forEach(r => { if (r.winner) map[r.match_id] = r.winner; });
+      (data || []).forEach(r => {
+        map[r.match_id] = { h: r.home_goals ?? null, a: r.away_goals ?? null, adv: r.winner ?? null };
+      });
       setPicks(map);
       setLoading(false);
     })();
   }, [user.id]);
 
-  // Mapa partido -> partido siguiente que depende de él (para limpiar aguas abajo)
+  // Mapa de descendientes (para limpiar lo que deja de ser válido al cambiar un ganador)
   const childMap = {};
-  ["R16", "QF", "SF", "FINAL"].forEach(rk => {
-    KO_TREE[rk].forEach(d => d.from.forEach(src => { childMap[src] = d.match; }));
-  });
-
-  const choose = async (matchId, teamName) => {
-    if (!teamName || teamName === "Por definir") return;
-    const next = { ...picks };
-    // Si cambia el ganador, invalida la cadena descendente
-    if (next[matchId] !== teamName) {
-      let cur = matchId;
-      const toDelete = [];
-      while (childMap[cur]) {
-        const child = childMap[cur];
-        if (next[child] !== undefined) { delete next[child]; toDelete.push(child); }
-        cur = child;
-      }
-      next[matchId] = teamName;
-      setPicks(next);
-      setSaving(true);
-      await supabase.from("knockout_picks").upsert(
-        { user_id: user.id, match_id: matchId, winner: teamName, updated_at: new Date().toISOString() },
-        { onConflict: "user_id,match_id" }
-      );
-      // Borra en BD los que ya no aplican
-      if (toDelete.length) {
-        await supabase.from("knockout_picks").delete().eq("user_id", user.id).in("match_id", toDelete);
-      }
-      setSaving(false);
-    }
+  const addChild = (s, c) => { (childMap[s] = childMap[s] || []).push(c); };
+  ["R16","QF","SF","FINAL","THIRD"].forEach(rk => KO_TREE[rk].forEach(d => d.from.forEach(s => addChild(s, d.match))));
+  const collectDesc = (id, acc = new Set()) => {
+    (childMap[id] || []).forEach(c => { if (!acc.has(c)) { acc.add(c); collectDesc(c, acc); } });
+    return acc;
   };
 
-  if (loading) return (
-    <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <SkeletonRows count={4} height={70} />
-    </div>
-  );
+  if (loading) return <div style={{ animation: "fadeIn 0.3s ease" }}><SkeletonRows count={4} height={70} /></div>;
 
   if (!groupsComplete) {
     return (
       <div style={{ animation: "fadeIn 0.3s ease" }}>
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "16px" }}>FASE ELIMINATORIA</p>
-        <EmptyState emoji="🔒" title="FASE DE GRUPOS EN JUEGO"
-          text="El cuadro de eliminatorias se abrirá cuando se hayan jugado todos los partidos de la fase de grupos y se conozcan los 32 clasificados reales." />
+        <EmptyState emoji="🔒" title="AÚN SIN RESULTADOS"
+          text="El cuadro de eliminatorias aparecerá en cuanto haya resultados reales de la fase de grupos." />
       </div>
     );
   }
 
   const bracket = buildKnockoutBracket(standingsByGroup, picks);
 
-  // Un cruce individual: dos equipos tocables; el elegido se resalta
-  const MatchCard = ({ m, accent = GREEN }) => {
-    const row = (team, side) => {
-      const isWinner = m.winner && team.name === m.winner;
-      const tappable = !team.placeholder;
+  const openEdit = (m) => {
+    if (m.home.placeholder || m.away.placeholder) return;
+    setEditing(m.match);
+    setHIn(m.h != null ? String(m.h) : "");
+    setAIn(m.a != null ? String(m.a) : "");
+    setAdvSel(m.adv || (m.winner ? m.winner.name : null));
+    setErr("");
+  };
+
+  const saveMatch = async () => {
+    const m = bracket.byId[editing];
+    const hh = hIn === "" ? null : parseInt(hIn);
+    const aa = aIn === "" ? null : parseInt(aIn);
+    if (hh == null || aa == null) { setErr("Mete el marcador completo"); return; }
+    let adv = null;
+    if (hh > aa) adv = m.home.name;
+    else if (aa > hh) adv = m.away.name;
+    else { if (!advSel) { setErr("Empate: elige quién pasa"); return; } adv = advSel; }
+
+    const prevAdv = m.winner?.name || null;
+    const next = { ...picks, [editing]: { h: hh, a: aa, adv: hh === aa ? adv : null } };
+    let toDelete = [];
+    if (adv !== prevAdv) { toDelete = [...collectDesc(editing)]; toDelete.forEach(id => delete next[id]); }
+
+    setPicks(next); setSaving(true);
+    await supabase.from("knockout_picks").upsert(
+      { user_id: user.id, match_id: editing, home_goals: hh, away_goals: aa, winner: adv, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,match_id" }
+    );
+    if (toDelete.length) await supabase.from("knockout_picks").delete().eq("user_id", user.id).in("match_id", toDelete);
+    setSaving(false); setEditing(null);
+  };
+
+  const clearMatch = async () => {
+    const next = { ...picks };
+    const toDelete = [editing, ...collectDesc(editing)];
+    toDelete.forEach(id => delete next[id]);
+    setPicks(next); setSaving(true);
+    await supabase.from("knockout_picks").delete().eq("user_id", user.id).in("match_id", toDelete);
+    setSaving(false); setEditing(null);
+  };
+
+  // ---- Tarjeta de un cruce ----
+  const Cell = ({ m, accent = GREEN, gold }) => {
+    const tappable = !m.home.placeholder && !m.away.placeholder;
+    const draw = m.h != null && m.a != null && m.h === m.a;
+    const teamRow = (team, score, top) => {
+      const isAdv = m.winner && team.name === m.winner.name;
       return (
-        <button
-          key={side}
-          onClick={() => tappable && choose(m.match, team.name)}
-          disabled={!tappable}
-          style={{
-            display: "flex", alignItems: "center", gap: "8px", width: "100%",
-            padding: "9px 10px", border: "none", textAlign: "left",
-            borderRadius: side === "home" ? "8px 8px 0 0" : "0 0 8px 8px",
-            background: isWinner ? GREEN_DIM : "transparent",
-            cursor: tappable ? "pointer" : "default",
-            opacity: team.placeholder ? 0.5 : 1,
-            borderLeft: `3px solid ${isWinner ? accent : "transparent"}`,
-          }}>
-          <span style={{ fontSize: "18px" }}>{team.flag}</span>
-          <span style={{ flex: 1, fontSize: "12px", fontFamily: "'Inter', sans-serif",
-            color: isWinner ? accent : team.placeholder ? "#7ab8e0" : "#e0eaf8",
-            fontWeight: isWinner ? 700 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {team.name}
+        <div style={{
+          display: "flex", alignItems: "center", gap: "5px", padding: "5px 6px",
+          background: isAdv ? GREEN_DIM : "transparent",
+          borderLeft: `3px solid ${isAdv ? accent : "transparent"}`,
+          opacity: team.placeholder ? 0.5 : 1,
+        }}>
+          <span style={{ fontSize: "14px" }}>{team.flag}</span>
+          <span style={{ flex: 1, fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: isAdv ? 700 : 500,
+            color: isAdv ? accent : team.placeholder ? "#7ab8e0" : "#e0eaf8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {team.placeholder ? team.name : koAbbr(team.name)}
           </span>
-          {isWinner && <span style={{ fontSize: "13px", color: accent }}>✓</span>}
-        </button>
+          {score != null && (
+            <span style={{ fontFamily: "'Bebas Neue', monospace", fontSize: "14px", color: isAdv ? accent : "#c0d8f0", minWidth: "12px", textAlign: "center" }}>{score}</span>
+          )}
+          {isAdv && draw && <span style={{ fontSize: "8px", color: accent }}>p</span>}
+        </div>
       );
     };
     return (
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", overflow: "hidden", marginBottom: "8px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 10px", borderBottom: `1px solid ${BORDER}` }}>
-          <span style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "'Bebas Neue', monospace", letterSpacing: "1px" }}>{m.match}</span>
+      <div onClick={() => tappable && openEdit(m)} style={{
+        background: gold ? "rgba(255,213,79,0.06)" : CARD,
+        border: `1px solid ${gold ? "rgba(255,213,79,0.4)" : BORDER}`,
+        borderRadius: "8px", overflow: "hidden",
+        cursor: tappable ? "pointer" : "default",
+      }}>
+        <div style={{ fontSize: "7px", color: gold ? "#ffd54f" : "#7ab8e0", fontFamily: "'Bebas Neue', monospace", letterSpacing: "1px", padding: "2px 6px", borderBottom: `1px solid ${BORDER}` }}>
+          {gold === "final" ? "🏆 FINAL" : gold === "third" ? "🥉 3º PUESTO" : m.match}
         </div>
-        {row(m.home, "home")}
-        <div style={{ height: "1px", background: BORDER, margin: "0 10px" }} />
-        {row(m.away, "away")}
+        {teamRow(m.home, m.h, true)}
+        <div style={{ height: "1px", background: BORDER }} />
+        {teamRow(m.away, m.a, false)}
       </div>
     );
   };
 
-  const RoundBlock = ({ rk, list, accent }) => (
-    <div style={{ marginBottom: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-        <div style={{ flex: 1, height: "1px", background: BORDER }} />
-        <span style={{ fontSize: "10px", color: accent, fontFamily: "'Bebas Neue', cursive", letterSpacing: "3px" }}>
-          {KO_ROUND_LABELS[rk]}
-        </span>
-        <div style={{ flex: 1, height: "1px", background: BORDER }} />
-      </div>
-      {list.map(m => <MatchCard key={m.match} m={m} accent={accent} />)}
+  const COL_W = 108, R32_W = 124, CENTER_W = 130, H = 620;
+  const Column = ({ ids, w, accent }) => (
+    <div style={{ width: w, flexShrink: 0, display: "flex", flexDirection: "column", justifyContent: "space-around", padding: "0 3px" }}>
+      {ids.map(id => <Cell key={id} m={bracket.byId[id]} accent={accent} />)}
     </div>
   );
+  const HeadCell = ({ label, w }) => (
+    <div style={{ width: w, flexShrink: 0, textAlign: "center", fontSize: "9px", color: GREEN, fontFamily: "'Bebas Neue', cursive", letterSpacing: "2px", padding: "6px 0" }}>{label}</div>
+  );
 
-  const champion = bracket.FINAL[0]?.winner;
+  const editM = editing ? bracket.byId[editing] : null;
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>TU CUADRO ELIMINATORIO</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>CUADRO ELIMINATORIO</p>
         {saving && <span style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif" }}>guardando…</span>}
       </div>
-
-      <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6, marginBottom: "20px" }}>
-        Toca al equipo que crees que pasa en cada cruce. El ganador avanza solo a la siguiente ronda. Los dieciseisavos salen de tus pronósticos de la fase de grupos.
+      <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6, marginBottom: "14px" }}>
+        Toca un cruce e introduce el resultado exacto. Si empatan, elige quién pasa (penaltis). El ganador avanza solo. Desliza → para ver todo el cuadro.
       </p>
 
       {/* Campeón */}
-      {champion && (() => {
-        const t = getTeam(champion);
+      {bracket.champion && (() => {
+        const t = getTeam(bracket.champion);
         return (
-          <div style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(255,213,79,0.18), rgba(10,22,40,0) 70%), rgba(255,255,255,0.03)", border: "1px solid rgba(255,213,79,0.4)", borderRadius: "14px", padding: "18px", marginBottom: "24px", textAlign: "center", animation: "glowPulse 2.5s ease-in-out infinite" }}>
-            <div style={{ fontSize: "9px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "6px" }}>🏆 TU CAMPEÓN</div>
-            <div style={{ fontSize: "48px", lineHeight: 1, marginBottom: "4px" }}>{t.flag}</div>
-            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: "#ffd54f", letterSpacing: "2px" }}>{champion}</div>
+          <div style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(255,213,79,0.18), rgba(10,22,40,0) 70%), rgba(255,255,255,0.03)", border: "1px solid rgba(255,213,79,0.4)", borderRadius: "14px", padding: "14px", marginBottom: "16px", textAlign: "center" }}>
+            <div style={{ fontSize: "9px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "4px" }}>🏆 TU CAMPEÓN</div>
+            <div style={{ fontSize: "40px", lineHeight: 1 }}>{t.flag}</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "24px", color: "#ffd54f", letterSpacing: "2px" }}>{bracket.champion}</div>
           </div>
         );
       })()}
 
-      <RoundBlock rk="R32"   list={bracket.R32}   accent={GREEN} />
-      <RoundBlock rk="R16"   list={bracket.R16}   accent="#4fc3f7" />
-      <RoundBlock rk="QF"    list={bracket.QF}    accent="#34d399" />
-      <RoundBlock rk="SF"    list={bracket.SF}    accent="#ffd54f" />
-      <RoundBlock rk="FINAL" list={bracket.FINAL} accent="#ffd54f" />
+      {/* Cuadro con scroll horizontal */}
+      <div style={{ overflowX: "auto", paddingBottom: "10px" }}>
+        <div style={{ minWidth: `${R32_W*2 + COL_W*6 + CENTER_W}px` }}>
+          {/* cabeceras */}
+          <div style={{ display: "flex" }}>
+            <HeadCell label="16avos" w={R32_W} /><HeadCell label="8avos" w={COL_W} />
+            <HeadCell label="4tos" w={COL_W} /><HeadCell label="Semis" w={COL_W} />
+            <HeadCell label="FINAL" w={CENTER_W} />
+            <HeadCell label="Semis" w={COL_W} /><HeadCell label="4tos" w={COL_W} />
+            <HeadCell label="8avos" w={COL_W} /><HeadCell label="16avos" w={R32_W} />
+          </div>
+          {/* columnas */}
+          <div style={{ display: "flex", height: `${H}px` }}>
+            <Column ids={KO_SIDES.left.R32} w={R32_W} accent={GREEN} />
+            <Column ids={KO_SIDES.left.R16} w={COL_W} accent="#4fc3f7" />
+            <Column ids={KO_SIDES.left.QF}  w={COL_W} accent="#34d399" />
+            <Column ids={KO_SIDES.left.SF}  w={COL_W} accent="#ffd54f" />
+            {/* centro: final + 3er puesto */}
+            <div style={{ width: CENTER_W, flexShrink: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: "14px", padding: "0 3px" }}>
+              <Cell m={bracket.FINAL[0]} accent="#ffd54f" gold="final" />
+              <Cell m={bracket.THIRD[0]} accent="#ff8a00" gold="third" />
+            </div>
+            <Column ids={KO_SIDES.right.SF}  w={COL_W} accent="#ffd54f" />
+            <Column ids={KO_SIDES.right.QF}  w={COL_W} accent="#34d399" />
+            <Column ids={KO_SIDES.right.R16} w={COL_W} accent="#4fc3f7" />
+            <Column ids={KO_SIDES.right.R32} w={R32_W} accent={GREEN} />
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de edición del cruce */}
+      {editM && (
+        <div onClick={() => setEditing(null)} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(5,12,24,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.2s ease" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "340px", background: "linear-gradient(160deg,#102339,#0a1628)", border: `2px solid ${GREEN}`, borderRadius: "16px", padding: "20px" }}>
+            <div style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "16px", textAlign: "center" }}>{editM.match} · RESULTADO</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "16px" }}>
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ fontSize: "30px" }}>{editM.home.flag}</div>
+                <div style={{ fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>{editM.home.name}</div>
+              </div>
+              <input value={hIn} onChange={e => setHIn(e.target.value)} type="number" min="0" max="20"
+                style={{ width: "48px", height: "54px", border: `1px solid rgba(79,195,247,0.35)`, borderRadius: "10px", background: "rgba(0,0,0,0.3)", color: GREEN, fontSize: "28px", fontFamily: "'Bebas Neue', cursive", textAlign: "center", outline: "none" }} placeholder="–" />
+              <span style={{ color: "#7ab8e0", fontSize: "20px" }}>:</span>
+              <input value={aIn} onChange={e => setAIn(e.target.value)} type="number" min="0" max="20"
+                style={{ width: "48px", height: "54px", border: `1px solid rgba(79,195,247,0.35)`, borderRadius: "10px", background: "rgba(0,0,0,0.3)", color: GREEN, fontSize: "28px", fontFamily: "'Bebas Neue', cursive", textAlign: "center", outline: "none" }} placeholder="–" />
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ fontSize: "30px" }}>{editM.away.flag}</div>
+                <div style={{ fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>{editM.away.name}</div>
+              </div>
+            </div>
+
+            {/* Selector de quién pasa (solo si empate) */}
+            {hIn !== "" && aIn !== "" && parseInt(hIn) === parseInt(aIn) && (
+              <div style={{ marginBottom: "14px" }}>
+                <p style={{ fontSize: "9px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px", textAlign: "center" }}>⚽ EMPATE · ¿QUIÉN PASA EN PENALTIS?</p>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {[editM.home, editM.away].map(t => (
+                    <button key={t.name} onClick={() => setAdvSel(t.name)} style={{
+                      flex: 1, padding: "10px", borderRadius: "8px", cursor: "pointer",
+                      border: `1px solid ${advSel === t.name ? GREEN : BORDER}`,
+                      background: advSel === t.name ? GREEN_DIM : CARD,
+                      color: advSel === t.name ? GREEN : "#a8d4f0",
+                      fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 700,
+                    }}>{t.flag} {koAbbr(t.name)}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {err && <p style={{ color: "#ff6b4a", fontSize: "11px", fontFamily: "'Inter', sans-serif", textAlign: "center", marginBottom: "10px" }}>⚠ {err}</p>}
+
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={clearMatch} style={{ padding: "11px 14px", border: "1px solid rgba(204,34,34,0.3)", borderRadius: "8px", background: "rgba(204,34,34,0.06)", color: "#cc2222", fontFamily: "'Inter', sans-serif", fontSize: "11px", cursor: "pointer" }}>Borrar</button>
+              <button onClick={() => setEditing(null)} style={{ flex: 1, padding: "11px", border: `1px solid ${BORDER}`, borderRadius: "8px", background: "transparent", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", fontSize: "12px", cursor: "pointer" }}>Cancelar</button>
+              <button onClick={saveMatch} style={{ flex: 2, padding: "11px", border: "none", borderRadius: "8px", background: GREEN, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, letterSpacing: "1px", cursor: "pointer" }}>GUARDAR</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
 // ============================================================
 // VISTA JUEGOS
 // ============================================================
