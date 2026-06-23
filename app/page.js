@@ -9667,12 +9667,15 @@ function KnockoutView({ user, matches }) {
     standingsByGroup[g] = calcRealStandings(g, matches);
   });
 
-  // El cuadro solo es válido cuando TODOS los partidos de grupos están jugados
-  // (los 8 mejores terceros no se conocen hasta entonces).
+  // ⚙️ TEST: construye el cuadro con la posición ACTUAL de los grupos.
+  // Pon WAIT_FOR_GROUPS_DONE en true para exigir que terminen los 72 partidos.
+  const WAIT_FOR_GROUPS_DONE = false;
   const groupMatches = matches.filter(m => m.grp);
-  const groupsComplete =
+  const groupsDone =
     groupMatches.length > 0 &&
     groupMatches.every(m => m.result_home !== null && m.result_away !== null);
+  const anyPlayed = matches.some(m => m.grp && m.result_home !== null);
+  const groupsComplete = WAIT_FOR_GROUPS_DONE ? groupsDone : anyPlayed;
 
   useEffect(() => {
     (async () => {
