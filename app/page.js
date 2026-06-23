@@ -1948,6 +1948,7 @@ function StadiumScore({ match, played, compact }) {
 function ResultsView({ matches }) {
   const [viewMode, setViewMode] = useState("day"); // "day" | "group"
   const [g, setG] = useState("A");
+  const activeDayRef = useRef(null);
 
   // Días disponibles (ordenados)
   const days = [...new Set(matches.map(m => m.match_date))].sort();
@@ -1961,6 +1962,12 @@ function ResultsView({ matches }) {
 
   const [selectedDay, setSelectedDay] = useState(defaultDay);
   const currentDay = selectedDay || defaultDay;
+  // ⬇️ Centra automáticamente el día seleccionado en la barra horizontal
+  useEffect(() => {
+    if (viewMode === "day" && activeDayRef.current) {
+      activeDayRef.current.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" });
+    }
+  }, [currentDay, viewMode]);
 
   const dayMatches = matches
     .filter(m => m.match_date === currentDay)
@@ -1991,7 +1998,7 @@ function ResultsView({ matches }) {
               const isToday = day === todayStr;
               const sel = currentDay === day;
               return (
-                <button key={day} onClick={() => setSelectedDay(day)} style={{
+                <button key={day} ref={sel ? activeDayRef : null} onClick={() => setSelectedDay(day)} style={{
                   padding: "7px 12px",
                   border: `1px solid ${sel ? GREEN : BORDER}`,
                   borderRadius: "8px", cursor: "pointer", whiteSpace: "nowrap",
@@ -2121,6 +2128,7 @@ function CommunityView({ matches, user }) {
   const [allPreds, setAllPreds] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const activeDayRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -2144,6 +2152,12 @@ function CommunityView({ matches, user }) {
 
   const currentDay = selectedDay || defaultDay;
   const matchesByDay = day => closedMatches.filter(m => m.match_date === day);
+  // ⬇️ Centra automáticamente el día seleccionado en la barra horizontal
+  useEffect(() => {
+    if (viewMode === "day" && activeDayRef.current) {
+      activeDayRef.current.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" });
+    }
+  }, [currentDay, viewMode, loading]);
 
   const renderMatchPreds = m => {
   const matchPreds = allPreds.filter(p => p.match_id === m.id);
@@ -2241,7 +2255,7 @@ function CommunityView({ matches, user }) {
         <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px", marginBottom: "16px" }}>
           {days.map(day => {
             const hasClosed = closedMatches.some(m => m.match_date === day);
-            return <button key={day} onClick={() => setSelectedDay(day)} disabled={!hasClosed} style={{ padding: "7px 12px", border: `1px solid ${currentDay === day ? GREEN : BORDER}`, borderRadius: "8px", cursor: hasClosed ? "pointer" : "default", whiteSpace: "nowrap", background: currentDay === day ? GREEN_DIM : CARD, color: currentDay === day ? GREEN : hasClosed ? "#a8d4f0" : "#7ab8e0", fontFamily: "'Inter', sans-serif", fontSize: "11px", flexShrink: 0, opacity: hasClosed ? 1 : 0.4 }}>{formatDate(day)}</button>;
+            return <button key={day} ref={currentDay === day ? activeDayRef : null} onClick={() => setSelectedDay(day)} disabled={!hasClosed} style={{ padding: "7px 12px", border: `1px solid ${currentDay === day ? GREEN : BORDER}`, borderRadius: "8px", cursor: hasClosed ? "pointer" : "default", whiteSpace: "nowrap", background: currentDay === day ? GREEN_DIM : CARD, color: currentDay === day ? GREEN : hasClosed ? "#a8d4f0" : "#7ab8e0", fontFamily: "'Inter', sans-serif", fontSize: "11px", flexShrink: 0, opacity: hasClosed ? 1 : 0.4 }}>{formatDate(day)}</button>;
           })}
         </div>
       )}
