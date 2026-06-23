@@ -535,6 +535,60 @@ function buildKnockoutBracket(standingsByGroup, picks) {
   };
 }
 
+// Todos los cruces del cuadro
+const KO_ALL_MATCHES = [
+  ...KO_SIDES.left.R32, ...KO_SIDES.right.R32,
+  "M89","M90","M91","M92","M93","M94","M95","M96",
+  "M97","M98","M99","M100","M101","M102","M104","M103",
+];
+
+// Convierte filas (knockout_picks o knockout_results) a { M73:{h,a,adv}, ... }
+function koPicksMap(rows) {
+  const m = {};
+  (rows || []).forEach(r => {
+    m[r.match_id] = { h: r.home_goals ?? null, a: r.away_goals ?? null, adv: r.winner ?? null };
+  });
+  return m;
+}
+
+// 1/3/5 igual que en grupos
+function koScore(uh, ua, rh, ra) {
+  if (uh === rh && ua === ra) return 5;
+  const us = uh > ua ? "H" : uh < ua ? "A" : "D";
+  const rs = rh > ra ? "H" : rh < ra ? "A" : "D";
+  if (us !== rs) return 0;
+  if (uh - ua === rh - ra) return 3;
+  return 1;
+}
+
+// Puntos de eliminatoria de un usuario:
+//   +5 por acertar quién pasa en cada cruce (·+10 en la final = campeón)
+//   +1/+3/+5 por el marcador (solo si los dos equipos coinciden con la realidad)
+function calcKnockoutPoints(userPicks, realPicks, standingsByGroup) {
+  if (!realPicks || Object.keys(realPicks).length === 0) return 0;
+  const userB = buildKnockoutBracket(standingsByGroup, userPicks);
+  const realB = buildKnockoutBracket(standingsByGroup, realPicks);
+  let pts = 0;
+  KO_ALL_MATCHES.forEach(id => {
+    const rm = realB.byId[id], um = userB.byId[id];
+    if (!rm || !um) return;
+    const realW = rm.winner?.name || null;
+    if (!realW) return; // cruce real aún sin definir
+    const userW = um.winner?.name || null;
+
+    // Acertar quién pasa (la final da +10: campeón)
+    if (userW && userW === realW) pts += (id === "M104") ? 10 : 5;
+
+    // Marcador exacto: solo si coinciden los dos equipos del cruce
+    const sameTeams = !um.home.placeholder && !um.away.placeholder &&
+      um.home.name === rm.home.name && um.away.name === rm.away.name;
+    if (sameTeams && um.h != null && um.a != null && rm.h != null && rm.a != null) {
+      pts += koScore(um.h, um.a, rm.h, rm.a);
+    }
+  });
+  return pts;
+}
+
 // +2 por cada equipo que el usuario sitúa como clasificado (1º, 2º o
 // tercero entre los 8 mejores) y que realmente se clasifica.
 // Solo puntúa cuando TODOS los partidos de la fase de grupos están definidos.
@@ -3017,6 +3071,11 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
     const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
     const { data: qpicks } = await supabase.from("qualifier_picks").select("*");
     const { data: specialPreds } = await supabase.from("special_predictions").select("*");
+    const { data: koPicks } = await supabase.from("knockout_picks").select("*").range(0, 99999);
+    const { data: koResults } = await supabase.from("knockout_results").select("*");
+    const koReal = koPicksMap(koResults || []);
+    const koByGroup = {};
+    Object.keys(GROUPS).forEach(g => { koByGroup[g] = calcRealStandings(g, matches); });
     const r = (profiles || []).map(p => {
       const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
       // Clasificados (1º, 2º y mejores terceros) automáticos desde sus pronósticos
@@ -3024,17 +3083,18 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
       (preds || []).filter(x => x.user_id === p.id).forEach(x => { predMap[x.match_id] = x; });
       const qualPts = calcQualifierPoints(matches, predMap);
       const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);
+      const koPts = calcKnockoutPoints(koPicksMap((koPicks || []).filter(x => x.user_id === p.id)), koReal, koByGroup);
       const specialPts = mySpecial
         ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0)
         : 0;
       return {
         ...p,
-        total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts,
+        total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts + koPts,
         exactos: myPreds.filter(x => x.points === 5).length,
         difGoles: myPreds.filter(x => x.points === 3).length,
         parciales: myPreds.filter(x => x.points === 1).length,
         count: myPreds.length,
-        qualPts, specialPts,
+        qualPts, specialPts, koPts,
       };
     }).sort((a, b) => b.total - a.total);
 
@@ -3232,6 +3292,7 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
                 🎯 {u.exactos} · 📏 {u.difGoles} · ✓ {u.parciales} · {u.count} total.
                 {u.qualPts > 0 ? ` · +${u.qualPts} clas.` : ""}
                 {u.specialPts > 0 ? ` · +${u.specialPts} esp.` : ""}
+                {u.koPts > 0 ? ` · +${u.koPts} elim.` : ""}
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -5108,6 +5169,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
         {user.role === "admin" && navCard("🏟️", "ELIMINATORIAS", "cuadro · beta admin", "#34d399", "rgba(52,211,153,0.2)", "rgba(52,211,153,0.05)", "knockout")}
         {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#cc2222", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
         {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
+        {user.role === "admin" && navCard("⚙️", "RESULTADOS ELIM.", "cuadro real · admin", "#ffd54f", "rgba(255,213,79,0.2)", "rgba(255,213,79,0.05)", "knockout_results")}
       </div>
 
       {/* Antes del Mundial: progreso. Al empezar: el bote ocupa su sitio */}
@@ -9695,7 +9757,8 @@ function chapasEnabled(user) { return true; }
 // ============================================================
 // ELIMINATORIAS — cuadro con resultado exacto (de momento solo admin)
 // ============================================================
-function KnockoutView({ user, matches }) {
+function KnockoutView({ user, matches, resultsMode = false }) {
+  const KO_TABLE = resultsMode ? "knockout_results" : "knockout_picks";
   const [picks, setPicks] = useState({});        // { M73: { h, a, adv } }
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);  // matchId en edición
@@ -9719,7 +9782,9 @@ function KnockoutView({ user, matches }) {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("knockout_picks").select("*").eq("user_id", user.id);
+      let q = supabase.from(KO_TABLE).select("*");
+      if (!resultsMode) q = q.eq("user_id", user.id);
+      const { data } = await q;
       const map = {};
       (data || []).forEach(r => {
         map[r.match_id] = { h: r.home_goals ?? null, a: r.away_goals ?? null, adv: r.winner ?? null };
@@ -9777,11 +9842,15 @@ function KnockoutView({ user, matches }) {
     if (adv !== prevAdv) { toDelete = [...collectDesc(editing)]; toDelete.forEach(id => delete next[id]); }
 
     setPicks(next); setSaving(true);
-    await supabase.from("knockout_picks").upsert(
-      { user_id: user.id, match_id: editing, home_goals: hh, away_goals: aa, winner: adv, updated_at: new Date().toISOString() },
-      { onConflict: "user_id,match_id" }
-    );
-    if (toDelete.length) await supabase.from("knockout_picks").delete().eq("user_id", user.id).in("match_id", toDelete);
+    const row = resultsMode
+      ? { match_id: editing, home_goals: hh, away_goals: aa, winner: adv, updated_at: new Date().toISOString() }
+      : { user_id: user.id, match_id: editing, home_goals: hh, away_goals: aa, winner: adv, updated_at: new Date().toISOString() };
+    await supabase.from(KO_TABLE).upsert(row, { onConflict: resultsMode ? "match_id" : "user_id,match_id" });
+    if (toDelete.length) {
+      let dq = supabase.from(KO_TABLE).delete().in("match_id", toDelete);
+      if (!resultsMode) dq = dq.eq("user_id", user.id);
+      await dq;
+    }
     setSaving(false); setEditing(null);
   };
 
@@ -9790,7 +9859,9 @@ function KnockoutView({ user, matches }) {
     const toDelete = [editing, ...collectDesc(editing)];
     toDelete.forEach(id => delete next[id]);
     setPicks(next); setSaving(true);
-    await supabase.from("knockout_picks").delete().eq("user_id", user.id).in("match_id", toDelete);
+    let dq = supabase.from(KO_TABLE).delete().in("match_id", toDelete);
+    if (!resultsMode) dq = dq.eq("user_id", user.id);
+    await dq;
     setSaving(false); setEditing(null);
   };
 
@@ -9836,7 +9907,7 @@ function KnockoutView({ user, matches }) {
     );
   };
 
-  const COL_W = 108, R32_W = 124, CENTER_W = 130, H = 620;
+  const COL_W = 108, R32_W = 124, CENTER_W = 142, H = 620;
   const Column = ({ ids, w, accent }) => (
     <div style={{ width: w, flexShrink: 0, display: "flex", flexDirection: "column", justifyContent: "space-around", padding: "0 3px" }}>
       {ids.map(id => <Cell key={id} m={bracket.byId[id]} accent={accent} />)}
@@ -9851,7 +9922,7 @@ function KnockoutView({ user, matches }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>CUADRO ELIMINATORIO</p>
+        <p style={{ fontSize: "9px", color: resultsMode ? "#ffd54f" : "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>{resultsMode ? "⚙️ RESULTADOS REALES · ELIMINATORIA" : "CUADRO ELIMINATORIO"}</p>
         {saving && <span style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif" }}>guardando…</span>}
       </div>
       <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6, marginBottom: "14px" }}>
@@ -9887,10 +9958,29 @@ function KnockoutView({ user, matches }) {
             <Column ids={KO_SIDES.left.R16} w={COL_W} accent="#4fc3f7" />
             <Column ids={KO_SIDES.left.QF}  w={COL_W} accent="#34d399" />
             <Column ids={KO_SIDES.left.SF}  w={COL_W} accent="#ffd54f" />
-            {/* centro: final + 3er puesto */}
-            <div style={{ width: CENTER_W, flexShrink: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: "14px", padding: "0 3px" }}>
+            {/* centro: leyenda + final + 3er puesto */}
+            <div style={{ width: CENTER_W, flexShrink: 0, display: "flex", flexDirection: "column", padding: "0 3px" }}>
+              {/* Leyenda de puntos (hueco encima de la final) */}
+              <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "10px 9px" }}>
+                <div style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px", textAlign: "center" }}>CÓMO SE PUNTÚA</div>
+                {[
+                  { ic: "🎯", t: "+5 resultado exacto", c: GREEN },
+                  { ic: "📏", t: "+3 dif. de goles", c: "#4fc3f7" },
+                  { ic: "✓", t: "+1 aciertas ganador", c: "#ffd54f" },
+                  { ic: "✅", t: "+5 quién se clasifica", c: "#34d399" },
+                  { ic: "🏆", t: "+10 campeón", c: "#ffd54f" },
+                ].map(r => (
+                  <div key={r.t} style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "5px" }}>
+                    <span style={{ fontSize: "11px", width: "15px", textAlign: "center" }}>{r.ic}</span>
+                    <span style={{ fontSize: "8px", color: r.c, fontFamily: "'Inter', sans-serif", lineHeight: 1.2 }}>{r.t}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ flex: 1 }} />
               <Cell m={bracket.FINAL[0]} accent="#ffd54f" gold="final" />
+              <div style={{ height: "14px" }} />
               <Cell m={bracket.THIRD[0]} accent="#ff8a00" gold="third" />
+              <div style={{ flex: 1 }} />
             </div>
             <Column ids={KO_SIDES.right.SF}  w={COL_W} accent="#ffd54f" />
             <Column ids={KO_SIDES.right.QF}  w={COL_W} accent="#34d399" />
@@ -10310,6 +10400,7 @@ export default function Home() {
             {view === "games" && <GamesView user={user} />}
             {view === "payments" && <PaymentsView user={user} />}
             {view === "knockout" && user.role === "admin" && <KnockoutView user={user} matches={matches} />}
+            {view === "knockout_results" && user.role === "admin" && <KnockoutView user={user} matches={matches} resultsMode={true} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
           </div>
