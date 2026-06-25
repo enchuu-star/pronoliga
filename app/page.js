@@ -626,6 +626,12 @@ function calcQualifierPoints(matches, predMap) {
   return pts;
 }
 
+function formatDate(d) {
+  if (!d) return "";
+  const [, m, day] = d.split("-");
+  return `${parseInt(day)} ${["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][parseInt(m)]}`;
+}
+
 // ============================================================
 // CUENTA ATRÁS
 // ============================================================
