@@ -2147,7 +2147,6 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
 function StadiumScore({ match, played, compact }) {
   const ht = match.homeFlag ? { name: match.home, flag: match.homeFlag } : getTeam(match.home);
   const at = match.awayFlag ? { name: match.away, flag: match.awayFlag } : getTeam(match.away);
-  const ht = getTeam(match.home), at = getTeam(match.away);
   const hasResult = match.result_home !== null && match.result_away !== null;
   const homeWin = hasResult && match.result_home > match.result_away;
   const awayWin = hasResult && match.result_away > match.result_home;
@@ -2498,9 +2497,6 @@ function CommunityQualifiers({ matches, currentUserId }) {
 function CommunityView({ matches, user }) {
   const [viewMode, setViewMode] = useState("day");
   const [selectedDay, setSelectedDay] = useState(null);
-  const [allPreds, setAllPreds] = useState([]);
-  const [profiles, setProfiles] = useState([]);
-  const [loading, setLoading] = useState(true);
   const activeDayRef = useRef(null);
   const [allPreds, setAllPreds] = useState([]);
   const [profiles, setProfiles] = useState([]);
