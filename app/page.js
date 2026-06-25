@@ -388,31 +388,37 @@ function assignThirds(qualifiedThirdGroups) {
 // standingsByGroup: { A: [...ordenado], ... }
 // Devuelve [{ match, home: {name,flag,label}, away: {...} }, ...]
 function buildRoundOf32(standingsByGroup) {
+  const groupDone = {};
+  Object.keys(GROUPS).forEach(g => {
+    const st = standingsByGroup[g];
+    groupDone[g] = !!(st && st.length === 4 && st.every(t => t.pj === 3));
+  });
+  const allGroupsDone = Object.values(groupDone).every(Boolean);
+
   const thirds = calcThirdPlaceTable(standingsByGroup);
-  const qualifiedThirds = thirds.filter(t => t.qualifies);
+  const qualifiedThirds = allGroupsDone ? thirds.filter(t => t.qualifies) : [];
   const thirdGroups = qualifiedThirds.map(t => t.grp).sort();
   const thirdByGroup = {};
   qualifiedThirds.forEach(t => { thirdByGroup[t.grp] = t; });
 
-  const assignment = assignThirds(thirdGroups);
+  const assignment = allGroupsDone ? assignThirds(thirdGroups) : {};
 
-  // Helper: obtener equipo según etiqueta (1X / 2X) o tercero por grupo
   const teamFromLabel = (label, thirdGroup) => {
     if (label === "3?") {
-      if (!thirdGroup) return { name: "Mejor 3º", flag: "❓", label: "3º", placeholder: true };
+      if (!allGroupsDone || !thirdGroup) return { name: "Mejor 3º", flag: "❓", label: "3º", placeholder: true };
       const t = thirdByGroup[thirdGroup];
+      if (!t) return { name: "Mejor 3º", flag: "❓", label: "3º", placeholder: true };
       return { name: t.name, flag: t.flag, label: `3º ${thirdGroup}` };
     }
-    const pos = label[0]; // 1 ó 2
+    const pos = label[0];
     const grp = label[1];
     const st = standingsByGroup[grp];
     const idx = pos === "1" ? 0 : 1;
-    const team = st && st[idx] && st[idx].pj > 0 ? st[idx] : null;
+    const team = groupDone[grp] && st && st[idx] ? st[idx] : null;
     if (!team) return { name: `${pos === "1" ? "1º" : "2º"} ${grp}`, flag: "❓", label, placeholder: true };
     return { name: team.name, flag: team.flag, label: `${pos === "1" ? "1º" : "2º"} ${grp}` };
   };
 
-  // Mapear qué grupo de tercero va en cada match
   const thirdForMatch = {};
   R32_THIRD_SLOTS.forEach(s => { thirdForMatch[s.match] = assignment[s.match]; });
 
@@ -587,6 +593,101 @@ function calcKnockoutPoints(userPicks, realPicks, standingsByGroup) {
     }
   });
   return pts;
+}
+
+// ============================================================
+// FECHAS Y SEDES REALES DE LA ELIMINATORIA (hora España)
+// ============================================================
+const KO_DATES = {
+  // Dieciseisavos
+  M73: { d: "2026-06-28", t: "21:00", v: "SoFi Stadium, Los Ángeles" },
+  M76: { d: "2026-06-29", t: "19:00", v: "NRG Stadium, Houston" },
+  M74: { d: "2026-06-29", t: "22:30", v: "Gillette Stadium, Boston" },
+  M75: { d: "2026-06-30", t: "03:00", v: "Estadio BBVA, Monterrey" },
+  M78: { d: "2026-06-30", t: "19:00", v: "AT&T Stadium, Arlington" },
+  M77: { d: "2026-06-30", t: "23:00", v: "MetLife Stadium, Nueva Jersey" },
+  M79: { d: "2026-07-01", t: "03:00", v: "Estadio Azteca, CDMX" },
+  M80: { d: "2026-07-01", t: "18:00", v: "Mercedes-Benz Stadium, Atlanta" },
+  M82: { d: "2026-07-01", t: "22:00", v: "Lumen Field, Seattle" },
+  M83: { d: "2026-07-02", t: "01:00", v: "BMO Field, Toronto" },
+  M81: { d: "2026-07-02", t: "02:00", v: "Levi's Stadium, Santa Clara" },
+  M85: { d: "2026-07-02", t: "05:00", v: "BC Place, Vancouver" },
+  M84: { d: "2026-07-02", t: "21:00", v: "SoFi Stadium, Los Ángeles" },
+  M86: { d: "2026-07-03", t: "00:00", v: "Hard Rock Stadium, Miami" },
+  M87: { d: "2026-07-03", t: "03:30", v: "Arrowhead Stadium, Kansas City" },
+  M88: { d: "2026-07-03", t: "20:00", v: "AT&T Stadium, Arlington" },
+  // Octavos
+  M90: { d: "2026-07-04", t: "19:00", v: "NRG Stadium, Houston" },
+  M89: { d: "2026-07-04", t: "23:00", v: "Lincoln Financial Field, Filadelfia" },
+  M91: { d: "2026-07-05", t: "22:00", v: "MetLife Stadium, Nueva Jersey" },
+  M92: { d: "2026-07-06", t: "02:00", v: "Estadio Azteca, CDMX" },
+  M93: { d: "2026-07-06", t: "21:00", v: "AT&T Stadium, Arlington" },
+  M94: { d: "2026-07-07", t: "02:00", v: "Lumen Field, Seattle" },
+  M95: { d: "2026-07-07", t: "18:00", v: "Mercedes-Benz Stadium, Atlanta" },
+  M96: { d: "2026-07-07", t: "22:00", v: "BC Place, Vancouver" },
+  // Cuartos
+  M97:  { d: "2026-07-09", t: "22:00", v: "Gillette Stadium, Boston" },
+  M98:  { d: "2026-07-10", t: "21:00", v: "SoFi Stadium, Los Ángeles" },
+  M99:  { d: "2026-07-11", t: "23:00", v: "Hard Rock Stadium, Miami" },
+  M100: { d: "2026-07-11", t: "03:00", v: "Arrowhead Stadium, Kansas City" },
+  // Semifinales
+  M101: { d: "2026-07-14", t: "21:00", v: "AT&T Stadium, Arlington" },
+  M102: { d: "2026-07-15", t: "21:00", v: "Mercedes-Benz Stadium, Atlanta" },
+  // Tercer puesto
+  M103: { d: "2026-07-18", t: "23:00", v: "Hard Rock Stadium, Miami" },
+  // Final
+  M104: { d: "2026-07-19", t: "21:00", v: "MetLife Stadium, Nueva Jersey" },
+};
+
+const KO_ROUND_OF = (() => {
+  const m = {};
+  [...KO_SIDES.left.R32, ...KO_SIDES.right.R32].forEach(id => { m[id] = "R32"; });
+  KO_TREE.R16.forEach(d => { m[d.match] = "R16"; });
+  KO_TREE.QF.forEach(d => { m[d.match] = "QF"; });
+  KO_TREE.SF.forEach(d => { m[d.match] = "SF"; });
+  KO_TREE.FINAL.forEach(d => { m[d.match] = "FINAL"; });
+  KO_TREE.THIRD.forEach(d => { m[d.match] = "THIRD"; });
+  return m;
+})();
+
+const KO_ROUND_NAME = {
+  R32: "Dieciseisavos", R16: "Octavos", QF: "Cuartos",
+  SF: "Semifinal", THIRD: "Tercer puesto", FINAL: "Final",
+};
+
+// Convierte el cuadro en "partidos" con el mismo shape que los de grupos,
+// para mostrarlos por días en Resultados reales y en Todos los pronósticos.
+function buildKnockoutFixtures(matches, koResults) {
+  const standingsByGroup = {};
+  Object.keys(GROUPS).forEach(g => { standingsByGroup[g] = calcRealStandings(g, matches); });
+  const realPicks = koPicksMap(koResults || []);
+  const bracket = buildKnockoutBracket(standingsByGroup, realPicks);
+
+  return Object.keys(KO_DATES).map(id => {
+    const bm = bracket.byId[id];
+    const s = KO_DATES[id];
+    const r = realPicks[id] || {};
+    return {
+      id,
+      ko: true,
+      round: KO_ROUND_OF[id],
+      roundLabel: KO_ROUND_NAME[KO_ROUND_OF[id]],
+      home: bm ? bm.home.name : "—",
+      away: bm ? bm.away.name : "—",
+      homeFlag: bm ? bm.home.flag : "❓",
+      awayFlag: bm ? bm.away.flag : "❓",
+      homePlaceholder: !bm || bm.home.placeholder,
+      awayPlaceholder: !bm || bm.away.placeholder,
+      grp: null,
+      competition: `${KO_ROUND_NAME[KO_ROUND_OF[id]]} · Mundial 2026`,
+      venue: s.v,
+      match_date: s.d,
+      match_time: s.t,
+      result_home: r.h != null ? r.h : null,
+      result_away: r.a != null ? r.a : null,
+      status: (r.h != null && r.a != null) ? "closed" : "open",
+    };
+  });
 }
 
 // +2 por cada equipo que el usuario sitúa como clasificado Y ACIERTA su posición
@@ -2044,6 +2145,8 @@ function GroupsView({ user, matches, predictions, onDataChange, allClosed }) {
 // MARCADOR TIPO ESTADIO (banderas grandes + resultado central)
 // ============================================================
 function StadiumScore({ match, played, compact }) {
+  const ht = match.homeFlag ? { name: match.home, flag: match.homeFlag } : getTeam(match.home);
+  const at = match.awayFlag ? { name: match.away, flag: match.awayFlag } : getTeam(match.away);
   const ht = getTeam(match.home), at = getTeam(match.away);
   const hasResult = match.result_home !== null && match.result_away !== null;
   const homeWin = hasResult && match.result_home > match.result_away;
@@ -2117,11 +2220,27 @@ function ResultsView({ matches }) {
   const [g, setG] = useState("A");
   const activeDayRef = useRef(null);
 
-  // Días disponibles (ordenados)
-  const days = [...new Set(matches.map(m => m.match_date))].sort();
+  // Resultados de eliminatoria (para mostrar el cuadro por días)
+  const [koResults, setKoResults] = useState([]);
+  const loadKo = async () => {
+    const { data } = await supabase.from("knockout_results").select("*");
+    setKoResults(data || []);
+  };
+  useEffect(() => {
+    loadKo();
+    const ch = supabase.channel("ko_results_results_view")
+      .on("postgres_changes", { event: "*", schema: "public", table: "knockout_results" }, loadKo)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, []);
 
-  // Día por defecto: hoy si hay partidos, si no el más cercano hacia adelante,
-  // y si todo es pasado, el último día.
+  // Grupos + eliminatoria juntos para la vista por días
+  const koFixtures = buildKnockoutFixtures(matches, koResults);
+  const allMatches = [...matches, ...koFixtures];
+
+  // Días disponibles (ordenados)
+  const days = [...new Set(allMatches.map(m => m.match_date))].sort();
+
   const todayStr = new Date().toISOString().slice(0, 10);
   const defaultDay = days.includes(todayStr)
     ? todayStr
@@ -2136,7 +2255,7 @@ function ResultsView({ matches }) {
     }
   }, [currentDay, viewMode]);
 
-  const dayMatches = matches
+  const dayMatches = allMatches
     .filter(m => m.match_date === currentDay)
     .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
 
@@ -2194,7 +2313,12 @@ function ResultsView({ matches }) {
             </p>
           ) : (
             dayMatches.map(m => (
-              <div key={m.id} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden", opacity: m.result_home !== null ? 1 : 0.6 }}>
+              <div key={m.id} style={{ background: CARD, border: `1px solid ${m.ko ? "rgba(255,213,79,0.3)" : BORDER}`, borderRadius: "10px", marginBottom: "6px", overflow: "hidden", opacity: m.result_home !== null ? 1 : 0.6 }}>
+                {m.ko && (
+                  <div style={{ fontSize: "8px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", textAlign: "center", padding: "6px 0 0" }}>
+                    🏆 {m.roundLabel?.toUpperCase()} · {m.id}
+                  </div>
+                )}
                 <StadiumScore match={m} />
               </div>
             ))
@@ -2378,17 +2502,27 @@ function CommunityView({ matches, user }) {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const activeDayRef = useRef(null);
+  const [allPreds, setAllPreds] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [koResults, setKoResults] = useState([]);
+  const [koPicks, setKoPicks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
       const { data: profs } = await supabase.from("profiles").select("*");
-      setAllPreds(preds || []); setProfiles(profs || []); setLoading(false);
+      const { data: kr } = await supabase.from("knockout_results").select("*");
+      const { data: kp } = await supabase.from("knockout_picks").select("*").range(0, 99999);
+      setAllPreds(preds || []); setProfiles(profs || []);
+      setKoResults(kr || []); setKoPicks(kp || []);
+      setLoading(false);
     })();
   }, []);
 
   const getName = id => profiles.find(p => p.id === id)?.name || "Usuario";
-  const closedMatches = matches.filter(m => m.status === "closed" || m.result_home !== null);
+  const koFixtures = buildKnockoutFixtures(matches, koResults);
+  const closedMatches = [...matches, ...koFixtures].filter(m => m.status === "closed" || m.result_home !== null);
   // Solo días que tienen al menos un partido cerrado (con pronósticos visibles)
   const days = [...new Set(closedMatches.map(m => m.match_date))].sort();
 
@@ -2408,7 +2542,82 @@ function CommunityView({ matches, user }) {
     }
   }, [currentDay, viewMode, loading]);
 
+  const renderKnockoutPreds = m => {
+    const ht = { flag: m.homeFlag };
+    const at = { flag: m.awayFlag };
+    const mPicks = koPicks.filter(p => p.match_id === m.id);
+
+    const advName = (p) => p.winner
+      || (p.home_goals > p.away_goals ? m.home : p.away_goals > p.home_goals ? m.away : null);
+
+    const homeAdv = [], awayAdv = [];
+    mPicks.forEach(p => {
+      const a = advName(p);
+      if (a === m.home) homeAdv.push(p);
+      else if (a === m.away) awayAdv.push(p);
+    });
+    const sortByName = (a, b) => getName(a.user_id).localeCompare(getName(b.user_id));
+    homeAdv.sort(sortByName); awayAdv.sort(sortByName);
+
+    const predRow = (pred) => {
+      const isMe = pred.user_id === user.id;
+      return (
+        <div key={pred.id ?? (pred.match_id + pred.user_id)} style={{
+          display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px",
+          background: isMe ? GREEN_DIM : "rgba(255,255,255,0.02)",
+          border: isMe ? "1px solid rgba(79,195,247,0.3)" : "1px solid transparent",
+          borderLeft: isMe ? `3px solid ${GREEN}` : "3px solid transparent",
+          borderRadius: "6px", marginBottom: "3px",
+        }}>
+          <span style={{ fontSize: "12px", color: isMe ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1, fontWeight: isMe ? 700 : 400, display: "flex", alignItems: "center", gap: "4px" }}>
+            {isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
+            {getName(pred.user_id)}
+          </span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>
+            {pred.home_goals}-{pred.away_goals}
+          </span>
+        </div>
+      );
+    };
+
+    const bloque = (icono, titulo, lista, accent) => {
+      if (lista.length === 0) return null;
+      return (
+        <div style={{ marginBottom: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
+            <span style={{ fontSize: "15px" }}>{icono}</span>
+            <span style={{ fontSize: "9px", color: accent, fontFamily: "'Inter', sans-serif", letterSpacing: "1px", fontWeight: 700, textTransform: "uppercase" }}>{titulo}</span>
+            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>· {lista.length}</span>
+            <div style={{ flex: 1, height: "1px", background: accent, opacity: 0.3 }} />
+          </div>
+          {lista.map(predRow)}
+        </div>
+      );
+    };
+
+    return (
+      <div key={m.id} style={{ position: "relative", background: CARD, border: `1px solid rgba(255,213,79,0.3)`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
+        <div style={{ margin: "-12px -12px 0", borderBottom: `1px solid ${BORDER}` }}>
+          <StadiumScore match={m} compact />
+        </div>
+        <div style={{ fontSize: "8px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", textAlign: "center", padding: "6px 0 8px" }}>
+          🏆 {m.roundLabel?.toUpperCase()} · {m.id}
+        </div>
+        {mPicks.length === 0 ? (
+          <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha pronosticado</p>
+        ) : (
+          <>
+            {bloque(ht.flag, `Pasa ${m.home}`, homeAdv, GREEN)}
+            {bloque(at.flag, `Pasa ${m.away}`, awayAdv, "#4fc3f7")}
+          </>
+        )}
+        <MatchChat match={m} user={user} />
+      </div>
+    );
+  };
+
   const renderMatchPreds = m => {
+  if (m.ko) return renderKnockoutPreds(m);
   const matchPreds = allPreds.filter(p => p.match_id === m.id);
   const ht = getTeam(m.home), at = getTeam(m.away);
   
