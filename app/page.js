@@ -589,46 +589,41 @@ function calcKnockoutPoints(userPicks, realPicks, standingsByGroup) {
   return pts;
 }
 
-// +2 por cada equipo que el usuario sitúa como clasificado (1º, 2º o
-// tercero entre los 8 mejores) y que realmente se clasifica.
+// +2 por cada equipo que el usuario sitúa como clasificado Y ACIERTA su posición
+// (1º de grupo, 2º de grupo o 3º entre los 8 mejores).
 // Solo puntúa cuando TODOS los partidos de la fase de grupos están definidos.
 function calcQualifierPoints(matches, predMap) {
-  // Partidos de fase de grupos (los que tienen grupo asignado)
   const groupMatches = matches.filter(m => m.grp);
 
-  // Si no están todos jugados, todavía no se puntúa
   const allPlayed =
     groupMatches.length > 0 &&
     groupMatches.every(m => m.result_home !== null && m.result_away !== null);
   if (!allPlayed) return 0;
 
-  // Standings reales (ya definitivos)
+  // Posición real de cada clasificado: "1", "2" o "3"
   const realByGroup = {};
   Object.keys(GROUPS).forEach(g => { realByGroup[g] = calcRealStandings(g, matches); });
   const real = calcAllQualifiers(realByGroup);
-  const realQualified = new Set();
-  real.firsts.forEach(t => realQualified.add(t.name));
-  real.seconds.forEach(t => realQualified.add(t.name));
-  real.thirds.filter(t => t.qualifies).forEach(t => realQualified.add(t.name));
+  const realPos = {};
+  real.firsts.forEach(t => { realPos[t.name] = "1"; });
+  real.seconds.forEach(t => { realPos[t.name] = "2"; });
+  real.thirds.filter(t => t.qualifies).forEach(t => { realPos[t.name] = "3"; });
 
-  // Standings del usuario
+  // Posición que predijo el usuario
   const userByGroup = {};
   Object.keys(GROUPS).forEach(g => { userByGroup[g] = calcPersonalStandings(g, matches, predMap); });
   const user = calcAllQualifiers(userByGroup);
-  const userQualified = [];
-  user.firsts.forEach(t => userQualified.push(t.name));
-  user.seconds.forEach(t => userQualified.push(t.name));
-  user.thirds.filter(t => t.qualifies).forEach(t => userQualified.push(t.name));
+  const userPos = {};
+  user.firsts.forEach(t => { userPos[t.name] = "1"; });
+  user.seconds.forEach(t => { userPos[t.name] = "2"; });
+  user.thirds.filter(t => t.qualifies).forEach(t => { userPos[t.name] = "3"; });
 
+  // +2 SOLO si el equipo se clasifica en la MISMA posición que predijo
   let pts = 0;
-  userQualified.forEach(name => { if (realQualified.has(name)) pts += 2; });
+  Object.keys(userPos).forEach(name => {
+    if (realPos[name] && realPos[name] === userPos[name]) pts += 2;
+  });
   return pts;
-}
-
-function formatDate(d) {
-  if (!d) return "";
-  const [, m, day] = d.split("-");
-  return `${parseInt(day)} ${["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"][parseInt(m)]}`;
 }
 
 // ============================================================
@@ -1061,7 +1056,7 @@ function QualifiersTable({ standingsByGroup }) {
         </div>
       ))}
       <p style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", margin: "8px 0 0" }}>
-        🟢 Pasan a dieciseisavos: 2 primeros de cada grupo + 8 mejores terceros · +2 pts por clasificado acertado
+        🟢 Pasan a dieciseisavos: 2 primeros de cada grupo + 8 mejores terceros · +2 pts si aciertas el clasificado EN SU POSICIÓN (1º, 2º o 3º)
       </p>
     </div>
   );
@@ -2287,6 +2282,88 @@ function SpecialPredictionsTableCollapsible({ currentUserId }) {
   );
 }
 
+function CommunityQualifiers({ matches, currentUserId }) {
+  const [open, setOpen] = useState(false);
+  const [allPreds, setAllPreds] = useState([]);
+  const [profiles, setProfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  useEffect(() => {
+    if (!open || allPreds.length > 0) return;
+    (async () => {
+      const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
+      const { data: profs } = await supabase.from("profiles").select("*").eq("role", "user");
+      setAllPreds(preds || []);
+      setProfiles((profs || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      setSelectedUser(currentUserId);
+      setLoading(false);
+    })();
+  }, [open]);
+
+  const standingsByGroup = (uid) => {
+    const predMap = {};
+    allPreds.filter(p => p.user_id === uid).forEach(p => { predMap[p.match_id] = p; });
+    const sb = {};
+    Object.keys(GROUPS).forEach(g => { sb[g] = calcPersonalStandings(g, matches, predMap); });
+    return sb;
+  };
+
+  return (
+    <div style={{ marginBottom: "16px" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", padding: "10px 14px",
+          border: `1px solid ${open ? GREEN : BORDER}`,
+          borderRadius: open ? "10px 10px 0 0" : "10px",
+          background: open ? GREEN_DIM : CARD,
+          color: open ? GREEN : "#d0e4f7",
+          fontFamily: "'Inter', sans-serif", fontSize: "10px",
+          cursor: "pointer", letterSpacing: "2px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+        <span>✅ CLASIFICADOS DE TODOS</span>
+        <span style={{ fontSize: "12px" }}>{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          border: `1px solid ${GREEN}`, borderTop: "none",
+          borderRadius: "0 0 10px 10px", padding: "14px", background: CARD,
+        }}>
+          {loading ? (
+            <SkeletonRows count={3} height={40} />
+          ) : (
+            <>
+              <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", marginBottom: "10px", lineHeight: 1.5 }}>
+                Elige un participante para ver a quién clasifica según sus pronósticos.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "14px" }}>
+                {profiles.map(p => {
+                  const sel = selectedUser === p.id;
+                  return (
+                    <button key={p.id} onClick={() => setSelectedUser(p.id)} style={{
+                      padding: "7px 12px",
+                      border: `1px solid ${sel ? GREEN : BORDER}`,
+                      borderRadius: "8px",
+                      background: sel ? GREEN_DIM : "rgba(255,255,255,0.02)",
+                      color: sel ? GREEN : "#a8d4f0",
+                      fontFamily: "'Inter', sans-serif", fontSize: "11px", cursor: "pointer",
+                    }}>
+                      {p.id === currentUserId ? `${p.name} (tú)` : p.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedUser && <QualifiersTable standingsByGroup={standingsByGroup(selectedUser)} />}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CommunityView({ matches, user }) {
   const [viewMode, setViewMode] = useState("day");
@@ -2413,6 +2490,7 @@ function CommunityView({ matches, user }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
     <SpecialPredictionsTableCollapsible currentUserId={user.id} />
+    <CommunityQualifiers matches={matches} currentUserId={user.id} />
       <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>PRONÓSTICOS DE TODOS</p>
       <div style={{ display: "flex", marginBottom: "16px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
         {[{ id: "day", label: "Por día" }, { id: "all", label: "Todos" }].map(opt => <button key={opt.id} onClick={() => setViewMode(opt.id)} style={{ flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "'Inter', sans-serif", textTransform: "uppercase", background: viewMode === opt.id ? GREEN : "transparent", color: viewMode === opt.id ? "#0a1628" : "#e0eefa", fontWeight: 700 }}>{opt.label}</button>)}
@@ -3305,7 +3383,7 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
 
       <div style={{ marginTop: "16px", padding: "12px 14px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px" }}>
         <p style={{ color: "#c0d8f0", fontFamily: "'Inter', sans-serif", fontSize: "10px", lineHeight: 2 }}>
-          <span style={{ color: GREEN }}>+5</span> exacto · <span style={{ color: "#4fc3f7" }}>+3</span> ganador + diferencia · <span style={{ color: "#ffd54f" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado acertado
+          <span style={{ color: GREEN }}>+5</span> exacto · <span style={{ color: "#4fc3f7" }}>+3</span> ganador + diferencia · <span style={{ color: "#ffd54f" }}>+1</span> signo · <span style={{ color: "#ff6b4a" }}>+0</span> fallo · <span style={{ color: GREEN }}>+2</span> clasificado en su posición
         </p>
       </div>
       <RankingHistory ranking={ranking} user={user} matches={matches} />
