@@ -2508,16 +2508,12 @@ function CommunityView({ matches, user }) {
   useEffect(() => {
     (async () => {
       const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
-      const { data: profs } = await supabase.from("profiles").select("*").eq("role", "user");
+      const { data: profs } = await supabase.from("profiles").select("*");
       const { data: kr } = await supabase.from("knockout_results").select("*");
       const { data: kp } = await supabase.from("knockout_picks").select("*").range(0, 99999);
       const { data: kl } = await supabase.from("knockout_locks").select("*");
-      const userIds = new Set((profs || []).map(p => p.id));
-      setAllPreds((preds || []).filter(p => userIds.has(p.user_id)));
-      setProfiles(profs || []);
-      setKoResults(kr || []);
-      setKoPicks((kp || []).filter(p => userIds.has(p.user_id)));
-      setKoLocks(kl || []);
+      setAllPreds(preds || []); setProfiles(profs || []);
+      setKoResults(kr || []); setKoPicks(kp || []); setKoLocks(kl || []);
       setLoading(false);
     })();
   }, []);
@@ -5386,27 +5382,13 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
   // Partidos de hoy (solo cuando el Mundial ya ha arrancado)
   const todayStr = new Date().toISOString().slice(0, 10);
   const mundialStarted = todayStr >= "2026-06-11";
-  const koFixtures = buildKnockoutFixtures(matches, koResults);
-  const allMatches = [...matches, ...koFixtures];
-  const todayMatches = allMatches
+  const todayMatches = matches
     .filter(m => m.match_date === todayStr)
     .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
 
   const [myRank, setMyRank] = useState(null);
 
   const [payInfo, setPayInfo] = useState(null);
-  const [koResults, setKoResults] = useState([]);
-  useEffect(() => {
-    const loadKo = async () => {
-      const { data } = await supabase.from("knockout_results").select("*");
-      setKoResults(data || []);
-    };
-    loadKo();
-    const ch = supabase.channel("ko_results_home")
-      .on("postgres_changes", { event: "*", schema: "public", table: "knockout_results" }, loadKo)
-      .subscribe();
-    return () => supabase.removeChannel(ch);
-  }, []);
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("profiles").select("has_paid").eq("role", "user");
