@@ -384,49 +384,40 @@ function assignThirds(qualifiedThirdGroups) {
   return assignment; // { M74: "A", M79: "C", ... }
 }
 
-// Construye los 16 partidos con equipos reales a partir de los standings.
-// standingsByGroup: { A: [...ordenado], ... }
-// Devuelve [{ match, home: {name,flag,label}, away: {...} }, ...]
-function buildRoundOf32(standingsByGroup) {
-  const groupDone = {};
-  Object.keys(GROUPS).forEach(g => {
-    const st = standingsByGroup[g];
-    groupDone[g] = !!(st && st.length === 4 && st.every(t => t.pj === 3));
+// ============================================================
+// DIECISEISAVOS CONFIRMADOS — emparejamientos reales tras la fase de grupos.
+// Ya no se calculan: están fijados a mano.
+// ============================================================
+const R32_CONFIRMED = [
+  { match: "M73", home: "Sudáfrica",       hl: "2A", away: "Canadá",         al: "2B" },
+  { match: "M74", home: "Alemania",        hl: "1E", away: "Paraguay",       al: "3D" },
+  { match: "M75", home: "Países Bajos",    hl: "1F", away: "Marruecos",      al: "2C" },
+  { match: "M76", home: "Brasil",          hl: "1C", away: "Japón",          al: "2F" },
+  { match: "M77", home: "Francia",         hl: "1I", away: "Suecia",         al: "3F" },
+  { match: "M78", home: "Costa de Marfil", hl: "2E", away: "Noruega",        al: "2I" },
+  { match: "M79", home: "México",          hl: "1A", away: "Ecuador",        al: "3E" },
+  { match: "M80", home: "Inglaterra",      hl: "1L", away: "RD Congo",       al: "3K" },
+  { match: "M81", home: "Estados Unidos",  hl: "1D", away: "Bosnia y Herz.", al: "3B" },
+  { match: "M82", home: "Bélgica",         hl: "1G", away: "Senegal",        al: "3I" },
+  { match: "M83", home: "Portugal",        hl: "2K", away: "Croacia",        al: "2L" },
+  { match: "M84", home: "España",          hl: "1H", away: "Austria",        al: "2J" },
+  { match: "M85", home: "Suiza",           hl: "1B", away: "Argelia",        al: "3J" },
+  { match: "M86", home: "Argentina",       hl: "1J", away: "Cabo Verde",     al: "2H" },
+  { match: "M87", home: "Colombia",        hl: "1K", away: "Ghana",          al: "3L" },
+  { match: "M88", home: "Australia",       hl: "2D", away: "Egipto",         al: "2G" },
+];
+
+// Devuelve los 16 dieciseisavos ya fijados con equipos reales.
+// Ignora los standings: los cruces están confirmados.
+function buildRoundOf32() {
+  return R32_CONFIRMED.map(m => {
+    const h = getTeam(m.home), a = getTeam(m.away);
+    return {
+      match: m.match,
+      home: { name: m.home, flag: h.flag, label: m.hl },
+      away: { name: m.away, flag: a.flag, label: m.al },
+    };
   });
-  const allGroupsDone = Object.values(groupDone).every(Boolean);
-
-  const thirds = calcThirdPlaceTable(standingsByGroup);
-  const qualifiedThirds = allGroupsDone ? thirds.filter(t => t.qualifies) : [];
-  const thirdGroups = qualifiedThirds.map(t => t.grp).sort();
-  const thirdByGroup = {};
-  qualifiedThirds.forEach(t => { thirdByGroup[t.grp] = t; });
-
-  const assignment = allGroupsDone ? assignThirds(thirdGroups) : {};
-
-  const teamFromLabel = (label, thirdGroup) => {
-    if (label === "3?") {
-      if (!allGroupsDone || !thirdGroup) return { name: "Mejor 3º", flag: "❓", label: "3º", placeholder: true };
-      const t = thirdByGroup[thirdGroup];
-      if (!t) return { name: "Mejor 3º", flag: "❓", label: "3º", placeholder: true };
-      return { name: t.name, flag: t.flag, label: `3º ${thirdGroup}` };
-    }
-    const pos = label[0];
-    const grp = label[1];
-    const st = standingsByGroup[grp];
-    const idx = pos === "1" ? 0 : 1;
-    const team = groupDone[grp] && st && st[idx] ? st[idx] : null;
-    if (!team) return { name: `${pos === "1" ? "1º" : "2º"} ${grp}`, flag: "❓", label, placeholder: true };
-    return { name: team.name, flag: team.flag, label: `${pos === "1" ? "1º" : "2º"} ${grp}` };
-  };
-
-  const thirdForMatch = {};
-  R32_THIRD_SLOTS.forEach(s => { thirdForMatch[s.match] = assignment[s.match]; });
-
-  return R32_LAYOUT.map(m => ({
-    match: m.match,
-    home: teamFromLabel(m.home, m.home === "3?" ? thirdForMatch[m.match] : null),
-    away: teamFromLabel(m.away, m.away === "3?" ? thirdForMatch[m.match] : null),
-  }));
 }
 
 // ============================================================
