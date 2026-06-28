@@ -2620,41 +2620,6 @@ function CommunityView({ matches, user }) {
     );
   };
 
-    const bloque = (icono, titulo, lista, accent) => {
-      if (lista.length === 0) return null;
-      return (
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
-            <span style={{ fontSize: "15px" }}>{icono}</span>
-            <span style={{ fontSize: "9px", color: accent, fontFamily: "'Inter', sans-serif", letterSpacing: "1px", fontWeight: 700, textTransform: "uppercase" }}>{titulo}</span>
-            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>· {lista.length}</span>
-            <div style={{ flex: 1, height: "1px", background: accent, opacity: 0.3 }} />
-          </div>
-          {lista.map(predRow)}
-        </div>
-      );
-    };
-
-    return (
-      <div key={m.id} style={{ position: "relative", background: CARD, border: `1px solid rgba(255,213,79,0.3)`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
-        <div style={{ margin: "-12px -12px 0", borderBottom: `1px solid ${BORDER}` }}>
-          <StadiumScore match={m} compact />
-        </div>
-        <div style={{ fontSize: "8px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", textAlign: "center", padding: "6px 0 8px" }}>
-          🏆 {m.roundLabel?.toUpperCase()} · {m.id}
-        </div>
-        {mPicks.length === 0 ? (
-          <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha pronosticado</p>
-        ) : (
-          <>
-            {bloque(ht.flag, `Pasa ${m.home}`, homeAdv, GREEN)}
-            {bloque(at.flag, `Pasa ${m.away}`, awayAdv, "#4fc3f7")}
-          </>
-        )}
-        <MatchChat match={m} user={user} />
-      </div>
-    );
-  };
 
   const renderMatchPreds = m => {
   if (m.ko) return renderKnockoutPreds(m);
