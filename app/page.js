@@ -2502,6 +2502,7 @@ function CommunityView({ matches, user }) {
   const [profiles, setProfiles] = useState([]);
   const [koResults, setKoResults] = useState([]);
   const [koPicks, setKoPicks] = useState([]);
+  const [koLocks, setKoLocks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -2510,15 +2511,23 @@ function CommunityView({ matches, user }) {
       const { data: profs } = await supabase.from("profiles").select("*");
       const { data: kr } = await supabase.from("knockout_results").select("*");
       const { data: kp } = await supabase.from("knockout_picks").select("*").range(0, 99999);
+      const { data: kl } = await supabase.from("knockout_locks").select("*");
       setAllPreds(preds || []); setProfiles(profs || []);
-      setKoResults(kr || []); setKoPicks(kp || []);
+      setKoResults(kr || []); setKoPicks(kp || []); setKoLocks(kl || []);
       setLoading(false);
     })();
   }, []);
 
   const getName = id => profiles.find(p => p.id === id)?.name || "Usuario";
   const koFixtures = buildKnockoutFixtures(matches, koResults);
-  const closedMatches = [...matches, ...koFixtures].filter(m => m.status === "closed" || m.result_home !== null);
+  const koLockMap = {};
+  (koLocks || []).forEach(l => { koLockMap[l.id] = l.locked; });
+  // Un cruce se muestra cuando el admin lo ha CERRADO o ya tiene resultado real.
+  const koShown = koFixtures.filter(f => koLockMap[f.id] || f.result_home !== null);
+  const closedMatches = [
+    ...matches.filter(m => m.status === "closed" || m.result_home !== null),
+    ...koShown,
+  ];
   // Solo días que tienen al menos un partido cerrado (con pronósticos visibles)
   const days = [...new Set(closedMatches.map(m => m.match_date))].sort();
 
@@ -2539,21 +2548,17 @@ function CommunityView({ matches, user }) {
   }, [currentDay, viewMode, loading]);
 
   const renderKnockoutPreds = m => {
-    const ht = { flag: m.homeFlag };
-    const at = { flag: m.awayFlag };
     const mPicks = koPicks.filter(p => p.match_id === m.id);
-
-    const advName = (p) => p.winner
-      || (p.home_goals > p.away_goals ? m.home : p.away_goals > p.home_goals ? m.away : null);
-
-    const homeAdv = [], awayAdv = [];
-    mPicks.forEach(p => {
-      const a = advName(p);
-      if (a === m.home) homeAdv.push(p);
-      else if (a === m.away) awayAdv.push(p);
-    });
     const sortByName = (a, b) => getName(a.user_id).localeCompare(getName(b.user_id));
-    homeAdv.sort(sortByName); awayAdv.sort(sortByName);
+
+    // Cada usuario puede tener un cruce distinto en su cuadro: agrupamos por
+    // el equipo que cree que pasa (guardado en p.winner).
+    const groups = {};
+    mPicks.forEach(p => {
+      const adv = p.winner
+        || (p.home_goals > p.away_goals ? m.home : p.away_goals > p.home_goals ? m.away : "—");
+      (groups[adv] = groups[adv] || []).push(p);
+    });
 
     const predRow = (pred) => {
       const isMe = pred.user_id === user.id;
@@ -2575,6 +2580,45 @@ function CommunityView({ matches, user }) {
         </div>
       );
     };
+
+    const bloque = (teamName, lista, accent) => {
+      if (!lista.length) return null;
+      const t = getTeam(teamName);
+      return (
+        <div key={teamName} style={{ marginBottom: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "5px" }}>
+            <span style={{ fontSize: "15px" }}>{teamName === "—" ? "🤝" : t.flag}</span>
+            <span style={{ fontSize: "9px", color: accent, fontFamily: "'Inter', sans-serif", letterSpacing: "1px", fontWeight: 700, textTransform: "uppercase" }}>
+              {teamName === "—" ? "Sin definir" : `Pasa ${teamName}`}
+            </span>
+            <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>· {lista.length}</span>
+            <div style={{ flex: 1, height: "1px", background: accent, opacity: 0.3 }} />
+          </div>
+          {lista.sort(sortByName).map(predRow)}
+        </div>
+      );
+    };
+
+    const ordered = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+    const palette = [GREEN, "#4fc3f7", "#34d399", "#ffd54f", "#ff8a5b", "#c084fc"];
+
+    return (
+      <div key={m.id} style={{ position: "relative", background: CARD, border: `1px solid rgba(255,213,79,0.3)`, borderRadius: "10px", padding: "12px", marginBottom: "8px" }}>
+        <div style={{ margin: "-12px -12px 0", borderBottom: `1px solid ${BORDER}` }}>
+          <StadiumScore match={m} compact />
+        </div>
+        <div style={{ fontSize: "8px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", textAlign: "center", padding: "6px 0 8px" }}>
+          🏆 {m.roundLabel?.toUpperCase()} · {m.id}
+        </div>
+        {mPicks.length === 0 ? (
+          <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>Nadie ha pronosticado</p>
+        ) : (
+          ordered.map(([name, list], i) => bloque(name, list, palette[i % palette.length]))
+        )}
+        <MatchChat match={m} user={user} />
+      </div>
+    );
+  };
 
     const bloque = (icono, titulo, lista, accent) => {
       if (lista.length === 0) return null;
@@ -3850,6 +3894,7 @@ const handleResult = async () => {
 
       {/* ADJUDICAR PRONÓSTICOS ESPECIALES */}
       <SpecialLocksAdmin />
+      <KnockoutLocksAdmin matches={matches} />
       <SpecialAwardsAdmin />
       <SyncResultsAdmin onDataChange={onDataChange} />
       <SaveRankingSnapshotAdmin matches={matches} />
@@ -4267,6 +4312,108 @@ function SpecialPredictionsTable({ currentUserId }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+                function KnockoutLocksAdmin({ matches }) {
+  const ROUNDS = [
+    { key: "R32", label: "Dieciseisavos", ids: [...KO_SIDES.left.R32, ...KO_SIDES.right.R32] },
+    { key: "R16", label: "Octavos",       ids: KO_TREE.R16.map(d => d.match) },
+    { key: "QF",  label: "Cuartos",       ids: KO_TREE.QF.map(d => d.match) },
+    { key: "SF",  label: "Semifinales",   ids: KO_TREE.SF.map(d => d.match) },
+    { key: "THIRD", label: "Tercer puesto", ids: KO_TREE.THIRD.map(d => d.match) },
+    { key: "FINAL", label: "Final",       ids: KO_TREE.FINAL.map(d => d.match) },
+  ];
+  const ALL_IDS = ROUNDS.flatMap(r => r.ids);
+
+  const [locks, setLocks] = useState({});
+  const [koResults, setKoResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [openRound, setOpenRound] = useState("R32");
+
+  const load = async () => {
+    const { data } = await supabase.from("knockout_locks").select("*");
+    const m = {};
+    (data || []).forEach(r => { m[r.id] = r.locked; });
+    setLocks(m);
+    const { data: kr } = await supabase.from("knockout_results").select("*");
+    setKoResults(kr || []);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const teamsById = {};
+  buildKnockoutFixtures(matches, koResults).forEach(f => { teamsById[f.id] = f; });
+
+  const setMany = async (ids, locked) => {
+    setBusy(true);
+    setLocks(prev => { const n = { ...prev }; ids.forEach(id => { n[id] = locked; }); return n; });
+    await supabase.from("knockout_locks").upsert(ids.map(id => ({ id, locked })), { onConflict: "id" });
+    setBusy(false);
+  };
+
+  if (loading) return null;
+  const lockedCount = ALL_IDS.filter(id => locks[id]).length;
+
+  const teamLabel = (f, side) => {
+    if (!f) return "—";
+    const ph = side === "home" ? f.homePlaceholder : f.awayPlaceholder;
+    const flag = side === "home" ? f.homeFlag : f.awayFlag;
+    const name = side === "home" ? f.home : f.away;
+    return `${flag} ${ph ? name : koAbbr(name)}`;
+  };
+
+  return (
+    <div style={{ background: CARD, border: "1px solid rgba(255,213,79,0.2)", borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>
+        🔐 ABRIR / CERRAR PRONÓSTICOS DE ELIMINATORIA
+      </p>
+      <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginBottom: "12px", lineHeight: 1.5 }}>
+        Al cerrar un cruce, los usuarios ya no lo pueden editar y su pronóstico aparece en «Todos». {lockedCount}/{ALL_IDS.length} cerrados.
+      </p>
+
+      <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
+        <button onClick={() => setMany(ALL_IDS, true)} disabled={busy} style={{ flex: 1, padding: "11px", borderRadius: "8px", border: "1px solid rgba(255,107,74,0.3)", background: "rgba(255,107,74,0.08)", color: "#ff6b4a", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 700, cursor: "pointer", letterSpacing: "1px" }}>🔒 CERRAR TODOS</button>
+        <button onClick={() => setMany(ALL_IDS, false)} disabled={busy} style={{ flex: 1, padding: "11px", borderRadius: "8px", border: "1px solid rgba(0,200,100,0.3)", background: "rgba(0,200,100,0.1)", color: "#007a3a", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 700, cursor: "pointer", letterSpacing: "1px" }}>🔓 ABRIR TODOS</button>
+      </div>
+
+      {ROUNDS.map(r => {
+        const rLocked = r.ids.filter(id => locks[id]).length;
+        const isOpen = openRound === r.key;
+        return (
+          <div key={r.key} style={{ marginBottom: "8px", border: `1px solid ${BORDER}`, borderRadius: "8px", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px", background: "rgba(255,255,255,0.02)" }}>
+              <button onClick={() => setOpenRound(isOpen ? null : r.key)} style={{ flex: 1, textAlign: "left", border: "none", background: "transparent", color: "#e0eaf8", fontFamily: "'Bebas Neue', cursive", fontSize: "15px", letterSpacing: "1px", cursor: "pointer" }}>
+                {isOpen ? "▾" : "▸"} {r.label} <span style={{ fontSize: "10px", color: rLocked === r.ids.length ? "#ff6b4a" : "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>({rLocked}/{r.ids.length} 🔒)</span>
+              </button>
+              <button onClick={() => setMany(r.ids, true)} disabled={busy} style={{ padding: "5px 9px", borderRadius: "6px", border: "1px solid rgba(255,107,74,0.3)", background: "rgba(255,107,74,0.08)", color: "#ff6b4a", fontSize: "9px", fontFamily: "'Inter', sans-serif", cursor: "pointer" }}>Cerrar</button>
+              <button onClick={() => setMany(r.ids, false)} disabled={busy} style={{ padding: "5px 9px", borderRadius: "6px", border: "1px solid rgba(0,200,100,0.3)", background: "rgba(0,200,100,0.1)", color: "#007a3a", fontSize: "9px", fontFamily: "'Inter', sans-serif", cursor: "pointer" }}>Abrir</button>
+            </div>
+            {isOpen && (
+              <div style={{ padding: "6px 10px 10px" }}>
+                {r.ids.map(id => {
+                  const f = teamsById[id];
+                  const locked = !!locks[id];
+                  return (
+                    <div key={id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 4px", borderTop: `1px solid ${BORDER}` }}>
+                      <span style={{ fontFamily: "'Bebas Neue', monospace", fontSize: "11px", color: "#7ab8e0", minWidth: "32px" }}>{id}</span>
+                      <span style={{ flex: 1, fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {teamLabel(f, "home")} vs {teamLabel(f, "away")}
+                      </span>
+                      <span style={{ fontSize: "9px", fontFamily: "'Inter', sans-serif", color: locked ? "#ff6b4a" : "#34d399" }}>{locked ? "🔒" : "🔓"}</span>
+                      <button onClick={() => setMany([id], !locked)} disabled={busy} style={{ padding: "5px 10px", borderRadius: "6px", whiteSpace: "nowrap", border: `1px solid ${locked ? "rgba(0,200,100,0.3)" : "rgba(255,107,74,0.3)"}`, background: locked ? "rgba(0,200,100,0.1)" : "rgba(255,107,74,0.08)", color: locked ? "#007a3a" : "#ff6b4a", fontSize: "9px", fontFamily: "'Inter', sans-serif", fontWeight: 700, cursor: "pointer" }}>
+                        {locked ? "Abrir" : "Cerrar"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -5455,7 +5602,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
         {navCard("📊", "RESULTADOS", "marcadores reales", GREEN, "rgba(79,195,247,0.2)", "rgba(79,195,247,0.05)", "results")}
         {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", GREEN, "rgba(79,195,247,0.15)", "rgba(79,195,247,0.04)", "games")}
         {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#e0eefa", "rgba(79,195,247,0.15)", "rgba(255,255,255,0.03)", "profile")}
-        {user.role === "admin" && navCard("🏟️", "ELIMINATORIAS", "cuadro · beta admin", "#34d399", "rgba(52,211,153,0.2)", "rgba(52,211,153,0.05)", "knockout")}
+        {navCard("🏟️", "ELIMINATORIAS", "tu cuadro · pronósticos", "#34d399", "rgba(52,211,153,0.2)", "rgba(52,211,153,0.05)", "knockout")}
         {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#cc2222", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
         {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
         {user.role === "admin" && navCard("⚙️", "RESULTADOS ELIM.", "cuadro real · admin", "#ffd54f", "rgba(255,213,79,0.2)", "rgba(255,213,79,0.05)", "knockout_results")}
@@ -10056,6 +10203,7 @@ function KnockoutView({ user, matches, resultsMode = false }) {
   const [advSel, setAdvSel] = useState(null);
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
+  const [locks, setLocks] = useState({});
 
   // Clasificación REAL por grupo
   const standingsByGroup = {};
@@ -10083,6 +10231,22 @@ function KnockoutView({ user, matches, resultsMode = false }) {
     })();
   }, [user.id]);
 
+  // Candados por cruce (los abre/cierra el admin). En modo resultados no aplican.
+  useEffect(() => {
+    const loadLocks = async () => {
+      const { data } = await supabase.from("knockout_locks").select("*");
+      const m = {};
+      (data || []).forEach(r => { m[r.id] = r.locked; });
+      setLocks(m);
+    };
+    loadLocks();
+    const ch = supabase
+      .channel("ko_locks_" + (resultsMode ? "res" : "picks"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "knockout_locks" }, loadLocks)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [resultsMode]);
+
   // Mapa de descendientes (para limpiar lo que deja de ser válido al cambiar un ganador)
   const childMap = {};
   const addChild = (s, c) => { (childMap[s] = childMap[s] || []).push(c); };
@@ -10108,6 +10272,7 @@ function KnockoutView({ user, matches, resultsMode = false }) {
 
   const openEdit = (m) => {
     if (m.home.placeholder || m.away.placeholder) return;
+    if (!resultsMode && locks[m.match]) return; // cruce cerrado por el admin
     setEditing(m.match);
     setHIn(m.h != null ? String(m.h) : "");
     setAIn(m.a != null ? String(m.a) : "");
@@ -10156,7 +10321,8 @@ function KnockoutView({ user, matches, resultsMode = false }) {
 
   // ---- Tarjeta de un cruce ----
   const Cell = ({ m, accent = GREEN, gold }) => {
-    const tappable = !m.home.placeholder && !m.away.placeholder;
+    const isLocked = !resultsMode && locks[m.match];
+    const tappable = !m.home.placeholder && !m.away.placeholder && !isLocked;
     const draw = m.h != null && m.a != null && m.h === m.a;
     const teamRow = (team, score, top) => {
       const isAdv = m.winner && team.name === m.winner.name;
@@ -10186,8 +10352,9 @@ function KnockoutView({ user, matches, resultsMode = false }) {
         borderRadius: "8px", overflow: "hidden",
         cursor: tappable ? "pointer" : "default",
       }}>
-        <div style={{ fontSize: "7px", color: gold ? "#ffd54f" : "#7ab8e0", fontFamily: "'Bebas Neue', monospace", letterSpacing: "1px", padding: "2px 6px", borderBottom: `1px solid ${BORDER}` }}>
-          {gold === "final" ? "🏆 FINAL" : gold === "third" ? "🥉 3º PUESTO" : m.match}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "7px", color: gold ? "#ffd54f" : "#7ab8e0", fontFamily: "'Bebas Neue', monospace", letterSpacing: "1px", padding: "2px 6px", borderBottom: `1px solid ${BORDER}` }}>
+          <span>{gold === "final" ? "🏆 FINAL" : gold === "third" ? "🥉 3º PUESTO" : m.match}</span>
+          {isLocked && <span style={{ fontSize: "9px" }}>🔒</span>}
         </div>
         {teamRow(m.home, m.h, true)}
         <div style={{ height: "1px", background: BORDER }} />
@@ -10688,7 +10855,7 @@ export default function Home() {
             {view === "ranking" && <RankingView matches={matches} user={user} setView={setView} setViewProfileId={setViewProfileId} />}
             {view === "games" && <GamesView user={user} />}
             {view === "payments" && <PaymentsView user={user} />}
-            {view === "knockout" && user.role === "admin" && <KnockoutView user={user} matches={matches} />}
+            {view === "knockout" && <KnockoutView user={user} matches={matches} />}
             {view === "knockout_results" && user.role === "admin" && <KnockoutView user={user} matches={matches} resultsMode={true} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
