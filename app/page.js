@@ -528,7 +528,7 @@ function buildKnockoutBracket(standingsByGroup, picks) {
     byId,
     R32: r32.map(m => byId[m.match]),
     R16, QF, SF, FINAL, THIRD,
-    champion: byId["M104"]?.winner || null,
+    champion: byId["M104"]?.winner?.name || null,
   };
 }
 
