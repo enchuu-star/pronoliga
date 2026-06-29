@@ -3427,6 +3427,7 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "special_predictions" }, () => loadRanking())
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "matches" }, () => loadRanking())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "ranking_history" }, () => loadRanking())
+      .on("postgres_changes", { event: "*", schema: "public", table: "knockout_results" }, () => loadRanking())
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, []);
@@ -10253,7 +10254,7 @@ function KnockoutView({ user, matches, resultsMode = false }) {
 
     setPicks(next); setSaving(true);
     const row = resultsMode
-      ? { match_id: editing, home_goals: hh, away_goals: aa, winner: adv, updated_at: new Date().toISOString() }
+      ? { match_id: editing, home_goals: hh, away_goals: aa, winner: adv, manual_override: true, result_source: "manual", updated_at: new Date().toISOString() }
       : { user_id: user.id, match_id: editing, home_goals: hh, away_goals: aa, winner: adv, updated_at: new Date().toISOString() };
     await supabase.from(KO_TABLE).upsert(row, { onConflict: resultsMode ? "match_id" : "user_id,match_id" });
     if (toDelete.length) {
