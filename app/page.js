@@ -2856,6 +2856,9 @@ function ProfileView({ user, matches, viewProfileId, onClearProfile }) {
   const [savingEmoji, setSavingEmoji] = useState(false);
   const targetId = viewProfileId || user.id;
   const isOwnProfile = targetId === user.id;
+  const [special, setSpecial] = useState(null);
+  const [koPicks, setKoPicks] = useState([]);
+  const [koResults, setKoResults] = useState([]);
   
   const saveEmoji = async () => {
     setSavingEmoji(true);
@@ -2871,7 +2874,11 @@ function ProfileView({ user, matches, viewProfileId, onClearProfile }) {
       const { data: mp } = await supabase.from("predictions").select("*").range(0, 99999).eq("user_id", targetId);
       const { data: profs } = await supabase.from("profiles").select("*").eq("role", "user");
       const { data: ap } = await supabase.from("predictions").select("*").range(0, 99999);
+      const { data: sp } = await supabase.from("special_predictions").select("*").eq("user_id", targetId).single();
+      const { data: kp } = await supabase.from("knockout_picks").select("*").range(0, 99999).eq("user_id", targetId);
+      const { data: kr } = await supabase.from("knockout_results").select("*");
       setMyPreds(mp || []); setProfiles(profs || []); setAllPreds(ap || []);
+      setSpecial(sp || null); setKoPicks(kp || []); setKoResults(kr || []);
       setLoading(false);
     })();
   }, [targetId]);
@@ -2909,6 +2916,16 @@ function ProfileView({ user, matches, viewProfileId, onClearProfile }) {
     if (m) { byGroup[m.grp].pts += p.points; byGroup[m.grp].count++; }
   });
   const bestGroup = Object.entries(byGroup).filter(([, v]) => v.count > 0).sort((a, b) => b[1].pts - a[1].pts)[0];
+  // Desglose de puntos (mismo cálculo que el ranking)
+  const predMapTarget = {};
+  myPreds.forEach(p => { predMapTarget[p.match_id] = p; });
+  const groupPts = total; // suma de la fase de grupos (predicciones evaluadas)
+  const qualPts = calcQualifierPoints(matches, predMapTarget);
+  const specialPts = special ? (special.top_scorer_points || 0) + (special.best_player_points || 0) : 0;
+  const koByGroupTarget = {};
+  Object.keys(GROUPS).forEach(g => { koByGroupTarget[g] = calcRealStandings(g, matches); });
+  const koPts = calcKnockoutPoints(koPicksMap(koPicks), koPicksMap(koResults), koByGroupTarget);
+  const grandTotal = groupPts + qualPts + specialPts + koPts;
 
   // Comparativa
   const otherPreds = compareWith ? allPreds.filter(p => p.user_id === compareWith) : [];
@@ -3021,8 +3038,30 @@ function ProfileView({ user, matches, viewProfileId, onClearProfile }) {
   </div>
 )}
 
+      {/* DESGLOSE DE PUNTOS — siempre visible */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+        <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "12px" }}>
+          DESGLOSE DE PUNTOS {isOwnProfile ? "· TUYOS" : ""}
+        </p>
+        {[
+          { label: "⚽ Fase de grupos", value: groupPts, color: GREEN },
+          { label: "✅ Países clasificados", value: qualPts, color: "#34d399" },
+          { label: "🏟️ Eliminatorias", value: koPts, color: "#4fc3f7" },
+          { label: "🏅 Especiales", value: specialPts, color: "#ffd54f" },
+        ].map(r => (
+          <div key={r.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${BORDER}` }}>
+            <span style={{ fontSize: "12px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{r.label}</span>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: r.value > 0 ? r.color : "#7ab8e0" }}>{r.value > 0 ? `+${r.value}` : "0"}</span>
+          </div>
+        ))}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0 0" }}>
+          <span style={{ fontSize: "13px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: "1px" }}>TOTAL</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "34px", color: GREEN, lineHeight: 1 }}>{grandTotal}</span>
+        </div>
+      </div>
+
       <div style={{ display: "flex", marginBottom: "20px", background: "rgba(0,0,0,0.35)", borderRadius: "8px", padding: "3px" }}>
-        {[{ id: "stats", label: "Estadísticas" }, { id: "compare", label: "Comparar" }].map(t => (
+        {[{ id: "stats", label: "Estadísticas" }, { id: "preds", label: "Pronósticos" }, { id: "compare", label: "Comparar" }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "9px", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "11px", letterSpacing: "2px", fontFamily: "'Inter', sans-serif", textTransform: "uppercase", background: tab === t.id ? GREEN : "transparent", color: tab === t.id ? "#0a1628" : "#e0eefa", fontWeight: 700 }}>{t.label}</button>
         ))}
       </div>
@@ -3126,6 +3165,76 @@ function ProfileView({ user, matches, viewProfileId, onClearProfile }) {
                 );
               })}
             </div>
+          </>
+        );
+      })()}
+
+        {tab === "preds" && (() => {
+        const targetStandings = {};
+        Object.keys(GROUPS).forEach(g => { targetStandings[g] = calcPersonalStandings(g, matches, predMapTarget); });
+
+        const ptsBadge = (pts) => {
+          const cfg = pts === 5 ? ["🎯 +5", GREEN, GREEN_DIM]
+            : pts === 3 ? ["📏 +3", "#4fc3f7", "rgba(79,195,247,0.08)"]
+            : pts === 1 ? ["✓ +1", "#ffd54f", "rgba(255,193,7,0.1)"]
+            : ["✗ +0", "#cc2222", "rgba(255,82,82,0.08)"];
+          return <span style={{ padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: cfg[2], color: cfg[1] }}>{cfg[0]}</span>;
+        };
+
+        return (
+          <>
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+              <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "4px" }}>
+                {isOwnProfile ? "TUS" : "SUS"} CLASIFICADOS · +{qualPts} PTS
+              </p>
+              <p style={{ fontSize: "10px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", marginBottom: "12px", lineHeight: 1.5 }}>
+                Equipos que clasifica según sus pronósticos. +2 pts por cada clasificado acertado en su posición.
+              </p>
+              <QualifiersTable standingsByGroup={targetStandings} />
+            </div>
+
+            <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>
+              {isOwnProfile ? "TUS" : "SUS"} PREDICCIONES · FASE DE GRUPOS
+            </p>
+            {Object.keys(GROUPS).map(g => {
+              const gms = matches.filter(m => m.grp === g);
+              if (!gms.some(m => predMapTarget[m.id])) return null;
+              const gPts = gms.reduce((s, m) => {
+                const pr = predMapTarget[m.id];
+                if (pr && m.result_home !== null) return s + calcPoints(pr, m.result_home, m.result_away);
+                return s;
+              }, 0);
+              return (
+                <div key={g} style={{ marginBottom: "18px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: GREEN_DIM, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "15px", color: GREEN }}>{g}</span>
+                    </div>
+                    <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", flex: 1 }}>GRUPO {g}</span>
+                    <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: GREEN }}>{gPts} pts</span>
+                  </div>
+                  {gms.map(m => {
+                    const pred = predMapTarget[m.id];
+                    const ht = getTeam(m.home), at = getTeam(m.away);
+                    const hasResult = m.result_home !== null && m.result_away !== null;
+                    const pts = pred && hasResult ? calcPoints(pred, m.result_home, m.result_away) : null;
+                    return (
+                      <div key={m.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", background: CARD, border: `1px solid ${BORDER}`, borderRadius: "8px", marginBottom: "5px" }}>
+                        <span style={{ fontSize: "15px" }}>{ht.flag}</span>
+                        <span style={{ flex: 1, fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {m.home} {hasResult && <b style={{ color: "#e0eaf8" }}>{m.result_home}-{m.result_away}</b>} {m.away}
+                        </span>
+                        <span style={{ fontSize: "15px" }}>{at.flag}</span>
+                        <span style={{ fontSize: "11px", color: pred ? "#7ab8e0" : "#506070", fontFamily: "'Inter', sans-serif", minWidth: "30px", textAlign: "center" }}>
+                          {pred ? `${pred.predicted_home}-${pred.predicted_away}` : "—"}
+                        </span>
+                        {pts !== null && ptsBadge(pts)}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </>
         );
       })()}
