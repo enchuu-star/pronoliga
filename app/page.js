@@ -189,6 +189,11 @@ const TV_BY_MATCH = {
   "RD Congo|Uzbekistán": "DAZN",
   "Rep. Checa|Sudáfrica": "DAZN",
   "Suecia|Túnez": "DAZN",
+  // ── Eliminatoria · dieciseisavos en La 1 ──
+  "Canadá|Sudáfrica": "La 1 + DAZN",        // M73
+  "Brasil|Japón": "La 1 + DAZN",            // M76
+  "Francia|Suecia": "La 1 + DAZN",          // M77
+  "Austria|España": "La 1 + DAZN",          // M84
 };
 // Devuelve el canal de un partido. Por defecto DAZN (emite todos).
 function tvFor(match) {
@@ -5374,7 +5379,24 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
   // Partidos de hoy (solo cuando el Mundial ya ha arrancado)
   const todayStr = new Date().toISOString().slice(0, 10);
   const mundialStarted = todayStr >= "2026-06-11";
-  const todayMatches = matches
+
+  // 🆕 Resultados de eliminatoria para incluir los cruces del día
+  const [koResults, setKoResults] = useState([]);
+  useEffect(() => {
+    const loadKo = async () => {
+      const { data } = await supabase.from("knockout_results").select("*");
+      setKoResults(data || []);
+    };
+    loadKo();
+    const ch = supabase.channel("ko_results_home")
+      .on("postgres_changes", { event: "*", schema: "public", table: "knockout_results" }, loadKo)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, []);
+
+  // Grupos + eliminatoria juntos para "partidos de hoy"
+  const koFixtures = buildKnockoutFixtures(matches, koResults);
+  const todayMatches = [...matches, ...koFixtures]
     .filter(m => m.match_date === todayStr)
     .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
 
@@ -5468,7 +5490,8 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
             <SkeletonRows count={2} height={60} />
           ) : todayMatches.length > 0 ? (
             todayMatches.map(m => {
-              const ht = getTeam(m.home), at = getTeam(m.away);
+              const ht = m.homeFlag ? { name: m.home, flag: m.homeFlag } : getTeam(m.home);
+              const at = m.awayFlag ? { name: m.away, flag: m.awayFlag } : getTeam(m.away);
               const hasResult = m.result_home !== null && m.result_away !== null;
               const homeWin = hasResult && m.result_home > m.result_away;
               const awayWin = hasResult && m.result_away > m.result_home;
