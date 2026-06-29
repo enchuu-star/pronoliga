@@ -591,6 +591,32 @@ function calcKnockoutPoints(userPicks, realPicks, standingsByGroup) {
   return pts;
 }
 
+// Igual que calcKnockoutPoints pero devuelve el desglose por partido:
+// { M73: { adv, marker, total, advanced }, ... }  (solo cruces con ganador real)
+function calcKnockoutBreakdownByMatch(userPicks, realPicks, standingsByGroup) {
+  const out = {};
+  if (!realPicks || Object.keys(realPicks).length === 0) return out;
+  const userB = buildKnockoutBracket(standingsByGroup, userPicks);
+  const realB = buildKnockoutBracket(standingsByGroup, realPicks);
+  KO_ALL_MATCHES.forEach(id => {
+    const rm = realB.byId[id], um = userB.byId[id];
+    if (!rm || !um) return;
+    const realW = rm.winner?.name || null;
+    if (!realW) return; // cruce real aún sin definir → todavía sin puntos
+    const userW = um.winner?.name || null;
+    const advanced = !!(userW && userW === realW);
+    let adv = 0, marker = 0;
+    if (advanced) adv = (id === "M104") ? 10 : 5;
+    const sameTeams = !um.home.placeholder && !um.away.placeholder &&
+      um.home.name === rm.home.name && um.away.name === rm.away.name;
+    if (sameTeams && um.h != null && um.a != null && rm.h != null && rm.a != null) {
+      marker = koScore(um.h, um.a, rm.h, rm.a);
+    }
+    out[id] = { adv, marker, total: adv + marker, advanced };
+  });
+  return out;
+}
+
 // ============================================================
 // FECHAS Y SEDES REALES DE LA ELIMINATORIA (hora España)
 // ============================================================
@@ -2516,6 +2542,15 @@ function CommunityView({ matches, user }) {
 
   const getName = id => profiles.find(p => p.id === id)?.name || "Usuario";
   const koFixtures = buildKnockoutFixtures(matches, koResults);
+  // Puntos de eliminatoria por usuario y por partido (mismo cálculo que el ranking)
+  const koByGroup = {};
+  Object.keys(GROUPS).forEach(g => { koByGroup[g] = calcRealStandings(g, matches); });
+  const koReal = koPicksMap(koResults);
+  const koBreakdownByUser = {};
+  (profiles || []).forEach(p => {
+    const up = koPicksMap(koPicks.filter(x => x.user_id === p.id));
+    koBreakdownByUser[p.id] = calcKnockoutBreakdownByMatch(up, koReal, koByGroup);
+  });
   const koLockMap = {};
   (koLocks || []).forEach(l => { koLockMap[l.id] = l.locked; });
   // Un cruce se muestra cuando el admin lo ha CERRADO o ya tiene resultado real.
@@ -2556,8 +2591,27 @@ function CommunityView({ matches, user }) {
       (groups[adv] = groups[adv] || []).push(p);
     });
 
+    const ptsBadge = (bd) => {
+      if (!bd) return null; // cruce real aún sin resultado
+      const advLabel = m.id === "M104" ? "🏆 +10" : "✅ +5";
+      const markerLabel = bd.marker === 5 ? "🎯 +5" : bd.marker === 3 ? "📏 +3" : bd.marker === 1 ? "✓ +1" : null;
+      const chip = (txt, bg, col) => (
+        <span style={{ padding: "2px 7px", borderRadius: "10px", fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: bg, color: col, whiteSpace: "nowrap" }}>{txt}</span>
+      );
+      return (
+        <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+          {bd.advanced && chip(advLabel, "rgba(52,211,153,0.14)", "#34d399")}
+          {markerLabel && chip(markerLabel,
+            bd.marker === 5 ? GREEN_DIM : bd.marker === 3 ? "rgba(79,195,247,0.08)" : "rgba(255,193,7,0.1)",
+            bd.marker === 5 ? GREEN : bd.marker === 3 ? "#4fc3f7" : "#ffd54f")}
+          {!bd.advanced && bd.marker === 0 && chip("✗ +0", "rgba(255,82,82,0.08)", "#cc2222")}
+        </span>
+      );
+    };
+
     const predRow = (pred) => {
       const isMe = pred.user_id === user.id;
+      const bd = koBreakdownByUser[pred.user_id]?.[m.id];
       return (
         <div key={pred.id ?? (pred.match_id + pred.user_id)} style={{
           display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px",
@@ -2573,6 +2627,7 @@ function CommunityView({ matches, user }) {
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>
             {pred.home_goals}-{pred.away_goals}
           </span>
+          {ptsBadge(bd)}
         </div>
       );
     };
