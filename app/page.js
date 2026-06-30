@@ -3824,7 +3824,64 @@ function ParticipantProgress() {
     </div>
   );
 }
+function UsageStats() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    (async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: usage } = await supabase.from("usage_daily").select("*");
+      const { data: profiles } = await supabase.from("profiles").select("id, name").eq("role", "user");
+      const byUser = {};
+      (usage || []).forEach(u => {
+        if (!byUser[u.user_id]) byUser[u.user_id] = { today: 0, total: 0, days: 0 };
+        byUser[u.user_id].total += u.seconds;
+        byUser[u.user_id].days += 1;
+        if (u.day === today) byUser[u.user_id].today += u.seconds;
+      });
+      const r = (profiles || []).map(p => {
+        const u = byUser[p.id] || { today: 0, total: 0, days: 0 };
+        return {
+          name: p.name,
+          today: u.today,
+          avg: u.days ? Math.round(u.total / u.days) : 0,
+          total: u.total,
+        };
+      }).sort((a, b) => b.total - a.total);
+      setRows(r);
+      setLoading(false);
+    })();
+  }, []);
+
+  const fmt = (s) => {
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60), sec = s % 60;
+    if (m < 60) return `${m}m ${sec}s`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  };
+
+  if (loading) return <SkeletonRows count={5} height={40} />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 70px 70px", gap: "6px", padding: "0 12px 4px" }}>
+        {["JUGADOR", "HOY", "MEDIA/DÍA", "TOTAL"].map(h => (
+          <span key={h} style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", letterSpacing: "1px", textAlign: h === "JUGADOR" ? "left" : "right" }}>{h}</span>
+        ))}
+      </div>
+      {rows.map((r, i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 70px 70px 70px", gap: "6px", padding: "10px 12px", background: "rgba(255,255,255,0.02)", border: `1px solid ${BORDER}`, borderRadius: "8px", alignItems: "center" }}>
+          <span style={{ fontSize: "12px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>{r.name}</span>
+          <span style={{ fontSize: "11px", color: GREEN, fontFamily: "'Inter', sans-serif", textAlign: "right" }}>{fmt(r.today)}</span>
+          <span style={{ fontSize: "11px", color: "#a8d4f0", fontFamily: "'Inter', sans-serif", textAlign: "right" }}>{fmt(r.avg)}</span>
+          <span style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", textAlign: "right" }}>{fmt(r.total)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 // ============================================================
 // ÚLTIMA CONEXIÓN DE USUARIOS
 // ============================================================
@@ -3980,6 +4037,11 @@ const handleResult = async () => {
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
         <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>REGISTRO DE ACTIVIDAD</p>
         <UserActivityLog />
+      </div>
+
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: "10px", padding: "14px", marginBottom: "20px" }}>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>⏱️ TIEMPO DE USO</p>
+        <UsageStats />
       </div>
 
       {/* BOTÓN CERRAR TODO */}
@@ -10840,6 +10902,53 @@ function OnboardingTooltips({ user, onFinish, setView }) {
     </>
   );
 }
+// Mide tiempo ACTIVO (pestaña visible) y lo va sumando a usage_daily cada 30s.
+function useUsageTracker(user) {
+  const accumRef = useRef(0);        // segundos acumulados sin enviar
+  const lastTickRef = useRef(Date.now());
+  const visibleRef = useRef(typeof document !== "undefined" ? document.visibilityState === "visible" : true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const flush = async () => {
+      const secs = Math.round(accumRef.current);
+      if (secs <= 0) return;
+      accumRef.current = 0;
+      const day = new Date().toISOString().slice(0, 10);
+      try {
+        await supabase.rpc("add_usage_seconds", { p_user: user.id, p_day: day, p_seconds: secs });
+      } catch (e) { console.error("usage flush error", e); }
+    };
+
+    // Suma el tiempo transcurrido si la pestaña estaba visible
+    const tick = () => {
+      const now = Date.now();
+      if (visibleRef.current) accumRef.current += (now - lastTickRef.current) / 1000;
+      lastTickRef.current = now;
+    };
+
+    const onVisibility = () => {
+      tick(); // cierra el tramo actual antes de cambiar de estado
+      visibleRef.current = document.visibilityState === "visible";
+      if (!visibleRef.current) flush(); // al ocultar, envía lo acumulado
+    };
+
+    // Cada segundo acumula; cada 30s envía
+    const tickInt = setInterval(tick, 1000);
+    const flushInt = setInterval(flush, 30000);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", () => { tick(); flush(); });
+    window.addEventListener("beforeunload", () => { tick(); flush(); });
+
+    return () => {
+      clearInterval(tickInt);
+      clearInterval(flushInt);
+      document.removeEventListener("visibilitychange", onVisibility);
+      tick(); flush(); // al desmontar (logout), guarda lo pendiente
+    };
+  }, [user]);
+}
 
 // ============================================================
 // APP PRINCIPAL
@@ -10866,7 +10975,7 @@ export default function Home() {
         .catch(err => console.log("SW error:", err));
     }
   }, []);
-
+  useUsageTracker(user);
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
