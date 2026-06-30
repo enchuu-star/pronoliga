@@ -3824,6 +3824,10 @@ function ParticipantProgress() {
     </div>
   );
 }
+
+// ============================================================
+// COMPONENTE: ESTADÍSTICAS DE USO
+// ============================================================
 function UsageStats() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3832,7 +3836,11 @@ function UsageStats() {
     (async () => {
       const today = new Date().toISOString().slice(0, 10);
       const { data: usage } = await supabase.from("usage_daily").select("*");
-      const { data: profiles } = await supabase.from("profiles").select("id, name").eq("role", "user");
+      
+      // CORRECCIÓN: Quitamos el .eq("role", "user") para que tú (como admin) 
+      // también te puedas ver en la tabla al hacer pruebas.
+      const { data: profiles } = await supabase.from("profiles").select("id, name"); 
+      
       const byUser = {};
       (usage || []).forEach(u => {
         if (!byUser[u.user_id]) byUser[u.user_id] = { today: 0, total: 0, days: 0 };
@@ -3840,6 +3848,7 @@ function UsageStats() {
         byUser[u.user_id].days += 1;
         if (u.day === today) byUser[u.user_id].today += u.seconds;
       });
+
       const r = (profiles || []).map(p => {
         const u = byUser[p.id] || { today: 0, total: 0, days: 0 };
         return {
@@ -3849,6 +3858,7 @@ function UsageStats() {
           total: u.total,
         };
       }).sort((a, b) => b.total - a.total);
+
       setRows(r);
       setLoading(false);
     })();
@@ -3882,6 +3892,7 @@ function UsageStats() {
     </div>
   );
 }
+
 // ============================================================
 // ÚLTIMA CONEXIÓN DE USUARIOS
 // ============================================================
@@ -10902,50 +10913,70 @@ function OnboardingTooltips({ user, onFinish, setView }) {
     </>
   );
 }
-// Mide tiempo ACTIVO (pestaña visible) y lo va sumando a usage_daily cada 30s.
+// ============================================================
+// Mide tiempo ACTIVO (pestaña visible) y lo va sumando a usage_daily
+// ============================================================
 function useUsageTracker(user) {
-  const accumRef = useRef(0);        // segundos acumulados sin enviar
+  const accumRef = useRef(0);
   const lastTickRef = useRef(Date.now());
   const visibleRef = useRef(typeof document !== "undefined" ? document.visibilityState === "visible" : true);
 
   useEffect(() => {
     if (!user) return;
 
-    const flush = async () => {
+    // RESET: Iniciar el reloj de verdad en el momento que el usuario hace login, 
+    // no cuando carga la pantalla de login.
+    lastTickRef.current = Date.now();
+    accumRef.current = 0;
+
+    // No debe ser "async". Si usamos await, el navegador cancela la petición 
+    // al cerrar la pestaña antes de que se complete.
+    const flush = () => {
       const secs = Math.round(accumRef.current);
       if (secs <= 0) return;
-      accumRef.current = 0;
+      accumRef.current = 0; // Vaciamos para no duplicar
+
       const day = new Date().toISOString().slice(0, 10);
-      try {
-        await supabase.rpc("add_usage_seconds", { p_user: user.id, p_day: day, p_seconds: secs });
-      } catch (e) { console.error("usage flush error", e); }
+      
+      // Se lanza la petición "al aire" sin await para que el navegador la procese rápido
+      supabase.rpc("add_usage_seconds", { p_user: user.id, p_day: day, p_seconds: secs })
+        .catch(e => console.error("usage flush error", e));
     };
 
-    // Suma el tiempo transcurrido si la pestaña estaba visible
     const tick = () => {
       const now = Date.now();
-      if (visibleRef.current) accumRef.current += (now - lastTickRef.current) / 1000;
+      if (visibleRef.current) {
+        accumRef.current += (now - lastTickRef.current) / 1000;
+      }
       lastTickRef.current = now;
     };
 
     const onVisibility = () => {
-      tick(); // cierra el tramo actual antes de cambiar de estado
+      tick(); // Cierra el tramo actual
       visibleRef.current = document.visibilityState === "visible";
-      if (!visibleRef.current) flush(); // al ocultar, envía lo acumulado
+      if (!visibleRef.current) flush(); // Si se ocultó, enviamos de inmediato
     };
 
-    // Cada segundo acumula; cada 30s envía
+    // Función con nombre para poder eliminarla correctamente en el cleanup
+    const handleUnload = () => {
+      tick();
+      flush();
+    };
+
     const tickInt = setInterval(tick, 1000);
-    const flushInt = setInterval(flush, 30000);
+    const flushInt = setInterval(flush, 15000); // Reducido a 15s para perder menos datos si cierran rápido
+
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pagehide", () => { tick(); flush(); });
-    window.addEventListener("beforeunload", () => { tick(); flush(); });
+    window.addEventListener("pagehide", handleUnload);
+    window.addEventListener("beforeunload", handleUnload);
 
     return () => {
       clearInterval(tickInt);
       clearInterval(flushInt);
       document.removeEventListener("visibilitychange", onVisibility);
-      tick(); flush(); // al desmontar (logout), guarda lo pendiente
+      window.removeEventListener("pagehide", handleUnload);
+      window.removeEventListener("beforeunload", handleUnload);
+      handleUnload(); // Guardar remanente al desmontar (ej. al hacer logout)
     };
   }, [user]);
 }
