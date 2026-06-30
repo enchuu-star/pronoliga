@@ -10856,6 +10856,7 @@ export default function Home() {
   const [showEmojiTip, setShowEmojiTip] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [viewProfileId, setViewProfileId] = useState(null);
+  const [showAvisoM73, setShowAvisoM73] = useState(false);
 
   // PWA — registrar service worker
   useEffect(() => {
@@ -10918,6 +10919,20 @@ export default function Home() {
   const dismissEmojiTip = () => {
     setShowEmojiTip(false);
     try { localStorage.setItem("emojiTipV2_seen", "1"); } catch {}
+  };
+  // Aviso único: anulación del pronóstico de M73 (Sudáfrica-Canadá)
+  useEffect(() => {
+    if (!user) return;
+    try {
+      if (!localStorage.getItem("avisoM73_seen")) setShowAvisoM73(true);
+    } catch {
+      setShowAvisoM73(true);
+    }
+  }, [user]);
+
+  const dismissAvisoM73 = () => {
+    setShowAvisoM73(false);
+    try { localStorage.setItem("avisoM73_seen", "1"); } catch {}
   };
   
   const loadData = async () => {
@@ -11046,6 +11061,50 @@ export default function Home() {
                     color: "#7ab8e0", fontFamily: "'Inter', sans-serif", fontSize: "11px", cursor: "pointer",
                   }}>
                   Ahora no
+                </button>
+              </div>
+            </div>
+          )}
+            {showAvisoM73 && (
+            <div
+              onClick={dismissAvisoM73}
+              style={{
+                position: "fixed", inset: 0, zIndex: 260,
+                background: "rgba(5,12,24,0.85)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: "24px", animation: "fadeIn 0.25s ease",
+              }}>
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  width: "100%", maxWidth: "380px", maxHeight: "90vh", overflowY: "auto",
+                  background: "linear-gradient(160deg,#102339,#0a1628)",
+                  border: `2px solid #ffd54f`, borderRadius: "18px",
+                  padding: "26px 22px 20px", textAlign: "center",
+                  animation: "popIn 0.4s ease",
+                }}>
+                <div style={{ fontSize: "46px", lineHeight: 1, marginBottom: "12px" }}>⚠️</div>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: "#ffd54f", letterSpacing: "2px", marginBottom: "12px" }}>
+                  AVISO IMPORTANTE
+                </div>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8", lineHeight: 1.7, marginBottom: "10px" }}>
+                  El partido <b>Sudáfrica - Canadá</b> (dieciseisavos) se ha <b>anulado</b> para todos los participantes.
+                </p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#c0d8f0", lineHeight: 1.7, marginBottom: "10px" }}>
+                  El resultado se introdujo con el partido ya empezado, así que entre todos se ha decidido anularlo. Ese cruce no puntúa.
+                </p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#c0d8f0", lineHeight: 1.7, marginBottom: "20px" }}>
+                  Además, en los cruces siguientes donde tuvieras a <b>Canadá</b> como clasificado, ese pronóstico queda <b>sin efecto</b>. Revisa tu cuadro y vuelve a rellenar esas rondas si quieres.
+                </p>
+                <button
+                  onClick={dismissAvisoM73}
+                  style={{
+                    width: "100%", padding: "14px", border: "none", borderRadius: "10px",
+                    background: "linear-gradient(135deg,#ffd54f,#e6a100)",
+                    color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800,
+                    letterSpacing: "2px", cursor: "pointer",
+                  }}>
+                  ENTENDIDO
                 </button>
               </div>
             </div>
