@@ -11088,13 +11088,16 @@ export default function Home() {
                   AVISO IMPORTANTE
                 </div>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8", lineHeight: 1.7, marginBottom: "10px" }}>
-                  El partido <b>Sudáfrica - Canadá</b> (dieciseisavos) se ha <b>anulado</b> para todos los participantes.
+                  El pronóstico de <b>Gorka</b> en el <b>Sudáfrica - Canadá</b> (dieciseisavos) se registró con el partido ya empezado.
                 </p>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#c0d8f0", lineHeight: 1.7, marginBottom: "10px" }}>
-                  El resultado se introdujo con el partido ya empezado, así que entre todos se ha decidido anularlo. Ese cruce no puntúa.
+                  Para que conste a todos: se ha decidido cambiarle el pronóstico a (<b>Sudáfrica 1-0</b>), así que ese cruce no le suma puntos.
+                </p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#c0d8f0", lineHeight: 1.7, marginBottom: "10px" }}>
+                  Como consecuencia, en las fases siguientes donde Gorka tenía a <b>Canadá</b> en un partido, ahora le aparecerá <b>Sudáfrica</b> en su lugar.
                 </p>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#c0d8f0", lineHeight: 1.7, marginBottom: "20px" }}>
-                  Además, en los cruces siguientes donde tuvieras a <b>Canadá</b> como clasificado, ese pronóstico queda <b>sin efecto</b>. Revisa tu cuadro y vuelve a rellenar esas rondas si quieres.
+                  El cambio solo afecta a Gorka. El resto de pronósticos no se han tocado.
                 </p>
                 <button
                   onClick={dismissAvisoM73}
