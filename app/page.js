@@ -11518,7 +11518,12 @@ function useUsageTracker(user) {
       
       // Se lanza la petición "al aire" sin await para que el navegador la procese rápido
       supabase.rpc("add_usage_seconds", { p_user: user.id, p_day: day, p_seconds: secs })
-        .catch(e => console.error("usage flush error", e));
+        .then(({ error }) => {
+          if (error) {
+            console.error("usage flush error", error.message);
+            alert("usage: " + error.message); // TEMPORAL — quitar cuando funcione
+          }
+        });
     };
 
     const tick = () => {
