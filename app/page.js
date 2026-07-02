@@ -5608,6 +5608,165 @@ function DailySummary({ user, matches }) {
 }
 
 // ============================================================
+// EN VIVO — marcador, goleadores, alineaciones y puntos provisionales
+// ============================================================
+function LiveMatches({ user, matches }) {
+  const [rows, setRows] = useState([]);
+  const [myPreds, setMyPreds] = useState({});
+  const [myKoPicks, setMyKoPicks] = useState({});
+  const [openLineup, setOpenLineup] = useState(null);
+
+  const load = async () => {
+    const { data } = await supabase.from("live_matches").select("*")
+      .in("status", ["1H", "HT", "2H", "ET", "BT", "P"]);
+    setRows(data || []);
+  };
+
+  useEffect(() => {
+    load();
+    (async () => {
+      const { data: p } = await supabase.from("predictions").select("*").eq("user_id", user.id).range(0, 99999);
+      const pm = {}; (p || []).forEach(x => { pm[x.match_id] = x; }); setMyPreds(pm);
+      const { data: kp } = await supabase.from("knockout_picks").select("*").eq("user_id", user.id);
+      const km = {}; (kp || []).forEach(x => { km[x.match_id] = x; }); setMyKoPicks(km);
+    })();
+    const ch = supabase.channel("live_matches_rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "live_matches" }, load)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [user.id]);
+
+  if (rows.length === 0) return null;
+
+  const teamsOf = (r) => {
+    if (r.match_id.startsWith("wc26_")) {
+      const m = matches.find(x => x.id === r.match_id);
+      return m ? { home: m.home, away: m.away } : null;
+    }
+    const rc = R32_CONFIRMED.find(x => x.match === r.match_id);
+    if (rc) return { home: rc.home, away: rc.away };
+    // KO posterior: sacamos los equipos de los eventos o mostramos genérico
+    const ev = (r.events || []).find(e => e.team);
+    return ev ? null : null;
+  };
+
+  const provisional = (r) => {
+    const isKO = !r.match_id.startsWith("wc26_");
+    // En KO puntúa el marcador de 90': si hay prórroga usamos el congelado
+    const h = isKO && r.reg_home != null ? r.reg_home : r.home_goals;
+    const a = isKO && r.reg_away != null ? r.reg_away : r.away_goals;
+    if (isKO) {
+      const pk = myKoPicks[r.match_id];
+      if (!pk || pk.home_goals == null) return null;
+      return { pts: koScore(pk.home_goals, pk.away_goals, h, a), pred: `${pk.home_goals}-${pk.away_goals}`, extra: true };
+    }
+    const p = myPreds[r.match_id];
+    if (!p) return null;
+    return { pts: calcPoints(p, h, a), pred: `${p.predicted_home}-${p.predicted_away}` };
+  };
+
+  const stLabel = (s, min) =>
+    s === "HT" ? "DESCANSO" : s === "BT" ? "DESC. PRÓRROGA"
+    : s === "ET" ? `PRÓRROGA ${min || ""}'` : s === "P" ? "PENALTIS" : `${min || 0}'`;
+
+  return (
+    <div style={{ marginBottom: "20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ff4444", boxShadow: "0 0 8px #ff4444", animation: "pulse 1s infinite" }} />
+        <p style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>EN VIVO</p>
+      </div>
+
+      {rows.map(r => {
+        const t = teamsOf(r);
+        const ht = t ? getTeam(t.home) : { flag: "⚽" };
+        const at = t ? getTeam(t.away) : { flag: "⚽" };
+        const goals = (r.events || []).filter(e => e.type === "Goal" && e.detail !== "Missed Penalty");
+        const prov = provisional(r);
+        const isET = ["ET", "BT", "P"].includes(r.status);
+        return (
+          <div key={r.match_id} style={{ background: CARD, border: "1px solid rgba(255,68,68,0.35)", borderRadius: "12px", padding: "12px", marginBottom: "8px", animation: "fadeIn 0.3s ease" }}>
+            {/* Marcador */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ flex: 1, textAlign: "right" }}>
+                <span style={{ fontSize: "22px" }}>{ht.flag}</span>
+                <div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{t?.home}</div>
+              </div>
+              <div style={{ textAlign: "center", minWidth: "80px" }}>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "32px", color: "#e0eaf8", lineHeight: 1 }}>
+                  {r.home_goals}<span style={{ color: "#7ab8e0", margin: "0 3px" }}>-</span>{r.away_goals}
+                </div>
+                <div style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "'Inter', sans-serif", fontWeight: 700, animation: "pulse 1.5s infinite" }}>
+                  🔴 {stLabel(r.status, r.minute)}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: "22px" }}>{at.flag}</span>
+                <div style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>{t?.away}</div>
+              </div>
+            </div>
+
+            {/* Aviso prórroga: para puntos cuenta el 90' */}
+            {isET && r.reg_home != null && (
+              <p style={{ fontSize: "9px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "6px" }}>
+                ⏱ A los 90': {r.reg_home}-{r.reg_away} (es el que puntúa)
+              </p>
+            )}
+
+            {/* Goleadores */}
+            {goals.length > 0 && (
+              <div style={{ marginTop: "8px", padding: "8px 10px", background: "rgba(0,0,0,0.25)", borderRadius: "8px" }}>
+                {goals.map((g, i) => (
+                  <div key={i} style={{ fontSize: "10px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif", lineHeight: 1.7 }}>
+                    ⚽ <b>{g.minLabel}'</b> {g.player}
+                    {g.detail === "Penalty" ? " (pen.)" : g.detail === "Own Goal" ? " (p.p.)" : ""}
+                    {g.assist ? <span style={{ color: "#7ab8e0" }}> · asist. {g.assist}</span> : ""}
+                    <span style={{ color: "#7ab8e0" }}> — {g.team}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Puntos provisionales */}
+            {prov && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "8px", padding: "7px", background: GREEN_DIM, borderRadius: "8px", border: `1px solid ${BORDER}` }}>
+                <span style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>Tu pronóstico {prov.pred} · si acaba así:</span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: prov.pts > 0 ? GREEN : "#ff6b4a" }}>
+                  {prov.pts > 0 ? `+${prov.pts}` : "+0"}
+                </span>
+              </div>
+            )}
+
+            {/* Alineaciones */}
+            {r.lineups && (
+              <button onClick={() => setOpenLineup(openLineup === r.match_id ? null : r.match_id)} style={{ width: "100%", marginTop: "8px", padding: "7px", border: `1px solid ${BORDER}`, borderRadius: "8px", background: "transparent", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", fontSize: "10px", cursor: "pointer", letterSpacing: "1px" }}>
+                📋 {openLineup === r.match_id ? "OCULTAR ALINEACIONES" : "VER ALINEACIONES"}
+              </button>
+            )}
+            {openLineup === r.match_id && r.lineups && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "8px" }}>
+                {r.lineups.map((l, i) => (
+                  <div key={i} style={{ background: "rgba(0,0,0,0.25)", borderRadius: "8px", padding: "8px" }}>
+                    <div style={{ fontSize: "10px", color: GREEN, fontFamily: "'Inter', sans-serif", fontWeight: 700, marginBottom: "4px" }}>
+                      {l.team} · {l.formation}
+                    </div>
+                    {l.startXI.map((p, j) => (
+                      <div key={j} style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6 }}>
+                        <span style={{ color: "#7ab8e0" }}>{p.number}</span> {p.name}
+                      </div>
+                    ))}
+                    {l.coach && <div style={{ fontSize: "8px", color: "#7ab8e0", marginTop: "4px", fontFamily: "'Inter', sans-serif" }}>DT: {l.coach}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
 // PANTALLA DE INICIO
 // ============================================================
 function HomeView({ user, matches, predictions, setView, loadingData }) {
@@ -5713,6 +5872,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <DailySummary user={user} matches={matches} />
+      {mundialStarted && <LiveMatches user={user} matches={matches} />}
       {/* Cuenta atrás (solo antes de empezar) */}
       {!mundialStarted && <CountdownBanner />}
       {!mundialStarted && boteCard}
