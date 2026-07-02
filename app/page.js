@@ -10875,6 +10875,422 @@ function KnockoutView({ user, matches, resultsMode = false }) {
     </div>
   );
 }
+
+// ============================================================
+// TIROS LIBRES — swipe con efecto (rosca), barrera, portero y dianas
+// ============================================================
+function FreeKickGame({ user, onBack }) {
+  const FK_W = 360, FK_H = 460;
+  const GOAL = { x: 60, w: 240, cross: 68, ground: 148 }; // portería en perspectiva
+  const BALL_START = { x: 180, y: 400 };
+
+  const [phase, setPhase] = useState("menu"); // menu | playing | result
+  const [score, setScore] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [lives, setLives] = useState(3);
+  const [msg, setMsg] = useState(null);       // { text, color }
+  const [rankings, setRankings] = useState([]);
+  const [loadingRank, setLoadingRank] = useState(false);
+  const [showHelp, setShowHelp] = useState(true);
+
+  const canvasRef = useRef(null);
+  const rafRef = useRef(null);
+  const stateRef = useRef(null);   // estado del disparo en curso
+  const swipeRef = useRef(null);   // puntos del gesto
+  const roundRef = useRef(null);   // barrera/portero/viento de la ronda
+  const scoreRef = useRef(0);
+  const levelRef = useRef(1);
+  const livesRef = useRef(3);
+
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+
+  // ---------- ranking ----------
+  const loadRankings = async () => {
+    setLoadingRank(true);
+    const { data: scores } = await supabase.from("freekick_scores").select("*").order("score", { ascending: false });
+    const { data: profiles } = await supabase.from("profiles").select("*");
+    if (scores && profiles) {
+      const byUser = {};
+      scores.forEach(s => { if (!byUser[s.user_id] || s.score > byUser[s.user_id].score) byUser[s.user_id] = s; });
+      const r = Object.entries(byUser).map(([uid, s]) => ({
+        name: profiles.find(p => p.id === uid)?.name || "Usuario",
+        emoji: profiles.find(p => p.id === uid)?.emoji || "⚽",
+        score: s.score, level: s.level,
+      })).sort((a, b) => b.score - a.score);
+      setRankings(r);
+    }
+    setLoadingRank(false);
+  };
+  useEffect(() => { if (phase === "menu") loadRankings(); }, [phase]);
+
+  // ---------- preparar ronda (barrera, portero, viento según nivel) ----------
+  const newRound = (lvl) => {
+    const wallPlayers = Math.min(3 + Math.floor(lvl / 2), 6);
+    const wallSpan = wallPlayers * 26;
+    const wallCenter = 180 + (Math.random() < 0.5 ? -1 : 1) * (20 + Math.random() * 45);
+    const wind = lvl >= 3 ? (Math.random() - 0.5) * Math.min(lvl * 9, 55) : 0;
+    roundRef.current = {
+      wall: { cx: wallCenter, span: wallSpan, players: wallPlayers, y: 252, jumpH: 46 + lvl * 2 },
+      keeper: { x: 180, reach: Math.min(30 + lvl * 3.5, 62), reads: Math.min(0.25 + lvl * 0.06, 0.7) },
+      wind,
+      targets: [
+        { x: GOAL.x + 20, y: GOAL.cross + 16 },
+        { x: GOAL.x + GOAL.w - 20, y: GOAL.cross + 16 },
+      ],
+    };
+    stateRef.current = { mode: "aim" };
+  };
+
+  const startGame = () => {
+    setScore(0); setLevel(1); setLives(3); setMsg(null); setShowHelp(true);
+    scoreRef.current = 0; levelRef.current = 1; livesRef.current = 3;
+    newRound(1);
+    setPhase("playing");
+  };
+
+  // ---------- dibujo ----------
+  const draw = (ctx) => {
+    const R = roundRef.current, S = stateRef.current;
+    if (!R || !S) return;
+    ctx.clearRect(0, 0, FK_W, FK_H);
+
+    // Césped con franjas en perspectiva
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = i % 2 === 0 ? "#0f2e1a" : "#0d2817";
+      ctx.fillRect(0, 140 + i * 42, FK_W, 42);
+    }
+    // Cielo de estadio
+    const sky = ctx.createLinearGradient(0, 0, 0, 145);
+    sky.addColorStop(0, "#0a1628"); sky.addColorStop(1, "#12253d");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, FK_W, 145);
+    // Gradas (puntitos)
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    for (let i = 0; i < 60; i++) ctx.fillRect((i * 37) % FK_W, 8 + (i * 13) % 48, 2, 2);
+
+    // Área
+    ctx.strokeStyle = "rgba(255,255,255,0.25)"; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(GOAL.x - 35, GOAL.ground); ctx.lineTo(GOAL.x - 55, 230);
+    ctx.lineTo(GOAL.x + GOAL.w + 55, 230); ctx.lineTo(GOAL.x + GOAL.w + 35, GOAL.ground);
+    ctx.stroke();
+
+    // Red
+    ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 0.6;
+    for (let nx = GOAL.x + 8; nx < GOAL.x + GOAL.w; nx += 14) {
+      ctx.beginPath(); ctx.moveTo(nx, GOAL.cross + 3); ctx.lineTo(nx + 4, GOAL.ground - 2); ctx.stroke();
+    }
+    for (let ny = GOAL.cross + 8; ny < GOAL.ground; ny += 12) {
+      ctx.beginPath(); ctx.moveTo(GOAL.x + 4, ny); ctx.lineTo(GOAL.x + GOAL.w - 4, ny); ctx.stroke();
+    }
+    // Palos
+    ctx.fillStyle = "#f0f0e8";
+    ctx.fillRect(GOAL.x - 4, GOAL.cross, 5, GOAL.ground - GOAL.cross);
+    ctx.fillRect(GOAL.x + GOAL.w - 1, GOAL.cross, 5, GOAL.ground - GOAL.cross);
+    ctx.fillRect(GOAL.x - 4, GOAL.cross - 4, GOAL.w + 9, 5);
+
+    // Dianas en las escuadras
+    R.targets.forEach(t => {
+      ctx.beginPath(); ctx.arc(t.x, t.y, 13, 0, Math.PI * 2);
+      ctx.strokeStyle = "#ffd54f"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(t.x, t.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,213,79,0.5)"; ctx.fill();
+    });
+
+    // Portero
+    const K = R.keeper;
+    let kx = K.x, klean = 0;
+    if (S.mode === "flying" && S.dive != null) {
+      const kt = Math.min(1, S.t * 1.5);
+      kx = K.x + (S.dive - K.x) * kt;
+      klean = Math.sign(S.dive - K.x) * kt * 0.9;
+    }
+    ctx.save(); ctx.translate(kx, GOAL.ground - 4); ctx.rotate(klean);
+    ctx.strokeStyle = "#ff8a00"; ctx.lineWidth = 5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -22); ctx.stroke();            // cuerpo
+    ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(-11, -30); ctx.moveTo(0, -20); ctx.lineTo(11, -30); ctx.stroke(); // brazos
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-7, 9); ctx.moveTo(0, 0); ctx.lineTo(7, 9); ctx.stroke();          // piernas
+    ctx.beginPath(); ctx.arc(0, -30, 6, 0, Math.PI * 2); ctx.fillStyle = "#f5d5b0"; ctx.fill(); // cabeza
+    ctx.restore();
+
+    // Barrera (salta al disparar)
+    const Wl = R.wall;
+    const jump = S.mode === "flying" ? Math.sin(Math.min(1, S.t * 2.4) * Math.PI) * 16 : 0;
+    for (let i = 0; i < Wl.players; i++) {
+      const px = Wl.cx - Wl.span / 2 + 13 + i * 26;
+      const py = Wl.y - jump;
+      ctx.save(); ctx.translate(px, py);
+      ctx.strokeStyle = "#c0392b"; ctx.lineWidth = 7; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -30); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, -38, 7, 0, Math.PI * 2); ctx.fillStyle = "#f5c89a"; ctx.fill();
+      // manos protegiendo 😄
+      ctx.strokeStyle = "#c0392b"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(-4, -14); ctx.lineTo(-4, -24); ctx.moveTo(4, -14); ctx.lineTo(4, -24); ctx.stroke();
+      ctx.restore();
+    }
+
+    // Viento
+    if (R.wind !== 0) {
+      const dir = R.wind > 0 ? "→" : "←";
+      const mag = Math.abs(R.wind);
+      ctx.font = "bold 13px monospace"; ctx.textAlign = "center";
+      ctx.fillStyle = mag > 30 ? "#ff6b4a" : "#ffd54f";
+      ctx.fillText(`💨 ${dir.repeat(mag > 30 ? 3 : mag > 15 ? 2 : 1)}`, FK_W / 2, 30);
+    }
+
+    // Balón
+    let bx = BALL_START.x, by = BALL_START.y, bs = 1;
+    if (S.mode === "flying") {
+      bx = S.pos.x; by = S.pos.y; bs = S.pos.s;
+    }
+    ctx.save(); ctx.translate(bx, by); ctx.scale(bs, bs);
+    ctx.save(); ctx.scale(1, 0.35);
+    ctx.beginPath(); ctx.arc(0, 26, 10, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fill(); ctx.restore();
+    if (S.mode === "flying") ctx.rotate(S.t * 14 * (S.curve >= 0 ? 1 : -1));
+    ctx.font = "26px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("⚽", 0, 0);
+    ctx.restore();
+
+    // Trazo del swipe mientras apuntas
+    if (S.mode === "aim" && swipeRef.current && swipeRef.current.pts.length > 1) {
+      const pts = swipeRef.current.pts;
+      ctx.strokeStyle = "rgba(79,195,247,0.7)"; ctx.lineWidth = 3; ctx.setLineDash([5, 5]);
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+      pts.forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke(); ctx.setLineDash([]);
+    }
+  };
+
+  // ---------- física del disparo ----------
+  const launch = () => {
+    const sw = swipeRef.current;
+    swipeRef.current = null;
+    if (!sw || sw.pts.length < 4) return;
+    const p0 = sw.pts[0], pN = sw.pts[sw.pts.length - 1];
+    const dx = pN.x - p0.x, dy = pN.y - p0.y;
+    if (dy > -30) return; // hay que deslizar hacia arriba
+
+    const dt = Math.max(60, pN.t - p0.t);
+    const dist = Math.hypot(dx, dy);
+    const power = Math.min(1, (dist / dt) * 1.9);       // velocidad del gesto
+    // Curva = desviación lateral del punto medio respecto a la recta del gesto
+    const mid = sw.pts[Math.floor(sw.pts.length / 2)];
+    const t0 = { x: pN.x - p0.x, y: pN.y - p0.y };
+    const len = Math.hypot(t0.x, t0.y) || 1;
+    const cross = ((mid.x - p0.x) * t0.y - (mid.y - p0.y) * t0.x) / len;
+    const curve = Math.max(-1, Math.min(1, cross / 45)); // -1..1 (rosca)
+
+    const R = roundRef.current;
+    // Destino en el plano de la portería
+    const gx = BALL_START.x + dx * 1.15 + curve * 62 + R.wind * 0.9;
+    const heightF = Math.min(1, Math.abs(dy) / 260) * (0.55 + power * 0.6);
+    const gy = GOAL.ground - 8 - heightF * (GOAL.ground - GOAL.cross - 4); // altura final en portería
+    // El portero elige: a veces "lee" el disparo (nivel alto), a veces al azar
+    const zones = [GOAL.x + 45, 180, GOAL.x + GOAL.w - 45];
+    let dive;
+    if (Math.random() < R.keeper.reads) dive = gx;                        // te ha leído
+    else dive = zones[Math.floor(Math.random() * 3)];
+    dive = Math.max(GOAL.x + 20, Math.min(GOAL.x + GOAL.w - 20, dive));
+
+    stateRef.current = {
+      mode: "flying", t: 0, curve, power,
+      from: { ...BALL_START }, gx, gy, dive,
+      arcH: 55 + power * 95,
+      pos: { x: BALL_START.x, y: BALL_START.y, s: 1 },
+      resolved: false,
+    };
+    setShowHelp(false);
+  };
+
+  const resolveShot = (S) => {
+    const R = roundRef.current;
+    // 1) ¿Barrera? — la barrera está a t≈0.42 del recorrido
+    const wt = 0.42;
+    const wx = S.from.x + (S.gx - S.from.x) * wt - S.curve * Math.sin(wt * Math.PI) * 55;
+    const arcAtWall = Math.sin(wt * Math.PI) * S.arcH;
+    const Wl = R.wall;
+    if (Math.abs(wx - Wl.cx) < Wl.span / 2 + 8 && arcAtWall < Wl.jumpH) {
+      return { ok: false, text: "🧱 ¡A LA BARRERA!", color: "#ff6b4a" };
+    }
+    // 2) ¿Dentro de la portería?
+    if (S.gx < GOAL.x + 6 || S.gx > GOAL.x + GOAL.w - 6) return { ok: false, text: "↔️ ¡FUERA!", color: "#ff6b4a" };
+    if (S.gy < GOAL.cross + 4) return { ok: false, text: "⬆️ ¡POR ENCIMA!", color: "#ff6b4a" };
+    // 3) ¿Diana en la escuadra? (el portero nunca llega ahí)
+    const hitTarget = R.targets.some(tg => Math.hypot(S.gx - tg.x, S.gy - tg.y) < 16);
+    if (hitTarget) return { ok: true, pts: 10 + levelRef.current * 2 + 15, text: "🎯 ¡ESCUADRA! +15 EXTRA", color: "#ffd54f" };
+    // 4) ¿Lo para el portero?
+    if (Math.abs(S.gx - S.dive) < R.keeper.reach && S.gy > GOAL.cross + 22) {
+      return { ok: false, text: "🧤 ¡PARADÓN!", color: "#4fc3f7" };
+    }
+    return { ok: true, pts: 10 + levelRef.current * 2, text: "⚽ ¡GOOOL!", color: GREEN };
+  };
+
+  // ---------- bucle ----------
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const ctx = canvasRef.current?.getContext("2d");
+    const loop = () => {
+      const S = stateRef.current;
+      if (S?.mode === "flying") {
+        S.t = Math.min(1, S.t + 0.022);
+        const t = S.t, e = t; // lineal queda bien con el arco
+        const bend = Math.sin(t * Math.PI) * 55 * S.curve;  // la rosca 🍌
+        S.pos.x = S.from.x + (S.gx - S.from.x) * e - bend;
+        S.pos.y = S.from.y + (S.gy - S.from.y) * e - Math.sin(t * Math.PI) * S.arcH * (1 - e * 0.55);
+        S.pos.s = 1 - 0.62 * e;
+        if (t >= 1 && !S.resolved) {
+          S.resolved = true;
+          const res = resolveShot(S);
+          setMsg({ text: res.text, color: res.color });
+          setTimeout(() => {
+            setMsg(null);
+            if (res.ok) {
+              scoreRef.current += res.pts; setScore(scoreRef.current);
+              levelRef.current += 1; setLevel(levelRef.current);
+              newRound(levelRef.current);
+            } else {
+              livesRef.current -= 1; setLives(livesRef.current);
+              if (livesRef.current <= 0) { finishGame(); return; }
+              newRound(levelRef.current);
+            }
+          }, 1300);
+        }
+      }
+      if (ctx) draw(ctx);
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+    // eslint-disable-next-line
+  }, [phase]);
+
+  const finishGame = async () => {
+    cancelAnimationFrame(rafRef.current);
+    setPhase("result");
+    await supabase.from("freekick_scores").insert({ user_id: user.id, score: scoreRef.current, level: levelRef.current });
+    loadRankings();
+  };
+
+  // ---------- input ----------
+  const toXY = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (cx - rect.left) * (FK_W / rect.width), y: (cy - rect.top) * (FK_H / rect.height), t: Date.now() };
+  };
+  const onDown = (e) => {
+    if (stateRef.current?.mode !== "aim") return;
+    swipeRef.current = { pts: [toXY(e)] };
+    e.preventDefault?.();
+  };
+  const onMove = (e) => {
+    if (!swipeRef.current) return;
+    swipeRef.current.pts.push(toXY(e));
+    if (swipeRef.current.pts.length > 40) swipeRef.current.pts.shift();
+    e.preventDefault?.();
+  };
+  const onUp = () => { if (swipeRef.current) launch(); };
+
+  const medals = ["🥇", "🥈", "🥉"];
+
+  // ============ MENÚ ============
+  if (phase === "menu") return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={onBack} style={{ padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
+        <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>TIROS LIBRES</p>
+      </div>
+      <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", padding: "24px", textAlign: "center", marginBottom: "20px" }}>
+        <div style={{ fontSize: "48px", marginBottom: "12px" }}>🌪️⚽</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", letterSpacing: "3px", marginBottom: "8px" }}>TIROS LIBRES</div>
+        <p style={{ fontSize: "11px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.9, marginBottom: "8px" }}>
+          Desliza para chutar · <b style={{ color: GREEN }}>curva el gesto para dar rosca</b> 🍌<br/>
+          Supera la barrera y al portero · 3 vidas
+        </p>
+        <p style={{ fontSize: "10px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", marginBottom: "20px" }}>
+          🎯 Escuadra = +15 extra · 💨 Viento desde nivel 3 · el portero aprende...
+        </p>
+        <button onClick={startGame} style={{ padding: "14px 40px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px" }}>⚡ JUGAR</button>
+      </div>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TIROS LIBRES</p>
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px" }}>
+          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
+          <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.emoji} {r.name}</span>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8", lineHeight: 1 }}>{r.score}</div>
+            <div style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>nivel {r.level}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // ============ JUGANDO ============
+  if (phase === "playing") return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+        <button onClick={() => { cancelAnimationFrame(rafRef.current); setPhase("menu"); }} style={{ padding: "6px 12px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#c0d8f0", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Salir</button>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#ffd54f" }}>NIVEL {level}</span>
+          <span style={{ fontSize: "14px" }}>{"❤️".repeat(lives)}{"🖤".repeat(3 - lives)}</span>
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "22px", color: GREEN }}>{score}</span>
+        </div>
+      </div>
+      <div style={{ position: "relative", borderRadius: "14px", overflow: "hidden", border: `1px solid ${BORDER}` }}>
+        <canvas ref={canvasRef} width={FK_W} height={FK_H}
+          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+          onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+          style={{ display: "block", width: "100%", height: "auto", touchAction: "none", cursor: "crosshair" }} />
+        {showHelp && stateRef.current?.mode === "aim" && (
+          <div style={{ position: "absolute", bottom: "70px", left: 0, right: 0, textAlign: "center", pointerEvents: "none" }}>
+            <span style={{ fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif", background: "rgba(0,0,0,0.6)", padding: "6px 14px", borderRadius: "14px", animation: "pulse 1.6s infinite" }}>
+              👆 Desliza hacia la portería · curva el dedo = rosca 🍌
+            </span>
+          </div>
+        )}
+        {msg && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.35)", pointerEvents: "none" }}>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "34px", letterSpacing: "3px", color: msg.color, textShadow: "0 0 20px rgba(0,0,0,0.7)", animation: "popIn 0.3s ease" }}>{msg.text}</span>
+          </div>
+        )}
+      </div>
+      <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", textAlign: "center", marginTop: "8px" }}>
+        Gesto rápido = potencia · gesto largo hacia arriba = altura · cuidado con el viento 💨
+      </p>
+    </div>
+  );
+
+  // ============ RESULTADO ============
+  if (phase === "result") return (
+    <div style={{ animation: "fadeIn 0.3s ease", textAlign: "center" }}>
+      <button onClick={() => setPhase("menu")} style={{ marginBottom: "20px", padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: "7px", background: "transparent", color: "#e0eefa", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: "11px" }}>← Volver</button>
+      <div style={{ background: CARD, border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", padding: "28px", marginBottom: "20px" }}>
+        <div style={{ fontSize: "44px", marginBottom: "10px" }}>{score >= 120 ? "🏆" : score >= 60 ? "🌪️" : "😅"}</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#d0e4f7", letterSpacing: "3px" }}>TU PUNTUACIÓN</div>
+        <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "64px", color: GREEN, lineHeight: 1 }}>{score}</div>
+        <div style={{ fontSize: "11px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", marginTop: "6px" }}>Llegaste al nivel {level}</div>
+        <p style={{ marginTop: "12px", fontSize: "12px", color: "#e0eefa", fontFamily: "'Inter', sans-serif" }}>
+          {score >= 120 ? "¡Roberto Carlos estaría orgulloso! 🍌" : score >= 60 ? "Buena zurda... ¿o era diestra? ⚽" : "A entrenar el golpeo 😅"}
+        </p>
+      </div>
+      <button onClick={startGame} style={{ padding: "13px 36px", border: "none", borderRadius: "10px", background: `linear-gradient(135deg,${GREEN},#0077cc)`, color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, cursor: "pointer", letterSpacing: "3px", marginBottom: "20px" }}>🔄 REPETIR</button>
+      <p style={{ fontSize: "9px", color: "#d0e4f7", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "12px" }}>RANKING TIROS LIBRES</p>
+      {loadingRank ? <SkeletonRanking count={4} /> : rankings.map((r, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", background: i === 0 ? GREEN_DIM : CARD, border: i === 0 ? "1px solid rgba(79,195,247,0.2)" : `1px solid ${BORDER}`, borderRadius: "10px", padding: "12px 16px", marginBottom: "5px", textAlign: "left" }}>
+          <span style={{ fontSize: "18px", minWidth: "26px" }}>{medals[i] || `#${i + 1}`}</span>
+          <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#e0eaf8" }}>{r.emoji} {r.name}</span>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: i === 0 ? GREEN : "#e0eaf8", lineHeight: 1 }}>{r.score}</div>
+            <div style={{ fontSize: "8px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>nivel {r.level}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  return null;
+}
+
 // ============================================================
 // VISTA JUEGOS
 // ============================================================
@@ -10891,6 +11307,7 @@ function GamesView({ user }) {
   if (game === "footle") return <FootleGame user={user} onBack={() => setGame(null)} />;
   if (game === "simon") return <SimonGame user={user} onBack={() => setGame(null)} />;
   if (game === "chapas" && chapasEnabled(user)) return <ChapasGame user={user} onBack={() => setGame(null)} />;
+  if (game === "freekick") return <FreeKickGame user={user} onBack={() => setGame(null)} />;
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -10946,6 +11363,11 @@ function GamesView({ user }) {
             <div style={{ fontSize: "34px", marginBottom: "8px" }}>🔵⚽</div>
             <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>CHAPAS <span style={{ fontSize: "9px", color: "#ffb38a" }}>BETA</span></div>
             <div style={{ fontSize: "9px", color: "#ffb38a", fontFamily: "'Inter', sans-serif" }}>fútbol de chapas · 2 jugadores 🔴</div>
+          </button>
+          <button onClick={() => setGame("freekick")} className="tappable" style={{ padding: "20px 12px", border: "1px solid rgba(79,195,247,0.2)", borderRadius: "14px", background: "rgba(79,195,247,0.05)", cursor: "pointer", textAlign: "center" }}>
+            <div style={{ fontSize: "34px", marginBottom: "8px" }}>🌪️</div>
+            <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "2px", marginBottom: "4px" }}>TIROS LIBRES</div>
+            <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>rosca y escuadras · 1 jugador</div>
           </button>
         )}
       </div>
