@@ -194,6 +194,7 @@ const TV_BY_MATCH = {
   "Brasil|Japón": "La 1 + DAZN",            // M76
   "Francia|Suecia": "La 1 + DAZN",          // M77
   "Austria|España": "La 1 + DAZN",          // M84
+  "Argentina|Cabo Verde": "La 1 + DAZN",
 };
 // Devuelve el canal de un partido. Por defecto DAZN (emite todos).
 function tvFor(match) {
@@ -3556,15 +3557,16 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
     Object.keys(GROUPS).forEach(g => { koByGroup[g] = calcRealStandings(g, matches); });
     const r = (profiles || []).map(p => {
       const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
-      // Clasificados (1º, 2º y mejores terceros) automáticos desde sus pronósticos
       const predMap = {};
       (preds || []).filter(x => x.user_id === p.id).forEach(x => { predMap[x.match_id] = x; });
       const qualPts = calcQualifierPoints(matches, predMap);
       const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);
-      const koPts = calcKnockoutPoints(koPicksMap((koPicks || []).filter(x => x.user_id === p.id)), koReal, koByGroup);
-      const specialPts = mySpecial
-        ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0)
-        : 0;
+      // ⬇️ desglose por partido (lo reutilizamos para las flechas)
+      const koBd = calcKnockoutBreakdownByMatch(
+        koPicksMap((koPicks || []).filter(x => x.user_id === p.id)), koReal, koByGroup
+      );
+      const koPts = Object.values(koBd).reduce((s, b) => s + b.total, 0);
+      const specialPts = mySpecial ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0) : 0;
       return {
         ...p,
         total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts + koPts,
@@ -3572,33 +3574,45 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
         difGoles: myPreds.filter(x => x.points === 3).length,
         parciales: myPreds.filter(x => x.points === 1).length,
         count: myPreds.length,
-        qualPts, specialPts, koPts,
+        qualPts, specialPts, koPts, koBd,
       };
     }).sort((a, b) => b.total - a.total);
 
-    // Posiciones de la última foto guardada
-    const { data: snap } = await supabase
-      .from("ranking_history")
-      .select("user_id, position, snapshot_at")
-      .order("snapshot_at", { ascending: false });
-    let prevPos = {};
-    if (snap && snap.length) {
-      const stamps = [...new Set(snap.map(s => s.snapshot_at))];
-      const curPos = {};
-      r.forEach((u, i) => { curPos[u.id] = i + 1; });
-      let chosen = null;
-      for (const st of stamps) {
-        const snapPos = {};
-        snap.filter(s => s.snapshot_at === st).forEach(s => { snapPos[s.user_id] = s.position; });
-        const differs = r.some(u => snapPos[u.id] != null && snapPos[u.id] !== curPos[u.id]);
-        if (differs) { chosen = snapPos; break; }
-      }
-      if (chosen) prevPos = chosen;
-    }
-    const rWithMove = r.map((u, i) => {
-      const prev = prevPos[u.id];
-      return { ...u, move: prev == null ? null : prev - (i + 1) };
+    // ── Flechas: comparar con la posición ANTES de la última franja de partidos ──
+    // Franja = fecha+hora. Incluye grupos terminados y cruces KO con resultado.
+    const slotOf = {}; // matchId -> "fecha hora"
+    matches.filter(m => m.grp && m.result_home !== null && m.result_away !== null)
+      .forEach(m => { slotOf[m.id] = `${m.match_date} ${m.match_time || ""}`; });
+    (koResults || []).forEach(kr => {
+      const d = KO_DATES[kr.match_id];
+      if (d && kr.home_goals != null && kr.away_goals != null) slotOf[kr.match_id] = `${d.d} ${d.t}`;
     });
+    const slotKeys = [...new Set(Object.values(slotOf))].sort();
+    
+    let rWithMove;
+    if (slotKeys.length === 0) {
+      rWithMove = r.map(u => ({ ...u, move: null }));
+    } else {
+      const lastSlot = slotKeys[slotKeys.length - 1];
+      const lastGroupIds = new Set(Object.entries(slotOf).filter(([id, k]) => k === lastSlot && id.startsWith("wc26_")).map(([id]) => id));
+      const lastKoIds = Object.entries(slotOf).filter(([id, k]) => k === lastSlot && !id.startsWith("wc26_")).map(([id]) => id);
+    
+      // Puntos que cada usuario ganó en esa última franja
+      const lastPts = {};
+      r.forEach(u => { lastPts[u.id] = 0; });
+      (preds || []).forEach(p => {
+        if (p.points != null && lastGroupIds.has(p.match_id) && lastPts[p.user_id] != null) lastPts[p.user_id] += p.points;
+      });
+      r.forEach(u => {
+        lastKoIds.forEach(id => { if (u.koBd[id]) lastPts[u.id] += u.koBd[id].total; });
+      });
+    
+      // Ranking "antes": total actual menos lo ganado en la última franja
+      const prevOrder = [...r].sort((a, b) => (b.total - lastPts[b.id]) - (a.total - lastPts[a.id]));
+      const prevPos = {};
+      prevOrder.forEach((u, i) => { prevPos[u.id] = i + 1; });
+      rWithMove = r.map((u, i) => ({ ...u, move: prevPos[u.id] - (i + 1) }));
+    }
 
     setRanking(rWithMove);
     setLoading(false);
