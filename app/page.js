@@ -195,6 +195,10 @@ const TV_BY_MATCH = {
   "Francia|Suecia": "La 1 + DAZN",          // M77
   "Austria|España": "La 1 + DAZN",          // M84
   "Argentina|Cabo Verde": "La 1 + DAZN",
+  // ── Eliminatoria · octavos en La 1 ──
+  "Paraguay|Francia": "La 1 + DAZN",
+  "Brasil|Noruega": "La 1 + DAZN",
+  "Portugal|España": "La 1 + DAZN",
 };
 // Devuelve el canal de un partido. Por defecto DAZN (emite todos).
 function tvFor(match) {
