@@ -3650,6 +3650,38 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
       <SkeletonRanking count={6} />
     </div>
   );
+  const BreakdownPanel = ({ u }) => {
+    const groupsPts = u.total - u.qualPts - u.specialPts - u.koPts;
+    const rows = [
+      { label: "⚽ Grupos", value: groupsPts, color: GREEN },
+      { label: "✅ Clasificados", value: u.qualPts, color: "#34d399" },
+      { label: "🏟️ Eliminatorias", value: u.koPts, color: "#4fc3f7" },
+      { label: "🏅 Especiales", value: u.specialPts, color: "#ffd54f" },
+    ];
+    const max = Math.max(...rows.map(r => r.value), 1);
+    return (
+      <div style={{ padding: "10px 14px 12px", borderTop: `1px solid ${BORDER}`, animation: "fadeIn 0.2s ease" }} onClick={e => e.stopPropagation()}>
+        {rows.map(r => (
+          <div key={r.label} style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <span style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", width: "104px", flexShrink: 0 }}>{r.label}</span>
+            <div style={{ flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: "3px", height: "6px", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${(r.value / max) * 100}%`, background: r.color, borderRadius: "3px", transition: "width 0.4s ease" }} />
+            </div>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: r.value > 0 ? r.color : "#7ab8e0", minWidth: "34px", textAlign: "right" }}>
+              {r.value > 0 ? `+${r.value}` : "0"}
+            </span>
+          </div>
+        ))}
+        <button onClick={() => goToProfile(u.id)} style={{
+          width: "100%", marginTop: "6px", padding: "8px",
+          border: `1px solid ${BORDER}`, borderRadius: "8px",
+          background: "rgba(79,195,247,0.06)", color: GREEN,
+          fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700,
+          letterSpacing: "1px", cursor: "pointer",
+        }}>👤 VER PERFIL COMPLETO →</button>
+      </div>
+    );
+  };
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -3762,36 +3794,34 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
       {ranking.slice(3).map((u, i) => {
         const realIdx = i + 3;
         const isMe = user && u.id === user.id;
+        const isOpen = expandedId === u.id;
         return (
-          <div key={u.id} onClick={() => goToProfile(u.id)} className="tappable" style={{
-            display: "flex", alignItems: "center", gap: "12px",
+          <div key={u.id} onClick={() => setExpandedId(isOpen ? null : u.id)} className="tappable" style={{
             background: isMe ? GREEN_DIM : CARD,
-            border: `1px solid ${isMe ? GREEN : BORDER}`,
+            border: `1px solid ${isMe ? GREEN : isOpen ? "rgba(79,195,247,0.35)" : BORDER}`,
             boxShadow: isMe ? `0 0 14px rgba(79,195,247,0.35)` : "none",
-            borderRadius: "10px", padding: "14px 16px", marginBottom: "6px", cursor: "pointer",
+            borderRadius: "10px", marginBottom: "6px", cursor: "pointer", overflow: "hidden",
           }}>
-            <div style={{ minWidth: "32px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-              <span style={{ fontSize: "16px", fontFamily: "'Bebas Neue', monospace", color: "#7ab8e0" }}>#{realIdx + 1}</span>
-              <MoveIndicator move={u.move} size={10} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ fontSize: "18px" }}>{u.emoji || "⚽"}</span>
-                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: isMe ? GREEN : "#e0eaf8", fontWeight: isMe ? 700 : 400 }}>
-                  {u.name}
-                </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "14px 16px" }}>
+              <div style={{ minWidth: "32px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                <span style={{ fontSize: "16px", fontFamily: "'Bebas Neue', monospace", color: "#7ab8e0" }}>#{realIdx + 1}</span>
+                <MoveIndicator move={u.move} size={10} />
               </div>
-              <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "2px" }}>
-                🎯 {u.exactos} · 📏 {u.difGoles} · ✓ {u.parciales} · {u.count} total.
-                {u.qualPts > 0 ? ` · +${u.qualPts} clas.` : ""}
-                {u.specialPts > 0 ? ` · +${u.specialPts} esp.` : ""}
-                {u.koPts > 0 ? ` · +${u.koPts} elim.` : ""}
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "18px" }}>{u.emoji || "⚽"}</span>
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: isMe ? GREEN : "#e0eaf8", fontWeight: isMe ? 700 : 400 }}>{u.name}</span>
+                </div>
+                <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "2px" }}>
+                  🎯 {u.exactos} · 📏 {u.difGoles} · ✓ {u.parciales} · {u.count} eval. · toca para desglose {isOpen ? "▲" : "▼"}
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", lineHeight: 1 }}>{u.total}</div>
+                <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>PTS</div>
               </div>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "28px", color: "#e0eaf8", lineHeight: 1 }}>{u.total}</div>
-              <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif" }}>PTS</div>
-            </div>
+            {isOpen && <BreakdownPanel u={u} />}
           </div>
         );
       })}
@@ -5823,12 +5853,30 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, []);
+  const [myKoPickIds, setMyKoPickIds] = useState({});
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("knockout_picks").select("match_id").eq("user_id", user.id);
+      const m = {}; (data || []).forEach(x => { m[x.match_id] = true; });
+      setMyKoPickIds(m);
+    })();
+  }, [user.id]);
 
   // Grupos + eliminatoria juntos para "partidos de hoy"
   const koFixtures = buildKnockoutFixtures(matches, koResults);
   const todayMatches = [...matches, ...koFixtures]
     .filter(m => m.match_date === todayStr)
     .sort((a, b) => (a.match_time || "").localeCompare(b.match_time || ""));
+
+  // Puntos en juego hoy (solo partidos sin resultado aún)
+  const predIds = {};
+  predictions.forEach(p => { predIds[p.match_id] = true; });
+  const pendingToday = todayMatches.filter(m => m.result_home === null);
+  const ptsOf = m => m.ko ? (m.id === "M104" ? 15 : 10) : 5;  // KO: +5 pasa +5 marcador (final +10+5)
+  const stakeTotal = pendingToday.reduce((s, m) => s + ptsOf(m), 0);
+  const stakeMine = pendingToday.reduce((s, m) =>
+    s + ((m.ko ? myKoPickIds[m.id] : predIds[m.id]) ? ptsOf(m) : 0), 0);
+  const missingToday = pendingToday.filter(m => !(m.ko ? myKoPickIds[m.id] : predIds[m.id])).length;
 
   const [myRank, setMyRank] = useState(null);
 
@@ -5917,6 +5965,29 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: GREEN, boxShadow: `0 0 8px ${GREEN}`, animation: "pulse 1.5s infinite" }} />
             <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>PARTIDOS DE HOY</p>
           </div>
+          {stakeTotal > 0 && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "12px",
+              padding: "11px 14px", marginBottom: "10px",
+              background: "linear-gradient(135deg, rgba(79,195,247,0.10), rgba(52,211,153,0.06))",
+              border: `1px solid ${BORDER}`, borderRadius: "12px",
+            }}>
+              <span style={{ fontSize: "24px" }}>🎯</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "16px", color: "#e0eaf8", letterSpacing: "1px", lineHeight: 1.2 }}>
+                  HOY HAY <span style={{ color: GREEN }}>{stakeTotal} PTS</span> EN JUEGO
+                </div>
+                <div style={{ fontSize: "10px", color: "#a8d4f0", fontFamily: "'Inter', sans-serif", marginTop: "2px" }}>
+                  {stakeMine === stakeTotal
+                    ? `Puedes ganar los ${stakeMine} · todo pronosticado ✓`
+                    : stakeMine > 0
+                      ? `Tú optas a ${stakeMine} · te faltan ${missingToday} pronósticos`
+                      : `No optas a ninguno · rellena tus pronósticos`}
+                </div>
+              </div>
+              <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "26px", color: stakeMine === stakeTotal ? GREEN : "#ffd54f" }}>{stakeMine}</span>
+            </div>
+          )}
           {loadingData ? (
             <SkeletonRows count={2} height={60} />
           ) : todayMatches.length > 0 ? (
