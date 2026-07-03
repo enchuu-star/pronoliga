@@ -2550,6 +2550,7 @@ function CommunityView({ matches, user }) {
   (profiles || []).forEach(p => {
     const up = koPicksMap(koPicks.filter(x => x.user_id === p.id));
     koBreakdownByUser[p.id] = calcKnockoutBreakdownByMatch(up, koReal, koByGroup);
+    koUserBrackets[p.id] = buildKnockoutBracket(koByGroup, up).byId;
   });
   const koLockMap = {};
   (koLocks || []).forEach(l => { koLockMap[l.id] = l.locked; });
@@ -2591,46 +2592,64 @@ function CommunityView({ matches, user }) {
       (groups[adv] = groups[adv] || []).push(p);
     });
 
-    const ptsBadge = (bd) => {
-      if (!bd) return null; // cruce real aún sin resultado
-      const advLabel = m.id === "M104" ? "🏆 +10" : "✅ +5";
-      const markerLabel = bd.marker === 5 ? "🎯 +5" : bd.marker === 3 ? "📏 +3" : bd.marker === 1 ? "✓ +1" : null;
-      const chip = (txt, bg, col) => (
-        <span style={{ padding: "2px 7px", borderRadius: "10px", fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: bg, color: col, whiteSpace: "nowrap" }}>{txt}</span>
-      );
-      return (
-        <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-          {bd.advanced && chip(advLabel, "rgba(52,211,153,0.14)", "#34d399")}
-          {markerLabel && chip(markerLabel,
-            bd.marker === 5 ? GREEN_DIM : bd.marker === 3 ? "rgba(79,195,247,0.08)" : "rgba(255,193,7,0.1)",
-            bd.marker === 5 ? GREEN : bd.marker === 3 ? "#4fc3f7" : "#ffd54f")}
-          {!bd.advanced && bd.marker === 0 && chip("✗ +0", "rgba(255,82,82,0.08)", "#cc2222")}
-        </span>
-      );
-    };
+    const ptsBadge = (bd, mismatch) => {
+  const chip = (txt, bg, col) => (
+    <span style={{ padding: "2px 7px", borderRadius: "10px", fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: bg, color: col, whiteSpace: "nowrap" }}>{txt}</span>
+  );
+  const advLabel = m.id === "M104" ? "🏆 +10" : "✅ +5";
+  return (
+    <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+      {mismatch && chip("🔀 +0", "rgba(255,107,74,0.12)", "#ff8a5b")}
+      {bd?.advanced && chip(advLabel, "rgba(52,211,153,0.14)", "#34d399")}
+      {bd && !mismatch && bd.marker > 0 && chip(
+        bd.marker === 5 ? "🎯 +5" : bd.marker === 3 ? "📏 +3" : "✓ +1",
+        bd.marker === 5 ? GREEN_DIM : bd.marker === 3 ? "rgba(79,195,247,0.08)" : "rgba(255,193,7,0.1)",
+        bd.marker === 5 ? GREEN : bd.marker === 3 ? "#4fc3f7" : "#ffd54f")}
+      {bd && !mismatch && !bd.advanced && bd.marker === 0 && chip("✗ +0", "rgba(255,82,82,0.08)", "#cc2222")}
+    </span>
+  );
+};
 
-    const predRow = (pred) => {
-      const isMe = pred.user_id === user.id;
-      const bd = koBreakdownByUser[pred.user_id]?.[m.id];
-      return (
-        <div key={pred.id ?? (pred.match_id + pred.user_id)} style={{
-          display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px",
-          background: isMe ? GREEN_DIM : "rgba(255,255,255,0.02)",
-          border: isMe ? "1px solid rgba(79,195,247,0.3)" : "1px solid transparent",
-          borderLeft: isMe ? `3px solid ${GREEN}` : "3px solid transparent",
-          borderRadius: "6px", marginBottom: "3px",
+const predRow = (pred) => {
+  const isMe = pred.user_id === user.id;
+  const bd = koBreakdownByUser[pred.user_id]?.[m.id];
+  const ub = koUserBrackets[pred.user_id]?.[m.id];   // cruce que pronosticó ÉL
+  const userFixtureKnown = ub && !ub.home.placeholder && !ub.away.placeholder;
+  const realFixtureKnown = !m.homePlaceholder && !m.awayPlaceholder;
+  const mismatch = userFixtureKnown && realFixtureKnown &&
+    (ub.home.name !== m.home || ub.away.name !== m.away);
+  return (
+    <div key={pred.id ?? (pred.match_id + pred.user_id)} style={{
+      display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px",
+      background: isMe ? GREEN_DIM : "rgba(255,255,255,0.02)",
+      border: isMe ? "1px solid rgba(79,195,247,0.3)" : "1px solid transparent",
+      borderLeft: isMe ? `3px solid ${GREEN}` : "3px solid transparent",
+      borderRadius: "6px", marginBottom: "3px",
+    }}>
+      <span style={{ fontSize: "12px", color: isMe ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1, fontWeight: isMe ? 700 : 400, display: "flex", alignItems: "center", gap: "4px" }}>
+        {isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
+        {getName(pred.user_id)}
+      </span>
+      {/* Cruce pronosticado por el usuario, con banderitas */}
+      {userFixtureKnown && (
+        <span title={`Su cruce: ${ub.home.name} vs ${ub.away.name}`} style={{
+          display: "flex", alignItems: "center", gap: "2px",
+          padding: "1px 6px", borderRadius: "8px",
+          background: mismatch ? "rgba(255,107,74,0.10)" : "rgba(255,255,255,0.04)",
+          border: `1px solid ${mismatch ? "rgba(255,107,74,0.35)" : "transparent"}`,
         }}>
-          <span style={{ fontSize: "12px", color: isMe ? GREEN : "#c0d8f0", fontFamily: "'Inter', sans-serif", flex: 1, fontWeight: isMe ? 700 : 400, display: "flex", alignItems: "center", gap: "4px" }}>
-            {isMe && <span style={{ fontSize: "9px", color: GREEN }}>▶</span>}
-            {getName(pred.user_id)}
-          </span>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>
-            {pred.home_goals}-{pred.away_goals}
-          </span>
-          {ptsBadge(bd)}
-        </div>
-      );
-    };
+          <span style={{ fontSize: "13px" }}>{ub.home.flag}</span>
+          <span style={{ fontSize: "8px", color: "#7ab8e0" }}>-</span>
+          <span style={{ fontSize: "13px" }}>{ub.away.flag}</span>
+        </span>
+      )}
+      <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: "#e0eefa" }}>
+        {pred.home_goals}-{pred.away_goals}
+      </span>
+      {ptsBadge(bd, mismatch)}
+    </div>
+  );
+};
 
     const bloque = (teamName, lista, accent) => {
       if (!lista.length) return null;
