@@ -618,6 +618,67 @@ function calcKnockoutBreakdownByMatch(userPicks, realPicks, standingsByGroup) {
   return out;
 }
 
+// ¿Puede el equipo T todavía aparecer (jugar) en el cruce id del cuadro real?
+function koCanStillAppear(realById, id, team) {
+  const m = realById[id];
+  if (!m || !team) return false;
+  // Cruce con los dos equipos ya fijados
+  if (!m.home.placeholder && !m.away.placeholder)
+    return m.home.name === team || m.away.name === team;
+  if (!m.from) return m.home.name === team || m.away.name === team; // R32
+  // 3er puesto: lo juegan los PERDEDORES de las semis
+  if (id === "M103") {
+    return m.from.some(sf => {
+      const s = realById[sf];
+      if (s?.winner) return s.loser?.name === team;   // semi decidida → perdedor conocido
+      return koCanStillAppear(realById, sf, team);     // semi abierta → basta con poder llegar
+    });
+  }
+  return m.from.some(f => koCanStillWin(realById, f, team));
+}
+
+// ¿Puede T todavía GANAR el cruce id? (si el cruce está abierto,
+// cualquiera que pueda llegar puede ganarlo)
+function koCanStillWin(realById, id, team) {
+  const m = realById[id];
+  if (!m || !team) return false;
+  if (m.winner) return m.winner.name === team;
+  return koCanStillAppear(realById, id, team);
+}
+
+// Puntos de eliminatoria que un usuario AÚN puede ganar
+function calcKnockoutPotential(userPicks, realB, standingsByGroup) {
+  const userB = buildKnockoutBracket(standingsByGroup, userPicks);
+  let pot = 0;
+  KO_ALL_MATCHES.forEach(id => {
+    const rm = realB.byId[id], um = userB.byId[id];
+    if (!rm || !um) return;
+    if (rm.winner) return; // ya decidido: esos puntos ya están (o no) en el total
+
+    // +5/+10 por acertar quién pasa: solo si su ganador aún puede ganar este cruce
+    const userW = um.winner?.name || null;
+    if (userW && koCanStillWin(realB.byId, id, userW)) pot += (id === "M104") ? 10 : 5;
+
+    // +5 de marcador: solo si su cruce aún puede coincidir con el real
+    const pick = userPicks[id];
+    if (pick && pick.h != null && pick.a != null &&
+        !um.home.placeholder && !um.away.placeholder) {
+      const sideOk = (side) => {
+        const rt = side === "home" ? rm.home : rm.away;
+        const ut = side === "home" ? um.home.name : um.away.name;
+        if (!rt.placeholder) return rt.name === ut;      // equipo real ya fijado
+        if (!rm.from) return false;
+        const fid = rm.from[side === "home" ? 0 : 1];
+        return id === "M103"
+          ? koCanStillAppear(realB.byId, fid, ut)         // puede llegar a esa semi
+          : koCanStillWin(realB.byId, fid, ut);           // puede ganar el cruce previo
+      };
+      if (sideOk("home") && sideOk("away")) pot += 5;
+    }
+  });
+  return pot;
+}
+
 // ============================================================
 // FECHAS Y SEDES REALES DE LA ELIMINATORIA (hora España)
 // ============================================================
@@ -3556,6 +3617,8 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
     const koReal = koPicksMap(koResults || []);
     const koByGroup = {};
     Object.keys(GROUPS).forEach(g => { koByGroup[g] = calcRealStandings(g, matches); });
+    const realB = buildKnockoutBracket(koByGroup, koReal);
+    const tournamentOver = !!realB.byId["M104"]?.winner;
     const r = (profiles || []).map(p => {
       const myPreds = (preds || []).filter(x => x.user_id === p.id && x.points !== null);
       const predMap = {};
@@ -3563,11 +3626,19 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
       const qualPts = calcQualifierPoints(matches, predMap);
       const mySpecial = (specialPreds || []).find(x => x.user_id === p.id);
       // ⬇️ desglose por partido (lo reutilizamos para las flechas)
-      const koBd = calcKnockoutBreakdownByMatch(
-        koPicksMap((koPicks || []).filter(x => x.user_id === p.id)), koReal, koByGroup
-      );
+      const myKoPicks = koPicksMap((koPicks || []).filter(x => x.user_id === p.id));
+      const koBd = calcKnockoutBreakdownByMatch(myKoPicks, koReal, koByGroup);
       const koPts = Object.values(koBd).reduce((s, b) => s + b.total, 0);
       const specialPts = mySpecial ? (mySpecial.top_scorer_points || 0) + (mySpecial.best_player_points || 0) : 0;
+    
+      // ── AÚN EN JUEGO ──
+      const koPot = calcKnockoutPotential(myKoPicks, realB, koByGroup);
+      const groupPot = matches.filter(m => m.grp && m.result_home === null && predMap[m.id]).length * 5;
+      const spPot = tournamentOver ? 0 :
+        ((mySpecial?.top_scorer && !(mySpecial.top_scorer_points > 0)) ? 10 : 0) +
+        ((mySpecial?.best_player && !(mySpecial.best_player_points > 0)) ? 10 : 0);
+      const potential = koPot + groupPot + spPot;
+    
       return {
         ...p,
         total: myPreds.reduce((s, x) => s + (x.points || 0), 0) + qualPts + specialPts + koPts,
@@ -3575,7 +3646,7 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
         difGoles: myPreds.filter(x => x.points === 3).length,
         parciales: myPreds.filter(x => x.points === 1).length,
         count: myPreds.length,
-        qualPts, specialPts, koPts, koBd,
+        qualPts, specialPts, koPts, koBd, potential,
       };
     }).sort((a, b) => b.total - a.total);
 
@@ -3673,6 +3744,16 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
             </span>
           </div>
         ))}
+          {/* Aún en juego */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "10px 0 4px", paddingTop: "8px", borderTop: `1px dashed ${BORDER}` }}>
+            <span style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", width: "104px", flexShrink: 0 }}>🔮 Aún en juego</span>
+            <span style={{ flex: 1, fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif" }}>
+              {u.potential > 0 ? `puede llegar a ${u.total + u.potential} pts` : "sin puntos pendientes"}
+            </span>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: u.potential > 0 ? "#c084fc" : "#7ab8e0", minWidth: "34px", textAlign: "right" }}>
+              {u.potential > 0 ? `+${u.potential}` : "0"}
+            </span>
+          </div>
         <button onClick={() => goToProfile(u.id)} style={{
           width: "100%", marginTop: "6px", padding: "8px",
           border: `1px solid ${BORDER}`, borderRadius: "8px",
