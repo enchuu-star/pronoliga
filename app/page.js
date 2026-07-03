@@ -2547,6 +2547,7 @@ function CommunityView({ matches, user }) {
   Object.keys(GROUPS).forEach(g => { koByGroup[g] = calcRealStandings(g, matches); });
   const koReal = koPicksMap(koResults);
   const koBreakdownByUser = {};
+  const koUserBrackets = {};
   (profiles || []).forEach(p => {
     const up = koPicksMap(koPicks.filter(x => x.user_id === p.id));
     koBreakdownByUser[p.id] = calcKnockoutBreakdownByMatch(up, koReal, koByGroup);
