@@ -2656,22 +2656,22 @@ function CommunityView({ matches, user }) {
     });
 
     const ptsBadge = (bd, mismatch) => {
-  const chip = (txt, bg, col) => (
-    <span style={{ padding: "2px 7px", borderRadius: "10px", fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: bg, color: col, whiteSpace: "nowrap" }}>{txt}</span>
-  );
-  const advLabel = m.id === "M104" ? "🏆 +10" : "✅ +5";
-  return (
-    <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-      {mismatch && chip("🔀 +0", "rgba(255,107,74,0.12)", "#ff8a5b")}
-      {bd?.advanced && chip(advLabel, "rgba(52,211,153,0.14)", "#34d399")}
-      {bd && !mismatch && bd.marker > 0 && chip(
-        bd.marker === 5 ? "🎯 +5" : bd.marker === 3 ? "📏 +3" : "✓ +1",
-        bd.marker === 5 ? GREEN_DIM : bd.marker === 3 ? "rgba(79,195,247,0.08)" : "rgba(255,193,7,0.1)",
-        bd.marker === 5 ? GREEN : bd.marker === 3 ? "#4fc3f7" : "#ffd54f")}
-      {bd && !mismatch && !bd.advanced && bd.marker === 0 && chip("✗ +0", "rgba(255,82,82,0.08)", "#cc2222")}
-    </span>
-  );
-};
+      const chip = (txt, bg, col) => (
+        <span style={{ padding: "2px 7px", borderRadius: "10px", fontSize: "10px", fontFamily: "'Inter', sans-serif", fontWeight: 700, background: bg, color: col, whiteSpace: "nowrap" }}>{txt}</span>
+      );
+      const advLabel = m.id === "M104" ? "🏆 +10" : "✅ +5";
+      return (
+        <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+          {mismatch && chip("🔀 +0", "rgba(255,107,74,0.12)", "#ff8a5b")}
+          {bd?.advanced && chip(advLabel, "rgba(52,211,153,0.14)", "#34d399")}
+          {bd && !mismatch && bd.marker > 0 && chip(
+            bd.marker === 5 ? "🎯 +5" : bd.marker === 3 ? "📏 +3" : "✓ +1",
+            bd.marker === 5 ? GREEN_DIM : bd.marker === 3 ? "rgba(79,195,247,0.08)" : "rgba(255,193,7,0.1)",
+            bd.marker === 5 ? GREEN : bd.marker === 3 ? "#4fc3f7" : "#ffd54f")}
+          {bd && !mismatch && bd.marker === 0 && chip("✗ +0", "rgba(255,82,82,0.08)", "#cc2222")}   {/* ⬅️ quitado !bd.advanced */}
+        </span>
+      );
+    };
 
 const predRow = (pred) => {
   const isMe = pred.user_id === user.id;
