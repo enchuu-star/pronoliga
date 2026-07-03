@@ -3543,6 +3543,7 @@ function RankingView({ matches, user, setView, setViewProfileId }) {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedId, setExpandedId] = useState(null); 
 
   const loadRanking = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
@@ -5979,7 +5980,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
                 </div>
                 <div style={{ fontSize: "10px", color: "#a8d4f0", fontFamily: "'Inter', sans-serif", marginTop: "2px" }}>
                   {stakeMine === stakeTotal
-                    ? `Puedes ganar los ${stakeMine} · todo pronosticado ✓`
+                    ? `Puedes ganar los ${stakeMine}`
                     : stakeMine > 0
                       ? `Tú optas a ${stakeMine} · te faltan ${missingToday} pronósticos`
                       : `No optas a ninguno · rellena tus pronósticos`}
