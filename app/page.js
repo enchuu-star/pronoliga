@@ -199,6 +199,7 @@ const TV_BY_MATCH = {
   "Paraguay|Francia": "La 1 + DAZN",
   "Brasil|Noruega": "La 1 + DAZN",
   "Portugal|España": "La 1 + DAZN",
+  "Argentina|Egipto": "La 1 + DAZN",
 };
 // Devuelve el canal de un partido. Por defecto DAZN (emite todos).
 function tvFor(match) {
@@ -11872,11 +11873,9 @@ function SimulatorView({ user, matches }) {
   const optimizeIdeal = () => {
     if (!me || pending.length === 0) return;
 
-    // Brackets de cada usuario (sus picks son fijos)
     const userBCache = {};
     rows.forEach(u => { userBCache[u.id] = buildKnockoutBracket(sbg, u.myKo).byId; });
 
-    // Puntos KO de un usuario dado un cuadro "real" hipotético
     const koPtsWith = (uid, realById) => {
       let pts = 0;
       KO_ALL_MATCHES.forEach(id => {
@@ -11895,7 +11894,6 @@ function SimulatorView({ user, matches }) {
       return pts;
     };
 
-    // Evalúa un escenario completo: posición, margen sobre el mejor rival, mis puntos
     const evaluate = (asg) => {
       const rb = buildKnockoutBracket(sbg, { ...realPicks, ...asg }).byId;
       const totals = rows.map(u => ({ id: u.id, t: u.base + koPtsWith(u.id, rb) }));
@@ -11910,7 +11908,6 @@ function SimulatorView({ user, matches }) {
       a.margin !== b.margin ? a.margin > b.margin :
       a.mine > b.mine;
 
-    // Candidatos de resultado para un cruce, evitando regalar puntos a rivales
     const candidatesFor = (id, m) => {
       const home = m.home.name, away = m.away.name;
       const rivalPicks = rows.filter(u => u.id !== me.id).map(u => {
@@ -11923,7 +11920,7 @@ function SimulatorView({ user, matches }) {
       const diffsFor = (sign) => new Set(
         rivalPicks.filter(p => Math.sign(p.h - p.a) === sign).map(p => p.h - p.a)
       );
-      const safeWin = (side) => { // 1 = gana home, -1 = gana away
+      const safeWin = (side) => {
         const diffs = diffsFor(side);
         for (let d = 1; d <= 12; d++) {
           if (diffs.has(side * d)) continue;
@@ -11937,47 +11934,62 @@ function SimulatorView({ user, matches }) {
         return { h: 10, a: 10, adv: advName };
       };
       const cands = [];
-      // Mi marcador exacto (si mi cruce coincide con el real)
       const mm = userBCache[me.id][id];
       if (mm && !mm.home.placeholder && !mm.away.placeholder &&
           mm.home.name === home && mm.away.name === away && mm.h != null && mm.a != null) {
-        const adv = mm.h === mm.a ? (mm.winner?.name || home) : null;
-        cands.push({ h: mm.h, a: mm.a, adv });
+        cands.push({ h: mm.h, a: mm.a, adv: mm.h === mm.a ? (mm.winner?.name || home) : null });
       }
+      cands.push({ h: 1, a: 0, adv: null }, { h: 0, a: 1, adv: null }); // victorias simples
       cands.push(safeWin(1), safeWin(-1), safeDraw(home), safeDraw(away));
       return cands;
     };
 
-    // Completa el resto del cuadro con un escenario por defecto (mi ganador, 1-0 seguro)
-    const completeFrom = (asg, startIdx) => {
-      const out = { ...asg };
-      for (let i = startIdx; i < pending.length; i++) {
-        const id = pending[i];
-        if (out[id]) continue;
+    // Reconstruye un escenario en cascada: mantiene cada asignación si el cruce
+    // sigue siendo válido; si no, cae a MI pick (marcador exacto o mi ganador 1-0).
+    const normalize = (asg) => {
+      const out = {};
+      pending.forEach(id => {
         const b = buildKnockoutBracket(sbg, { ...realPicks, ...out }).byId[id];
-        if (!b || b.home.placeholder || b.away.placeholder) continue;
-        const myW = userBCache[me.id][id]?.winner?.name;
-        if (myW === b.away.name) out[id] = { h: 0, a: 1, adv: null };
-        else out[id] = { h: 1, a: 0, adv: null };
-      }
+        if (!b || b.home.placeholder || b.away.placeholder) return;
+        const c = asg[id];
+        const advOk = !c || c.h !== c.a || (c.adv === b.home.name || c.adv === b.away.name);
+        if (c && advOk && !(c.h === c.a && !c.adv)) { out[id] = c; return; }
+        const um = userBCache[me.id][id];
+        const same = um && !um.home.placeholder && !um.away.placeholder &&
+          um.home.name === b.home.name && um.away.name === b.away.name;
+        if (same && um.h != null && um.a != null) {
+          out[id] = { h: um.h, a: um.a, adv: um.h === um.a ? (um.winner?.name || b.home.name) : null };
+        } else {
+          const myW = um?.winner?.name;
+          out[id] = myW === b.away.name ? { h: 0, a: 1, adv: null } : { h: 1, a: 0, adv: null };
+        }
+      });
       return out;
     };
 
-    // Greedy en cascada: fija cada cruce probando candidatos + rollout del resto
-    const chosen = {};
-    for (let i = 0; i < pending.length; i++) {
-      const id = pending[i];
-      const b = buildKnockoutBracket(sbg, { ...realPicks, ...chosen }).byId[id];
-      if (!b || b.home.placeholder || b.away.placeholder) continue;
-      let best = null, bestSc = null;
-      for (const c of candidatesFor(id, b)) {
-        if (!c || (c.h === c.a && !c.adv)) continue;
-        const sc = evaluate(completeFrom({ ...chosen, [id]: c }, i + 1));
-        if (!bestSc || better(sc, bestSc)) { bestSc = sc; best = c; }
+    // 1) BASE GARANTIZADA: el escenario clásico (mis picks). Nunca quedarás
+    //    peor que esto porque solo se aceptan cambios que mejoren.
+    let cur = normalize({});
+    let curSc = evaluate(cur);
+
+    // 2) Hill-climbing: probar candidatos cruce a cruce sobre el escenario
+    //    COMPLETO; aceptar solo si mejora posición/margen/puntos.
+    for (let pass = 0; pass < 3; pass++) {
+      let improved = false;
+      for (const id of pending) {
+        const b = buildKnockoutBracket(sbg, { ...realPicks, ...cur }).byId[id];
+        if (!b || b.home.placeholder || b.away.placeholder) continue;
+        for (const c of candidatesFor(id, b)) {
+          if (!c || (c.h === c.a && !c.adv)) continue;
+          const trial = normalize({ ...cur, [id]: c });
+          const sc = evaluate(trial);
+          if (better(sc, curSc)) { cur = trial; curSc = sc; improved = true; }
+        }
       }
-      if (best) chosen[id] = best;
+      if (!improved) break;
     }
-    setSims(chosen);
+
+    setSims(cur);
   };
 
   // ── Editor de un cruce simulado ──
