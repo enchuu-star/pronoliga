@@ -11855,6 +11855,8 @@ function SimulatorView({ user, matches }) {
   const simOrder = [...rows].sort((a, b) => b.sim - a.sim);
 
   const me = rows.find(r => r.id === user.id);
+  // Desglose de MIS puntos por partido con la simulación aplicada
+  const myBd = me ? calcKnockoutBreakdownByMatch(me.myKo, merged, sbg) : {};
   const myB = me ? buildKnockoutBracket(sbg, me.myKo) : null;
 
   // Qué necesita el usuario según SU cuadro
@@ -12094,7 +12096,14 @@ function SimulatorView({ user, matches }) {
       )}
 
       {/* ===== PARTIDOS PENDIENTES ===== */}
-      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>PARTIDOS POR SIMULAR</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "10px" }}>
+        <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>PARTIDOS POR SIMULAR</p>
+        {me && simCount > 0 && (
+          <span style={{ fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700, color: me.sim - me.now > 0 ? "#34d399" : "#7ab8e0" }}>
+            simulación: {me.sim - me.now > 0 ? `+${me.sim - me.now}` : me.sim - me.now} pts para ti
+          </span>
+        )}
+      </div>
       {pending.length === 0 ? (
         <EmptyState emoji="🏁" title="NO QUEDA NADA POR JUGAR" text="Todos los cruces ya tienen resultado real. El torneo ha terminado." />
       ) : (
@@ -12122,6 +12131,24 @@ function SimulatorView({ user, matches }) {
                 <span style={{ flex: 1, fontSize: "10px", color: m?.away.placeholder ? "#7ab8e0" : "#e0eaf8", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m?.away.placeholder ? m.away.name : koAbbr(m.away.name)}</span>
                 <span style={{ fontSize: "16px" }}>{m?.away.flag}</span>
                 {s && s.h === s.a && s.adv && <span style={{ fontSize: "8px", color: "#c084fc", fontFamily: "'Inter', sans-serif" }}>p: {koAbbr(s.adv)}</span>}
+                {s && (() => {
+                  const bd = myBd[id];
+                  const pts = bd ? bd.total : 0;
+                  const detail = bd
+                    ? `${bd.advanced ? (id === "M104" ? "🏆+10 campeón" : "✅+5 pasa") : "✗ no pasa"}${bd.marker > 0 ? ` · ${bd.marker === 5 ? "🎯+5" : bd.marker === 3 ? "📏+3" : "✓+1"} marcador` : ""}`
+                    : "sin puntos";
+                  return (
+                    <span title={detail} style={{
+                      padding: "3px 8px", borderRadius: "10px", flexShrink: 0,
+                      fontSize: "11px", fontFamily: "'Inter', sans-serif", fontWeight: 700,
+                      background: pts > 0 ? "rgba(52,211,153,0.14)" : "rgba(255,82,82,0.08)",
+                      color: pts > 0 ? "#34d399" : "#cc2222",
+                      minWidth: "34px", textAlign: "center",
+                    }}>
+                      {pts > 0 ? `+${pts}` : "+0"}
+                    </span>
+                  );
+                })()}
               </div>
             );
           })}
