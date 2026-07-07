@@ -6171,6 +6171,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
         {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", GREEN, "rgba(79,195,247,0.15)", "rgba(79,195,247,0.04)", "games")}
         {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#e0eefa", "rgba(79,195,247,0.15)", "rgba(255,255,255,0.03)", "profile")}
         {navCard("🏟️", "ELIMINATORIAS", "tu cuadro · pronósticos", "#34d399", "rgba(52,211,153,0.2)", "rgba(52,211,153,0.05)", "knockout")}
+        {simulatorEnabled(user) && navCard("🧪", "SIMULADOR", "¿y si...? · beta", "#c084fc", "rgba(192,132,252,0.2)", "rgba(192,132,252,0.05)", "simulator")}
         {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#cc2222", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
         {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
         {user.role === "admin" && navCard("⚙️", "RESULTADOS ELIM.", "cuadro real · admin", "#ffd54f", "rgba(255,213,79,0.2)", "rgba(255,213,79,0.05)", "knockout_results")}
@@ -11756,6 +11757,359 @@ function useUsageTracker(user) {
 }
 
 // ============================================================
+// SIMULADOR — prueba resultados y mira cómo quedaría el ranking
+// 🔒 BETA: de momento solo visible para Urien
+// ============================================================
+function simulatorEnabled(user) {
+  if (!user) return false;
+  const n = (user.name || "").toLowerCase();
+  const e = (user.email || "").toLowerCase();
+  return n.includes("urien") || e.includes("urien");
+  // Para abrirlo a todos: return true;
+}
+
+const SIM_ROUND_RANK = { R32: 0, R16: 1, QF: 2, SF: 3, THIRD: 4, FINAL: 5 };
+
+function SimulatorView({ user, matches }) {
+  const [profiles, setProfiles] = useState([]);
+  const [allPreds, setAllPreds] = useState([]);
+  const [specials, setSpecials] = useState([]);
+  const [koPicksAll, setKoPicksAll] = useState([]);
+  const [koResults, setKoResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sims, setSims] = useState({});        // { M97: {h,a,adv} } — solo en memoria
+  const [editing, setEditing] = useState(null);
+  const [hIn, setHIn] = useState("");
+  const [aIn, setAIn] = useState("");
+  const [advSel, setAdvSel] = useState(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data: profs } = await supabase.from("profiles").select("*").eq("role", "user");
+      const { data: preds } = await supabase.from("predictions").select("*").range(0, 99999);
+      const { data: sp } = await supabase.from("special_predictions").select("*");
+      const { data: kp } = await supabase.from("knockout_picks").select("*").range(0, 99999);
+      const { data: kr } = await supabase.from("knockout_results").select("*");
+      setProfiles(profs || []); setAllPreds(preds || []); setSpecials(sp || []);
+      setKoPicksAll(kp || []); setKoResults(kr || []);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div className="skeleton" style={{ width: "50%", height: "12px", marginBottom: "16px" }} />
+      <SkeletonRows count={5} height={70} />
+    </div>
+  );
+
+  // ── Cálculos base ──
+  const sbg = {};
+  Object.keys(GROUPS).forEach(g => { sbg[g] = calcRealStandings(g, matches); });
+  const realPicks = koPicksMap(koResults);
+  const realB = buildKnockoutBracket(sbg, realPicks);
+  const merged = { ...realPicks, ...sims };
+  const simB = buildKnockoutBracket(sbg, merged);
+
+  // Cruces pendientes (sin ganador real), en orden de ronda y fecha
+  const pending = KO_ALL_MATCHES
+    .filter(id => !realB.byId[id]?.winner)
+    .sort((x, y) =>
+      (SIM_ROUND_RANK[KO_ROUND_OF[x]] - SIM_ROUND_RANK[KO_ROUND_OF[y]]) ||
+      ((KO_DATES[x]?.d + KO_DATES[x]?.t) || "").localeCompare((KO_DATES[y]?.d + KO_DATES[y]?.t) || "")
+    );
+
+  // Mapa de descendientes para invalidar sims al cambiar un cruce anterior
+  const childMap = {};
+  ["R16", "QF", "SF", "FINAL", "THIRD"].forEach(rk =>
+    KO_TREE[rk].forEach(d => d.from.forEach(s => { (childMap[s] = childMap[s] || []).push(d.match); }))
+  );
+  const collectDesc = (id, acc = new Set()) => {
+    (childMap[id] || []).forEach(c => { if (!acc.has(c)) { acc.add(c); collectDesc(c, acc); } });
+    return acc;
+  };
+
+  // Puntos fijos (grupos + clasificados + especiales) por usuario
+  const baseOf = (p) => {
+    const mine = allPreds.filter(x => x.user_id === p.id);
+    const predMap = {}; mine.forEach(x => { predMap[x.match_id] = x; });
+    const groupPts = mine.filter(x => x.points != null).reduce((s, x) => s + x.points, 0);
+    const qualPts = calcQualifierPoints(matches, predMap);
+    const s = specials.find(x => x.user_id === p.id);
+    const spPts = s ? (s.top_scorer_points || 0) + (s.best_player_points || 0) : 0;
+    return groupPts + qualPts + spPts;
+  };
+
+  const rows = profiles.map(p => {
+    const myKo = koPicksMap(koPicksAll.filter(x => x.user_id === p.id));
+    const base = baseOf(p);
+    const now = base + calcKnockoutPoints(myKo, realPicks, sbg);
+    const sim = base + calcKnockoutPoints(myKo, merged, sbg);
+    const pot = calcKnockoutPotential(myKo, realB, sbg);
+    return { ...p, now, sim, pot, max: now + pot, myKo };
+  });
+  const nowOrder = [...rows].sort((a, b) => b.now - a.now);
+  const nowPos = {}; nowOrder.forEach((u, i) => { nowPos[u.id] = i + 1; });
+  const simOrder = [...rows].sort((a, b) => b.sim - a.sim);
+
+  const me = rows.find(r => r.id === user.id);
+  const myB = me ? buildKnockoutBracket(sbg, me.myKo) : null;
+
+  // Qué necesita el usuario según SU cuadro
+  const needs = me ? pending.map(id => {
+    const w = myB.byId[id]?.winner?.name;
+    if (!w) return null;
+    return { id, w, dead: !koCanStillWin(realB.byId, id, w) };
+  }).filter(Boolean) : [];
+
+  const rivals = me ? rows.filter(r => r.id !== me.id) : [];
+  const bestRivalNow = rivals.length ? Math.max(...rivals.map(r => r.now)) : 0;
+  const mathAlive = me ? me.max >= bestRivalNow : false;
+
+  // Cargar "mi escenario ideal" en el simulador
+  const loadIdeal = () => {
+    if (!me) return;
+    const next = {};
+    pending.forEach(id => {
+      const stepMerged = { ...realPicks, ...next };
+      const stepB = buildKnockoutBracket(sbg, stepMerged);
+      const m = stepB.byId[id];
+      if (!m || m.home.placeholder || m.away.placeholder) return;
+      const um = myB.byId[id];
+      const want = um?.winner?.name || null;
+      const pick = me.myKo[id];
+      const sameTeams = pick && um && !um.home.placeholder && !um.away.placeholder &&
+        um.home.name === m.home.name && um.away.name === m.away.name;
+      if (sameTeams && pick.h != null && pick.a != null) {
+        next[id] = { h: pick.h, a: pick.a, adv: pick.h === pick.a ? pick.adv : null };
+      } else if (want && (m.home.name === want || m.away.name === want)) {
+        next[id] = m.home.name === want ? { h: 1, a: 0, adv: null } : { h: 0, a: 1, adv: null };
+      } else {
+        next[id] = { h: 1, a: 0, adv: null };
+      }
+    });
+    setSims(next);
+  };
+
+  // ── Editor de un cruce simulado ──
+  const openEdit = (id) => {
+    const m = simB.byId[id];
+    if (!m || m.home.placeholder || m.away.placeholder) return;
+    setEditing(id);
+    const s = sims[id];
+    setHIn(s?.h != null ? String(s.h) : "");
+    setAIn(s?.a != null ? String(s.a) : "");
+    setAdvSel(s?.adv || null);
+    setErr("");
+  };
+  const saveSim = () => {
+    const hh = hIn === "" ? null : parseInt(hIn);
+    const aa = aIn === "" ? null : parseInt(aIn);
+    if (hh == null || aa == null) { setErr("Mete el marcador completo"); return; }
+    if (hh === aa && !advSel) { setErr("Empate: elige quién pasa"); return; }
+    const next = { ...sims };
+    collectDesc(editing).forEach(d => delete next[d]);
+    next[editing] = { h: hh, a: aa, adv: hh === aa ? advSel : null };
+    setSims(next); setEditing(null);
+  };
+  const clearSim = () => {
+    const next = { ...sims };
+    delete next[editing];
+    collectDesc(editing).forEach(d => delete next[d]);
+    setSims(next); setEditing(null);
+  };
+
+  const simCount = Object.keys(sims).length;
+  const editM = editing ? simB.byId[editing] : null;
+
+  return (
+    <div style={{ animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+        <p style={{ fontSize: "9px", color: "#c084fc", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>🧪 SIMULADOR · BETA</p>
+        {simCount > 0 && (
+          <button onClick={() => setSims({})} style={{ padding: "5px 10px", border: "1px solid rgba(255,107,74,0.3)", borderRadius: "7px", background: "rgba(255,107,74,0.08)", color: "#ff6b4a", fontFamily: "'Inter', sans-serif", fontSize: "10px", cursor: "pointer" }}>
+            ✕ Borrar simulación ({simCount})
+          </button>
+        )}
+      </div>
+      <p style={{ fontSize: "10px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", lineHeight: 1.6, marginBottom: "16px" }}>
+        Toca un partido pendiente y mete un resultado hipotético. Nada se guarda: es solo para ver cómo quedaría el ranking. Los cruces posteriores se van rellenando en cascada.
+      </p>
+
+      {/* ===== ¿QUÉ NECESITO PARA GANAR? ===== */}
+      {me && (
+        <div style={{ background: CARD, border: "1px solid rgba(192,132,252,0.3)", borderRadius: "12px", padding: "16px", marginBottom: "18px" }}>
+          <p style={{ fontSize: "9px", color: "#c084fc", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "10px" }}>🏆 ¿QUÉ NECESITAS PARA GANAR LA PORRA?</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "12px" }}>
+            {[
+              { l: "AHORA", v: me.now, c: "#e0eaf8" },
+              { l: "AÚN EN JUEGO", v: `+${me.pot}`, c: "#c084fc" },
+              { l: "TU MÁXIMO", v: me.max, c: GREEN },
+            ].map(s => (
+              <div key={s.l} style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${BORDER}`, borderRadius: "9px", padding: "10px 6px", textAlign: "center" }}>
+                <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "24px", color: s.c, lineHeight: 1 }}>{s.v}</div>
+                <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", letterSpacing: "1px", marginTop: "3px" }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding: "10px 12px", borderRadius: "9px", marginBottom: "12px", background: mathAlive ? "rgba(52,211,153,0.08)" : "rgba(255,107,74,0.08)", border: `1px solid ${mathAlive ? "rgba(52,211,153,0.3)" : "rgba(255,107,74,0.3)"}` }}>
+            <span style={{ fontSize: "11px", fontFamily: "'Inter', sans-serif", color: mathAlive ? "#34d399" : "#ff6b4a", fontWeight: 700 }}>
+              {mathAlive
+                ? `✅ Sigues vivo: tu máximo (${me.max}) alcanza al líder actual (${bestRivalNow}). Ojo: los rivales también pueden sumar.`
+                : `❌ Matemáticamente eliminado: aunque aciertes todo (${me.max}), no alcanzas los ${bestRivalNow} pts que ya tiene el líder.`}
+            </span>
+          </div>
+
+          {mathAlive && needs.length > 0 && (
+            <>
+              <p style={{ fontSize: "9px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px" }}>SEGÚN TU CUADRO, NECESITAS QUE PASEN:</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "12px" }}>
+                {needs.map(n => {
+                  const t = getTeam(n.w);
+                  return (
+                    <div key={n.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 10px", borderRadius: "7px", background: n.dead ? "rgba(255,107,74,0.06)" : "rgba(255,255,255,0.03)", border: `1px solid ${n.dead ? "rgba(255,107,74,0.25)" : BORDER}`, opacity: n.dead ? 0.6 : 1 }}>
+                      <span style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Bebas Neue', monospace", minWidth: "36px" }}>{n.id}</span>
+                      <span style={{ fontSize: "9px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif", minWidth: "78px" }}>{KO_ROUND_NAME[KO_ROUND_OF[n.id]]}</span>
+                      <span style={{ fontSize: "14px" }}>{t.flag}</span>
+                      <span style={{ flex: 1, fontSize: "11px", color: n.dead ? "#ff8a5b" : "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>
+                        {n.w} {n.id === "M104" ? "🏆 campeón" : "gana"}
+                      </span>
+                      {n.dead && <span style={{ fontSize: "9px", color: "#ff6b4a", fontFamily: "'Inter', sans-serif" }}>💀 ya imposible</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <button onClick={loadIdeal} disabled={pending.length === 0} className="tappable" style={{ width: "100%", padding: "11px", border: "none", borderRadius: "9px", background: "linear-gradient(135deg,#c084fc,#7c3aed)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 800, letterSpacing: "2px", cursor: "pointer" }}>
+            🎯 CARGAR MI ESCENARIO IDEAL EN EL SIMULADOR
+          </button>
+        </div>
+      )}
+
+      {/* ===== PARTIDOS PENDIENTES ===== */}
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "10px" }}>PARTIDOS POR SIMULAR</p>
+      {pending.length === 0 ? (
+        <EmptyState emoji="🏁" title="NO QUEDA NADA POR JUGAR" text="Todos los cruces ya tienen resultado real. El torneo ha terminado." />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "20px" }}>
+          {pending.map(id => {
+            const m = simB.byId[id];
+            const s = sims[id];
+            const known = m && !m.home.placeholder && !m.away.placeholder;
+            return (
+              <div key={id} onClick={() => known && openEdit(id)} className={known ? "tappable" : undefined} style={{
+                display: "flex", alignItems: "center", gap: "8px", padding: "10px 12px",
+                background: s ? "rgba(192,132,252,0.08)" : CARD,
+                border: `1px solid ${s ? "rgba(192,132,252,0.4)" : BORDER}`,
+                borderRadius: "10px", cursor: known ? "pointer" : "default", opacity: known ? 1 : 0.55,
+              }}>
+                <div style={{ minWidth: "70px" }}>
+                  <div style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Bebas Neue', monospace" }}>{id}</div>
+                  <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif" }}>{KO_ROUND_NAME[KO_ROUND_OF[id]]}</div>
+                </div>
+                <span style={{ fontSize: "16px" }}>{m?.home.flag}</span>
+                <span style={{ flex: 1, fontSize: "10px", color: m?.home.placeholder ? "#7ab8e0" : "#e0eaf8", fontFamily: "'Inter', sans-serif", textAlign: "right", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m?.home.placeholder ? m.home.name : koAbbr(m.home.name)}</span>
+                <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", color: s ? "#c084fc" : "#7ab8e0", minWidth: "44px", textAlign: "center" }}>
+                  {s ? `${s.h}-${s.a}` : "vs"}
+                </span>
+                <span style={{ flex: 1, fontSize: "10px", color: m?.away.placeholder ? "#7ab8e0" : "#e0eaf8", fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m?.away.placeholder ? m.away.name : koAbbr(m.away.name)}</span>
+                <span style={{ fontSize: "16px" }}>{m?.away.flag}</span>
+                {s && s.h === s.a && s.adv && <span style={{ fontSize: "8px", color: "#c084fc", fontFamily: "'Inter', sans-serif" }}>p: {koAbbr(s.adv)}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ===== RANKING SIMULADO ===== */}
+      <p style={{ fontSize: "9px", color: GREEN, fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "4px" }}>RANKING SIMULADO</p>
+      <p style={{ fontSize: "9px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", marginBottom: "10px" }}>
+        {simCount === 0 ? "Sin simulaciones: coincide con el ranking actual" : `Con ${simCount} ${simCount === 1 ? "partido simulado" : "partidos simulados"}`}
+      </p>
+      {simOrder.map((u, i) => {
+        const isMe = u.id === user.id;
+        const move = nowPos[u.id] - (i + 1);
+        const delta = u.sim - u.now;
+        return (
+          <div key={u.id} style={{
+            display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", marginBottom: "5px",
+            background: isMe ? GREEN_DIM : CARD, borderRadius: "10px",
+            border: `1px solid ${isMe ? GREEN : BORDER}`,
+          }}>
+            <div style={{ minWidth: "30px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+              <span style={{ fontFamily: "'Bebas Neue', monospace", fontSize: "15px", color: "#7ab8e0" }}>#{i + 1}</span>
+              <MoveIndicator move={move} size={10} />
+            </div>
+            <span style={{ fontSize: "17px" }}>{u.emoji || "⚽"}</span>
+            <span style={{ flex: 1, fontFamily: "'Inter', sans-serif", fontSize: "13px", color: isMe ? GREEN : "#e0eaf8", fontWeight: isMe ? 700 : 400 }}>{u.name}</span>
+            {delta > 0 && <span style={{ fontSize: "10px", color: "#c084fc", fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>+{delta}</span>}
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "24px", color: "#e0eaf8", lineHeight: 1 }}>{u.sim}</div>
+              <div style={{ fontSize: "8px", color: "#9cc4e6", fontFamily: "'Inter', sans-serif" }}>ahora: {u.now} · máx: {u.max}</div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* ===== MODAL DE EDICIÓN ===== */}
+      {editM && (
+        <div onClick={() => setEditing(null)} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(5,12,24,0.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.2s ease" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: "340px", background: "linear-gradient(160deg,#1a1030,#0a1628)", border: "2px solid #c084fc", borderRadius: "16px", padding: "20px" }}>
+            <div style={{ fontSize: "9px", color: "#c084fc", fontFamily: "'Inter', sans-serif", letterSpacing: "3px", marginBottom: "16px", textAlign: "center" }}>
+              🧪 {editing} · SIMULACIÓN
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "16px" }}>
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ fontSize: "30px" }}>{editM.home.flag}</div>
+                <div style={{ fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>{editM.home.name}</div>
+              </div>
+              <input value={hIn} onChange={e => setHIn(e.target.value)} type="number" min="0" max="20"
+                style={{ width: "48px", height: "54px", border: "1px solid rgba(192,132,252,0.4)", borderRadius: "10px", background: "rgba(0,0,0,0.3)", color: "#c084fc", fontSize: "28px", fontFamily: "'Bebas Neue', cursive", textAlign: "center", outline: "none" }} placeholder="–" />
+              <span style={{ color: "#7ab8e0", fontSize: "20px" }}>:</span>
+              <input value={aIn} onChange={e => setAIn(e.target.value)} type="number" min="0" max="20"
+                style={{ width: "48px", height: "54px", border: "1px solid rgba(192,132,252,0.4)", borderRadius: "10px", background: "rgba(0,0,0,0.3)", color: "#c084fc", fontSize: "28px", fontFamily: "'Bebas Neue', cursive", textAlign: "center", outline: "none" }} placeholder="–" />
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ fontSize: "30px" }}>{editM.away.flag}</div>
+                <div style={{ fontSize: "11px", color: "#e0eaf8", fontFamily: "'Inter', sans-serif" }}>{editM.away.name}</div>
+              </div>
+            </div>
+
+            {hIn !== "" && aIn !== "" && parseInt(hIn) === parseInt(aIn) && (
+              <div style={{ marginBottom: "14px" }}>
+                <p style={{ fontSize: "9px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", letterSpacing: "2px", marginBottom: "8px", textAlign: "center" }}>⚽ EMPATE · ¿QUIÉN PASA?</p>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  {[editM.home, editM.away].map(t => (
+                    <button key={t.name} onClick={() => setAdvSel(t.name)} style={{
+                      flex: 1, padding: "10px", borderRadius: "8px", cursor: "pointer",
+                      border: `1px solid ${advSel === t.name ? "#c084fc" : BORDER}`,
+                      background: advSel === t.name ? "rgba(192,132,252,0.15)" : CARD,
+                      color: advSel === t.name ? "#c084fc" : "#a8d4f0",
+                      fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 700,
+                    }}>{t.flag} {koAbbr(t.name)}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {err && <p style={{ color: "#ff6b4a", fontSize: "11px", fontFamily: "'Inter', sans-serif", textAlign: "center", marginBottom: "10px" }}>⚠ {err}</p>}
+
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={clearSim} style={{ padding: "11px 14px", border: "1px solid rgba(204,34,34,0.3)", borderRadius: "8px", background: "rgba(204,34,34,0.06)", color: "#cc2222", fontFamily: "'Inter', sans-serif", fontSize: "11px", cursor: "pointer" }}>Borrar</button>
+              <button onClick={() => setEditing(null)} style={{ flex: 1, padding: "11px", border: `1px solid ${BORDER}`, borderRadius: "8px", background: "transparent", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", fontSize: "12px", cursor: "pointer" }}>Cancelar</button>
+              <button onClick={saveSim} style={{ flex: 2, padding: "11px", border: "none", borderRadius: "8px", background: "#c084fc", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 800, letterSpacing: "1px", cursor: "pointer" }}>SIMULAR</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // APP PRINCIPAL
 // ============================================================
 export default function Home() {
@@ -11932,6 +12286,7 @@ export default function Home() {
             {view === "knockout_results" && user.role === "admin" && <KnockoutView user={user} matches={matches} resultsMode={true} />}
             {view === "admin" && user.role === "admin" && <AdminView matches={matches} onDataChange={loadData} />}
             {view === "export" && user.role === "admin" && <ExportView matches={matches} onBack={() => setView("home")} />}
+            {view === "simulator" && simulatorEnabled(user) && <SimulatorView user={user} matches={matches} />}
           </div>
           {showEmojiTip && (
             <div
