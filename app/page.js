@@ -12032,7 +12032,7 @@ function SimulatorView({ user, matches }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-        <p style={{ fontSize: "9px", color: "#c084fc", ... }}>🧪 SIMULADOR</p>
+        <p style={{ fontSize: "9px", color: "#c084fc", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>🧪 SIMULADOR</p>
         {simCount > 0 && (
           <button onClick={() => setSims({})} style={{ padding: "5px 10px", border: "1px solid rgba(255,107,74,0.3)", borderRadius: "7px", background: "rgba(255,107,74,0.08)", color: "#ff6b4a", fontFamily: "'Inter', sans-serif", fontSize: "10px", cursor: "pointer" }}>
             ✕ Borrar simulación ({simCount})
