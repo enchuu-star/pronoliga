@@ -11842,13 +11842,21 @@ function SimulatorView({ user, matches }) {
     return groupPts + qualPts + spPts;
   };
 
+  const tournamentOver = !!realB.byId["M104"]?.winner;
+
   const rows = profiles.map(p => {
     const myKo = koPicksMap(koPicksAll.filter(x => x.user_id === p.id));
     const base = baseOf(p);
     const now = base + calcKnockoutPoints(myKo, realPicks, sbg);
     const sim = base + calcKnockoutPoints(myKo, merged, sbg);
-    const pot = calcKnockoutPotential(myKo, realB, sbg);
-    return { ...p, base, now, sim, pot, max: now + pot, myKo };
+    const koPot = calcKnockoutPotential(myKo, realB, sbg);
+    // 🏅 Especiales aún en juego: +10 por cada pick sin adjudicar
+    const sp = specials.find(x => x.user_id === p.id);
+    const spPot = tournamentOver ? 0 :
+      ((sp?.top_scorer && !(sp.top_scorer_points > 0)) ? 10 : 0) +
+      ((sp?.best_player && !(sp.best_player_points > 0)) ? 10 : 0);
+    const pot = koPot + spPot;
+    return { ...p, base, now, sim, pot, spPot, sp, max: now + pot, myKo };
   });
   const nowOrder = [...rows].sort((a, b) => b.now - a.now);
   const nowPos = {}; nowOrder.forEach((u, i) => { nowPos[u.id] = i + 1; });
@@ -12055,6 +12063,22 @@ function SimulatorView({ user, matches }) {
               </div>
             ))}
           </div>
+          {/* ⬇️⬇️ AQUÍ VA EL PASO 2 ⬇️⬇️ */}
+          {me.spPot > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "9px 12px", marginBottom: "12px", borderRadius: "9px", background: "rgba(255,213,79,0.07)", border: "1px solid rgba(255,213,79,0.3)" }}>
+              <span style={{ fontSize: "18px" }}>🏅</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "11px", color: "#ffd54f", fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>
+                  +{me.spPot} pts de especiales aún en juego
+                </div>
+                <div style={{ fontSize: "9px", color: "#c0d8f0", fontFamily: "'Inter', sans-serif", marginTop: "2px", lineHeight: 1.4 }}>
+                  {me.sp?.top_scorer && !(me.sp.top_scorer_points > 0) && <>⚽ Goleador: <b>{me.sp.top_scorer}</b> (+10) </>}
+                  {me.sp?.best_player && !(me.sp.best_player_points > 0) && <>· 🏅 Mejor jugador: <b>{me.sp.best_player}</b> (+10)</>}
+                </div>
+              </div>
+            </div>
+          )}
+          {/* ⬆️⬆️ FIN DEL PASO 2 ⬆️⬆️ */}
 
           <div style={{ padding: "10px 12px", borderRadius: "9px", marginBottom: "12px", background: mathAlive ? "rgba(52,211,153,0.08)" : "rgba(255,107,74,0.08)", border: `1px solid ${mathAlive ? "rgba(52,211,153,0.3)" : "rgba(255,107,74,0.3)"}` }}>
             <span style={{ fontSize: "11px", fontFamily: "'Inter', sans-serif", color: mathAlive ? "#34d399" : "#ff6b4a", fontWeight: 700 }}>
