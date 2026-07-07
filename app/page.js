@@ -11847,7 +11847,7 @@ function SimulatorView({ user, matches }) {
     const now = base + calcKnockoutPoints(myKo, realPicks, sbg);
     const sim = base + calcKnockoutPoints(myKo, merged, sbg);
     const pot = calcKnockoutPotential(myKo, realB, sbg);
-    return { ...p, now, sim, pot, max: now + pot, myKo };
+    return { ...p, base, now, sim, pot, max: now + pot, myKo };
   });
   const nowOrder = [...rows].sort((a, b) => b.now - a.now);
   const nowPos = {}; nowOrder.forEach((u, i) => { nowPos[u.id] = i + 1; });
@@ -11867,29 +11867,117 @@ function SimulatorView({ user, matches }) {
   const bestRivalNow = rivals.length ? Math.max(...rivals.map(r => r.now)) : 0;
   const mathAlive = me ? me.max >= bestRivalNow : false;
 
-  // Cargar "mi escenario ideal" en el simulador
-  const loadIdeal = () => {
-    if (!me) return;
-    const next = {};
-    pending.forEach(id => {
-      const stepMerged = { ...realPicks, ...next };
-      const stepB = buildKnockoutBracket(sbg, stepMerged);
-      const m = stepB.byId[id];
-      if (!m || m.home.placeholder || m.away.placeholder) return;
-      const um = myB.byId[id];
-      const want = um?.winner?.name || null;
-      const pick = me.myKo[id];
-      const sameTeams = pick && um && !um.home.placeholder && !um.away.placeholder &&
-        um.home.name === m.home.name && um.away.name === m.away.name;
-      if (sameTeams && pick.h != null && pick.a != null) {
-        next[id] = { h: pick.h, a: pick.a, adv: pick.h === pick.a ? pick.adv : null };
-      } else if (want && (m.home.name === want || m.away.name === want)) {
-        next[id] = m.home.name === want ? { h: 1, a: 0, adv: null } : { h: 0, a: 1, adv: null };
-      } else {
-        next[id] = { h: 1, a: 0, adv: null };
+  // Optimiza los resultados pendientes para MAXIMIZAR tu posición en el
+  // ranking, teniendo en cuenta los pronósticos de TODOS los jugadores.
+  const optimizeIdeal = () => {
+    if (!me || pending.length === 0) return;
+
+    // Brackets de cada usuario (sus picks son fijos)
+    const userBCache = {};
+    rows.forEach(u => { userBCache[u.id] = buildKnockoutBracket(sbg, u.myKo).byId; });
+
+    // Puntos KO de un usuario dado un cuadro "real" hipotético
+    const koPtsWith = (uid, realById) => {
+      let pts = 0;
+      KO_ALL_MATCHES.forEach(id => {
+        const rm = realById[id], um = userBCache[uid][id];
+        if (!rm || !um) return;
+        const realW = rm.winner?.name || null;
+        if (!realW) return;
+        const userW = um.winner?.name || null;
+        if (userW && userW === realW) pts += id === "M104" ? 10 : 5;
+        const sameTeams = !um.home.placeholder && !um.away.placeholder &&
+          um.home.name === rm.home.name && um.away.name === rm.away.name;
+        if (sameTeams && um.h != null && um.a != null && rm.h != null && rm.a != null) {
+          pts += koScore(um.h, um.a, rm.h, rm.a);
+        }
+      });
+      return pts;
+    };
+
+    // Evalúa un escenario completo: posición, margen sobre el mejor rival, mis puntos
+    const evaluate = (asg) => {
+      const rb = buildKnockoutBracket(sbg, { ...realPicks, ...asg }).byId;
+      const totals = rows.map(u => ({ id: u.id, t: u.base + koPtsWith(u.id, rb) }));
+      const mine = totals.find(x => x.id === me.id).t;
+      const rivalsT = totals.filter(x => x.id !== me.id).map(x => x.t);
+      const bestRival = rivalsT.length ? Math.max(...rivalsT) : 0;
+      const above = rivalsT.filter(t => t > mine).length;
+      return { pos: above + 1, margin: mine - bestRival, mine };
+    };
+    const better = (a, b) =>
+      a.pos !== b.pos ? a.pos < b.pos :
+      a.margin !== b.margin ? a.margin > b.margin :
+      a.mine > b.mine;
+
+    // Candidatos de resultado para un cruce, evitando regalar puntos a rivales
+    const candidatesFor = (id, m) => {
+      const home = m.home.name, away = m.away.name;
+      const rivalPicks = rows.filter(u => u.id !== me.id).map(u => {
+        const um = userBCache[u.id][id];
+        if (!um || um.home.placeholder || um.away.placeholder) return null;
+        if (um.home.name !== home || um.away.name !== away) return null;
+        return um.h != null && um.a != null ? { h: um.h, a: um.a } : null;
+      }).filter(Boolean);
+      const exactSet = new Set(rivalPicks.map(p => `${p.h}-${p.a}`));
+      const diffsFor = (sign) => new Set(
+        rivalPicks.filter(p => Math.sign(p.h - p.a) === sign).map(p => p.h - p.a)
+      );
+      const safeWin = (side) => { // 1 = gana home, -1 = gana away
+        const diffs = diffsFor(side);
+        for (let d = 1; d <= 12; d++) {
+          if (diffs.has(side * d)) continue;
+          const h = side === 1 ? d : 0, a = side === 1 ? 0 : d;
+          if (!exactSet.has(`${h}-${a}`)) return { h, a, adv: null };
+        }
+        return side === 1 ? { h: 13, a: 0, adv: null } : { h: 0, a: 13, adv: null };
+      };
+      const safeDraw = (advName) => {
+        for (let g = 0; g <= 9; g++) if (!exactSet.has(`${g}-${g}`)) return { h: g, a: g, adv: advName };
+        return { h: 10, a: 10, adv: advName };
+      };
+      const cands = [];
+      // Mi marcador exacto (si mi cruce coincide con el real)
+      const mm = userBCache[me.id][id];
+      if (mm && !mm.home.placeholder && !mm.away.placeholder &&
+          mm.home.name === home && mm.away.name === away && mm.h != null && mm.a != null) {
+        const adv = mm.h === mm.a ? (mm.winner?.name || home) : null;
+        cands.push({ h: mm.h, a: mm.a, adv });
       }
-    });
-    setSims(next);
+      cands.push(safeWin(1), safeWin(-1), safeDraw(home), safeDraw(away));
+      return cands;
+    };
+
+    // Completa el resto del cuadro con un escenario por defecto (mi ganador, 1-0 seguro)
+    const completeFrom = (asg, startIdx) => {
+      const out = { ...asg };
+      for (let i = startIdx; i < pending.length; i++) {
+        const id = pending[i];
+        if (out[id]) continue;
+        const b = buildKnockoutBracket(sbg, { ...realPicks, ...out }).byId[id];
+        if (!b || b.home.placeholder || b.away.placeholder) continue;
+        const myW = userBCache[me.id][id]?.winner?.name;
+        if (myW === b.away.name) out[id] = { h: 0, a: 1, adv: null };
+        else out[id] = { h: 1, a: 0, adv: null };
+      }
+      return out;
+    };
+
+    // Greedy en cascada: fija cada cruce probando candidatos + rollout del resto
+    const chosen = {};
+    for (let i = 0; i < pending.length; i++) {
+      const id = pending[i];
+      const b = buildKnockoutBracket(sbg, { ...realPicks, ...chosen }).byId[id];
+      if (!b || b.home.placeholder || b.away.placeholder) continue;
+      let best = null, bestSc = null;
+      for (const c of candidatesFor(id, b)) {
+        if (!c || (c.h === c.a && !c.adv)) continue;
+        const sc = evaluate(completeFrom({ ...chosen, [id]: c }, i + 1));
+        if (!bestSc || better(sc, bestSc)) { bestSc = sc; best = c; }
+      }
+      if (best) chosen[id] = best;
+    }
+    setSims(chosen);
   };
 
   // ── Editor de un cruce simulado ──
@@ -11984,9 +12072,12 @@ function SimulatorView({ user, matches }) {
             </>
           )}
 
-          <button onClick={loadIdeal} disabled={pending.length === 0} className="tappable" style={{ width: "100%", padding: "11px", border: "none", borderRadius: "9px", background: "linear-gradient(135deg,#c084fc,#7c3aed)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 800, letterSpacing: "2px", cursor: "pointer" }}>
-            🎯 CARGAR MI ESCENARIO IDEAL EN EL SIMULADOR
+          <button onClick={optimizeIdeal} disabled={pending.length === 0} className="tappable" style={{ width: "100%", padding: "11px", border: "none", borderRadius: "9px", background: "linear-gradient(135deg,#c084fc,#7c3aed)", color: "#0a1628", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 800, letterSpacing: "2px", cursor: "pointer" }}>
+            🎯 CALCULAR MI MEJOR ESCENARIO (VS RIVALES)
           </button>
+          <p style={{ fontSize: "8px", color: "#7ab8e0", fontFamily: "'Inter', sans-serif", marginTop: "6px", textAlign: "center", lineHeight: 1.4 }}>
+            Elige los resultados que maximizan tu posición teniendo en cuenta los pronósticos de todos. Los marcadores "raros" (4-0, 5-5...) son a propósito: evitan regalar puntos de marcador a los rivales.
+          </p>
         </div>
       )}
 
