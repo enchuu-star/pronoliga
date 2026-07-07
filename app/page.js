@@ -6172,7 +6172,7 @@ function HomeView({ user, matches, predictions, setView, loadingData }) {
         {navCard("🎮", "JUEGOS", "trivial · flappy · banderas", GREEN, "rgba(79,195,247,0.15)", "rgba(79,195,247,0.04)", "games")}
         {navCard("👤", "MI PERFIL", "estadísticas y comparativas", "#e0eefa", "rgba(79,195,247,0.15)", "rgba(255,255,255,0.03)", "profile")}
         {navCard("🏟️", "ELIMINATORIAS", "tu cuadro · pronósticos", "#34d399", "rgba(52,211,153,0.2)", "rgba(52,211,153,0.05)", "knockout")}
-        {simulatorEnabled(user) && navCard("🧪", "SIMULADOR", "¿y si...? · beta", "#c084fc", "rgba(192,132,252,0.2)", "rgba(192,132,252,0.05)", "simulator")}
+        {simulatorEnabled(user) && navCard("🧪", "SIMULADOR", "¿y si...? · prueba resultados", "#c084fc", "rgba(192,132,252,0.2)", "rgba(192,132,252,0.05)", "simulator")}
         {user.role === "admin" && navCard("⚙️", "ADMIN", "gestión de partidos", "#cc2222", "rgba(255,82,82,0.2)", "rgba(255,82,82,0.05)", "admin")}
         {user.role === "admin" && navCard("📸", "EXPORTAR", "ranking e imágenes", "#007a3a", "rgba(0,122,58,0.2)", "rgba(0,122,58,0.05)", "export")}
         {user.role === "admin" && navCard("⚙️", "RESULTADOS ELIM.", "cuadro real · admin", "#ffd54f", "rgba(255,213,79,0.2)", "rgba(255,213,79,0.05)", "knockout_results")}
@@ -11762,11 +11762,7 @@ function useUsageTracker(user) {
 // 🔒 BETA: de momento solo visible para Urien
 // ============================================================
 function simulatorEnabled(user) {
-  if (!user) return false;
-  const n = (user.name || "").toLowerCase();
-  const e = (user.email || "").toLowerCase();
-  return n.includes("urien") || e.includes("urien");
-  // Para abrirlo a todos: return true;
+  return true;
 }
 
 const SIM_ROUND_RANK = { R32: 0, R16: 1, QF: 2, SF: 3, THIRD: 4, FINAL: 5 };
@@ -12036,7 +12032,7 @@ function SimulatorView({ user, matches }) {
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-        <p style={{ fontSize: "9px", color: "#c084fc", fontFamily: "'Inter', sans-serif", letterSpacing: "3px" }}>🧪 SIMULADOR · BETA</p>
+        <p style={{ fontSize: "9px", color: "#c084fc", ... }}>🧪 SIMULADOR</p>
         {simCount > 0 && (
           <button onClick={() => setSims({})} style={{ padding: "5px 10px", border: "1px solid rgba(255,107,74,0.3)", borderRadius: "7px", background: "rgba(255,107,74,0.08)", color: "#ff6b4a", fontFamily: "'Inter', sans-serif", fontSize: "10px", cursor: "pointer" }}>
             ✕ Borrar simulación ({simCount})
